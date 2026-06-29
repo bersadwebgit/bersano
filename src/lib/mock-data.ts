@@ -1,0 +1,85 @@
+import { Story } from '@/types';
+
+export const mockStories: Story[] = [
+  {
+    id: '1',
+    shop_id: 'shop_1',
+    title: 'New Arrivals',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=150&h=150&fit=crop',
+    mediaUrl: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&h=1600&fit=crop',
+    mediaType: 'image',
+    text: 'کالکشن جدید تابستانه رسید! 🔥',
+    linkUrl: 'https://example.com/new-arrivals',
+    linkText: 'خرید کالکشن جدید',
+    duration: 8,
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 86400000).toISOString(),
+    isActive: true,
+  },
+  {
+    id: '2',
+    shop_id: 'shop_1',
+    title: 'Summer Sale',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=150&h=150&fit=crop',
+    mediaUrl: 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=800&h=1600&fit=crop',
+    mediaType: 'image',
+    text: 'تخفیف ویژه تا ۵۰٪ 🎁',
+    duration: 5,
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 86400000).toISOString(),
+    isActive: true,
+  },
+  {
+    id: '3',
+    shop_id: 'shop_1',
+    title: 'Behind the Scenes',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=150&h=150&fit=crop',
+    mediaUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=1600&fit=crop',
+    mediaType: 'image',
+    linkUrl: 'https://example.com/about',
+    linkText: 'درباره ما بیشتر بدانید',
+    duration: 6,
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 86400000).toISOString(),
+    isActive: true,
+  }
+];
+
+export const mockProducts = [
+  {
+    id: 'p1',
+    title: 'کفش ورزشی نایک مدل Air Max',
+    description: 'کفش ورزشی مناسب برای دویدن و استفاده روزمره با کیفیت عالی و طراحی زیبا',
+    price: 3500000,
+    discount: 15,
+    imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500&h=500&fit=crop',
+    stock: 10,
+  },
+  {
+    id: 'p2',
+    title: 'تی‌شرت نخی مردانه',
+    description: 'تی‌شرت ۱۰۰٪ نخی با تن‌خور عالی و رنگ‌بندی متنوع',
+    price: 450000,
+    discount: 0,
+    imageUrl: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500&h=500&fit=crop',
+    stock: 25,
+  },
+  {
+    id: 'p3',
+    title: 'ساعت هوشمند اپل واچ سری ۸',
+    description: 'ساعت هوشمند با قابلیت‌های پیشرفته سلامتی و ورزشی',
+    price: 18500000,
+    discount: 5,
+    imageUrl: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=500&h=500&fit=crop',
+    stock: 5,
+  },
+  {
+    id: 'p4',
+    title: 'عینک آفتابی ری‌بن',
+    description: 'عینک آفتابی کلاسیک با محافظت UV400',
+    price: 2800000,
+    discount: 20,
+    imageUrl: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=500&h=500&fit=crop',
+    stock: 8,
+  }
+];

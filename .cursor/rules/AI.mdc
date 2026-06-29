@@ -1,0 +1,424 @@
+---
+description: 
+alwaysApply: true
+---
+
+# پرامپت قطعی Cursor — ارتقای سیستم AI ماژول محصولات (v3، منطبق‌شده با کد واقعی)
+
+> **هدف:** پیاده‌سازی معماری model-agnostic مبتنی بر key/value، RAG با pgvector، و بهبود دقت AI در ماژول محصولات — بدون تغییر در بقیه سیستم و سازگار با اسکیمای واقعی پروژه.
+>
+> **وضعیت:** این سند به‌عنوان قانون (Rule) برای Cursor عمل می‌کند. تمام «GROUND TRUTH»‌ها از اسکیما/کد واقعی استخراج و تأیید شده‌اند؛ از آن‌ها تخطی نکن.
+
+---
+
+## 0) دستورالعمل پایه — همیشه
+
+```
+You are working on a PRODUCTION Next.js / Prisma / PostgreSQL multi-tenant SaaS
+(hundreds of shops, single codebase, row-level isolation by shopId, Farsi RTL UI).
+
+MANDATORY — read fully before ANY change:
+- prisma/schema.prisma
+- src/lib/openrouter-fetch.ts
+- src/lib/rate-limiter.ts
+- src/lib/parse-ai-json.ts
+- src/lib/validate-ai-output.ts
+- src/lib/validate-ai-request.ts
+- src/app/api/admin/products/ai-control/route.ts
+- src/app/api/super-admin/settings/route.ts
+- src/app/super-admin/page.tsx
+
+GROUND TRUTH (تأییدشده از اسکیما/کد — اشتباه نکن):
+- `SystemSetting` = KEY/VALUE table { key String @id, value String }. NO columns.
+  Models live as ROWS. Existing keys: openrouter_model, openrouter_control_model,
+  openrouter_blog_model, openrouter_api_key, ai_enabled, pexels_api_key, poof_api_key.
+- `ShopSettings` is fetched by `shopId` (@unique), never by `id`. DB column is "shop_id".
+- `Product` field is `title` (NOT name). It has NO tags/sku/discountedPrice/reservedStock.
+  It HAS: title, description, price, discount, stock, brand, categoryId,
+  wholesalePrice, wholesaleTiers, wholesaleExclusivePrices, moq, wholesaleUnit,
+  wholesaleUnitSize, isWholesaleOnly, isActive, isSpecial, specialEndsAt.
+- Raw SQL → use Prisma.sql / Prisma.empty from '@prisma/client'. `prisma.$raw` DOES NOT EXIST.
+- Existing helpers (use, don't duplicate):
+  isRateLimited(shopId, limit=20, windowMs=60000) → already 20/min per shop.
+  parseAiJson<T>(raw, requiredFields, fallback) → truncation-safe.
+  validators.product(data) → checks price/stock/discountPercent only.
+  openRouterFetch(url, options) → retry+backoff for chat/completions.
+  getIranDateTime() → live Tehran date/time.
+
+GLOBAL RULES:
+1. Surgical changes only. No unrelated refactor. No file/folder renames. No new packages.
+2. Every DB query scoped by shopId. No exceptions.
+3. Every async side-effect has .catch(). Side-effects never block or crash the main flow.
+4. Keep existing system prompts intact — ADD only, never replace.
+5. Phase 1 → migrate → test → only then Phase 2. Report what changed and why after each step.
+```
+
+---
+
+## نکات حیاتی قبل از شروع (برای اپراتور انسانی)
+
+ترتیب اجرا حتماً رعایت شود:
+- **فاز ۱ (model-agnostic + super admin UI) را اول تمام کن و تست کن.** تا این کار نشده فاز ۲ را شروع نکن. دلیل: pgvector یک migration نسبتاً irreversible است و اگر قبلش مدل‌ها/سرویس embedding درست نباشند، embedding با مدل اشتباه اجرا می‌شود.
+- **یک چک حیاتی قبل از فاز ۲** در PostgreSQL:
+
+```sql
+SELECT * FROM pg_extension WHERE extname = 'vector';
+```
+
+اگر نتیجه خالی بود، باید pgvector را روی سرور PostgreSQL نصب کنی (`apt install postgresql-16-pgvector` یا معادلش) — بدون این، migration کرش می‌کند.
+
+---
+
+## PHASE 1 — Model-Agnostic روی key/value (بدون تغییر اسکیما، بدون migration)
+
+### وظیفه ۱.۱ — کلیدهای استاندارد (ردیف، نه ستون)
+
+```
+ai_model_router | ai_model_simple | ai_model_complex | ai_model_content |
+ai_model_chat | ai_model_embedding | ai_model_fallback | ai_model_wholesale
+```
+
+هیچ `ALTER TABLE` روی `SystemSetting` نزن. این جدول key/value است و مدل‌ها به‌صورت ردیف ذخیره می‌شوند (دقیقاً مثل `openrouter_model`, `openrouter_control_model`, `openrouter_blog_model`).
+
+### وظیفه ۱.۲ — `src/lib/ai-model-resolver.ts` (فایل جدید)
+
+- `export type AiModelSlot` شامل ۸ مورد بالا.
+- `getAiModel(slot, shopId?)`:
+  * یک کوئری: `prisma.systemSetting.findMany({ where: { key: { in: [...8 keys] } } })` → تبدیل به `Map`. (یک‌بار findMany، نه ۸ بار، نه `findFirst` روی ستون.)
+  * ترتیب resolve:
+    1. مقدار system از `ai_model_<slot>` اگر غیرخالی.
+    2. سازگاری عقب‌رو: اگر `slot ∈ {simple, complex}` و کلید نبود → `settingsMap('openrouter_control_model') || settingsMap('openrouter_model')`.
+    3. `HARDCODED_FALLBACK[slot]`.
+  * per-shop override فعلاً **پیاده نشود** (صدها فروشگاه = کابوس عملیاتی). امضای `shopId` را برای آینده نگه‌دار و در کامنت ذکر کن.
+  * کش in-memory ۵ دقیقه‌ای با `Map` + `invalidateModelCache()`. در کامنت بنویس: کش per-process است؛ در محیط چند-instance تا ۵ دقیقه تأخیر انتشار دارد (قابل قبول).
+- `HARDCODED_FALLBACK`: همه باید slug معتبرِ فعال روی اکانت OpenRouter باشند. قبل از commit صحت slugها را تأیید کن (router=ارزان‌ترین flash، simple/chat=flash، complex/content/wholesale=مدل قوی‌تر، fallback=flash). برای embedding به وظیفه ۱.۲.الف نگاه کن.
+
+```typescript
+// نمونه ساختار (باید با اسکیما/الگوی پروژه نهایی شود)
+import { prisma } from './prisma';
+
+export type AiModelSlot =
+  | 'router' | 'simple' | 'complex' | 'content'
+  | 'chat' | 'embedding' | 'fallback' | 'wholesale';
+
+const SLOT_KEYS: Record<AiModelSlot, string> = {
+  router: 'ai_model_router',
+  simple: 'ai_model_simple',
+  complex: 'ai_model_complex',
+  content: 'ai_model_content',
+  chat: 'ai_model_chat',
+  embedding: 'ai_model_embedding',
+  fallback: 'ai_model_fallback',
+  wholesale: 'ai_model_wholesale',
+};
+
+const HARDCODED_FALLBACK: Record<AiModelSlot, string> = {
+  router: 'google/gemini-2.5-flash-lite-preview-06-17',
+  simple: 'google/gemini-2.5-flash',
+  complex: 'anthropic/claude-sonnet-4-6',
+  content: 'anthropic/claude-sonnet-4-6',
+  chat: 'google/gemini-2.5-flash',
+  embedding: 'openai/text-embedding-3-small',
+  fallback: 'google/gemini-2.5-flash',
+  wholesale: 'anthropic/claude-sonnet-4-6',
+};
+
+const modelCache = new Map<string, { value: string; exp: number }>();
+
+export async function getAiModel(slot: AiModelSlot, _shopId?: string): Promise<string> {
+  const cacheKey = `system:${slot}`; // per-shop override فعلاً غیرفعال
+  const cached = modelCache.get(cacheKey);
+  if (cached && cached.exp > Date.now()) return cached.value;
+
+  try {
+    const rows = await prisma.systemSetting.findMany({
+      where: {
+        key: {
+          in: [...Object.values(SLOT_KEYS), 'openrouter_control_model', 'openrouter_model'],
+        },
+      },
+    });
+    const map = new Map(rows.map((r) => [r.key, r.value]));
+
+    let resolved = map.get(SLOT_KEYS[slot]);
+    if (!resolved && (slot === 'simple' || slot === 'complex')) {
+      resolved = map.get('openrouter_control_model') || map.get('openrouter_model');
+    }
+    if (resolved) {
+      modelCache.set(cacheKey, { value: resolved, exp: Date.now() + 5 * 60 * 1000 });
+      return resolved;
+    }
+  } catch {
+    // DB failure → silent fallback
+  }
+  return HARDCODED_FALLBACK[slot];
+}
+
+export function invalidateModelCache() {
+  modelCache.clear();
+}
+```
+
+### وظیفه ۱.۲.الف — تصمیم embedding (همین حالا تثبیت کن)
+
+OpenRouter یک endpoint پایدار `/embeddings` ندارد. کل سیستم فعلی روی `chat/completions` است. پس برای RAG دو کلید جدید در `SystemSetting` تعریف کن:
+
+```
+ai_embedding_base_url   (مثلاً سرویس embedding در دسترس شما — OpenAI یا واسط)
+ai_embedding_api_key
+```
+
+- embedding model از `ai_model_embedding` می‌آید و باید با ابعاد ستون `vector` هماهنگ باشد (`text-embedding-3-small` = 1536).
+- اگر این دو کلید خالی بودند، هر مسیر embedding باید **بی‌صدا skip** شود (نه crash، نه throw به کاربر).
+
+### وظیفه ۱.۳ — API سوپرادمین: `src/app/api/super-admin/settings/route.ts`
+
+- در `GET`: ۸ کلید `ai_model_*` + `ai_embedding_base_url` + `ai_embedding_api_key` را با همان الگوی موجود (مثل `openrouter_blog_model`) بخوان و در پاسخ JSON با defaultها برگردان.
+- در `POST`: برای هر فیلد، اگر `!== undefined` → `upsert` (کپی دقیق بلوک‌های upsert موجود).
+- بعد از ذخیره‌ی هر کلید مدل → `invalidateModelCache()` را صدا بزن.
+
+### وظیفه ۱.۴ — UI سوپرادمین: `src/app/super-admin/page.tsx`
+
+کنار بخش `openrouterControlModel`، یک کارت «تنظیمات مدل‌های هوش مصنوعی» اضافه کن:
+
+- ۷ ورودی متنی برای `router/simple/complex/content/chat/wholesale/fallback` با توضیح فارسی هر کدام.
+- `ai_model_embedding` به‌صورت **read-only با هشدار**: «تغییر این مدل = نیاز به rebuild کامل embeddingها».
+- دو ورودی `ai_embedding_base_url` و `ai_embedding_api_key` (کلید به‌صورت password/masked).
+- ذخیره از همان مکانیزم state/submit موجودِ همان صفحه استفاده کند (الگوی موجود را تطبیق بده).
+
+```typescript
+const AI_MODEL_SLOTS = [
+  { key: 'ai_model_router',    label: 'مدل Router (Intent)',  desc: 'تشخیص نوع درخواست — ارزان‌ترین' },
+  { key: 'ai_model_simple',    label: 'مدل عملیات ساده',      desc: '۸۰٪ درخواست‌ها — قیمت، موجودی، تنظیمات' },
+  { key: 'ai_model_complex',   label: 'مدل تحلیل پیچیده',     desc: 'گزارش، پیشنهاد قیمت، ترکیب داده' },
+  { key: 'ai_model_content',   label: 'مدل تولید محتوا',      desc: 'بلاگ، توضیحات، استوری — فارسی روان' },
+  { key: 'ai_model_chat',      label: 'مدل چت مشتری',         desc: 'پاسخ به خریداران در فروشگاه' },
+  { key: 'ai_model_wholesale', label: 'مدل فروش عمده B2B',    desc: 'قیمت پله‌ای، اعتبار، MOQ — مطمئن' },
+  { key: 'ai_model_fallback',  label: 'مدل Fallback',         desc: 'جایگزین اگر مدل اصلی خطا داد' },
+] as const;
+// ai_model_embedding → فقط نمایش read-only با هشدار
+```
+
+### ✅ تست Phase 1 (قبل از Phase 2 — اجباری)
+
+```
+□ SELECT value FROM "SystemSetting" WHERE key='ai_model_simple';  → مقدار ذخیره‌شده
+□ console.log(await getAiModel('simple')) و getAiModel('complex')  → درست
+□ یک پرامپت products/ai-control بزن → هنوز کار می‌کند (سازگاری عقب‌رو سالم)
+□ هیچ ai-control دیگری نشکسته
+```
+
+---
+
+## PHASE 2 — RAG با pgvector (فقط بعد از تأیید کامل Phase 1)
+
+### چک حیاتی
+
+```sql
+SELECT * FROM pg_extension WHERE extname='vector';  -- خالی بود → pgvector را نصب کن
+```
+
+### وظیفه ۲.۱ — Migration دو-مرحله‌ای
+
+در `prisma/schema.prisma` به مدل `Product` اضافه کن:
+
+```prisma
+embedding          Unsupported("vector(1536)")?
+embeddingUpdatedAt DateTime?
+```
+
+> `reservedStock` را اضافه نکن — منطق پرکردنش وجود ندارد و ستون مرده می‌شود. «موجودی واقعی» = `stock`.
+
+**مرحله A (transactional, امن):**
+
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+ALTER TABLE "Product"
+  ADD COLUMN IF NOT EXISTS embedding vector(1536),
+  ADD COLUMN IF NOT EXISTS "embeddingUpdatedAt" TIMESTAMP;
+
+CREATE INDEX IF NOT EXISTS product_shopid_embedding_idx
+  ON "Product" ("shop_id") WHERE embedding IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS product_trgm_title_idx
+  ON "Product" USING gin (title gin_trgm_ops);   -- title، نه name
+```
+
+**مرحله B (HNSW سنگین، non-transactional — وگرنه کرش می‌کند):**
+
+```sql
+-- prisma:no-transaction   ← خط اول فایل migration
+CREATE INDEX CONCURRENTLY IF NOT EXISTS product_embedding_hnsw
+  ON "Product" USING hnsw (embedding vector_cosine_ops)
+  WITH (m = 16, ef_construction = 64);
+```
+
+> توجه: ستون map شده‌ی shopId در دیتابیس `"shop_id"` است؛ در raw SQL از همین استفاده کن.
+
+### وظیفه ۲.۲ — `src/lib/product-embedding.ts` (فایل جدید)
+
+- `buildProductText(p)`: فقط فیلدهای موجود →
+  `[title, description?.slice(0,500), brand, isWholesaleOnly?'فقط عمده B2B':null, wholesaleUnit].filter(Boolean).join(' | ')`.
+  (هرگز name/tags/sku — وجود ندارند.)
+- `getEmbeddingConfig()`: `base_url` + `api_key` + `model` را از `SystemSetting` بخوان؛ اگر ناقص → `return null` (skip).
+- `fetchEmbedding(text)`: `POST` به `` `${base_url}/embeddings` `` با Bearer key و model. از `openRouterFetch` استفاده نکن (آن برای chat است)؛ یک `fetch` ساده با try/catch.
+- `embedProduct(productId, shopId)`:
+
+```typescript
+const product = await prisma.product.findFirst({
+  where: { id: productId, shopId },
+  select: { title: true, description: true, brand: true, wholesaleUnit: true, isWholesaleOnly: true },
+});
+if (!product) return;
+const config = await getEmbeddingConfig();
+if (!config) return; // skip silently
+
+const emb = await fetchEmbedding(buildProductText(product));
+await prisma.$executeRaw(Prisma.sql`
+  UPDATE "Product"
+  SET embedding = ${`[${emb.join(',')}]`}::vector,
+      "embeddingUpdatedAt" = NOW()
+  WHERE id = ${productId} AND "shop_id" = ${shopId}
+`);
+```
+
+- `batchEmbedShopProducts(shopId, batchSize=50)`: فقط `where:{ shopId, embeddingUpdatedAt: null }`، `take` محدود، `Promise.allSettled`، تأخیر ~500ms بین دسته‌ها، خروجی `{ embedded, failed }`.
+
+### وظیفه ۲.۳ — `src/lib/product-search.ts` (فایل جدید)
+
+```typescript
+import { Prisma } from '@prisma/client';
+
+// بخش شرطی ستون‌ها (نه prisma.$raw):
+const wholesaleCols = includeWholesaleData
+  ? Prisma.sql`, "wholesalePrice", "wholesaleTiers", moq, "wholesaleUnit"`
+  : Prisma.empty;
+
+const results = await prisma.$queryRaw(Prisma.sql`
+  SELECT id, title, price, discount, stock, "isWholesaleOnly" ${wholesaleCols},
+    ((1 - (embedding <=> ${vec}::vector)) * 0.7 + similarity(title, ${query}) * 0.3) AS score
+  FROM "Product"
+  WHERE "shop_id" = ${shopId}
+    AND embedding IS NOT NULL
+    AND stock > 0
+    AND (${isWholesaler} OR "isWholesaleOnly" = false)
+  ORDER BY score DESC
+  LIMIT ${maxResults}
+`);
+```
+
+- `getQueryEmbedding(query)` با همان `getEmbeddingConfig`؛ اگر null → throw تا caller آن را skip کند.
+- نتیجه‌ها از `title` استفاده می‌کنند (نه name). `shopId` در SQL است (ایزولاسیون مستأجر).
+- `formatProductsForContext`: «موجودی: stock»، و در حالت `isWholesaler` قیمت عمده/moq/واحد.
+
+---
+
+## PHASE 3 — اتصال به products/ai-control (جراحی)
+
+فایل: `src/app/api/admin/products/ai-control/route.ts`
+
+**تغییر ۱ — مدل پویا:**
+
+```typescript
+import { getAiModel } from '@/lib/ai-model-resolver';
+
+const isComplex = prompt.length > 200 || /تحلیل|مقایسه|پیشنهاد|گزارش/.test(prompt);
+const aiModel = await getAiModel(isComplex ? 'complex' : 'simple', shopId);
+// در attempt === 3 به‌جای hardcode: await getAiModel('fallback')
+```
+
+**تغییر ۲ — RAG context (فقط وقتی لازم است):**
+
+```typescript
+import { searchProducts, formatProductsForContext } from '@/lib/product-search';
+
+const isProductQuery = /محصول|کالا|موجودی|قیمت/.test(prompt);
+let productContext = '';
+if (isProductQuery) {
+  try {
+    const relevant = await searchProducts({
+      shopId, query: prompt, maxResults: 8,
+      isWholesaler: /* از کاربر/تنظیمات */ false,
+      includeWholesaleData: settings?.wholesaleEnabled,
+    });
+    productContext = formatProductsForContext(relevant, /* isWholesaler */ false);
+  } catch {
+    productContext = ''; // شکست RAG هرگز crash نشود
+  }
+}
+```
+
+این برای فروشگاه‌های پرمحصول، context را کوچک و دقیق نگه می‌دارد (به‌جای ارسال همه محصولات).
+
+**تغییر ۳ — schema فارسی عمده** فقط اگر `settings.wholesaleEnabled`، به انتهای `SYSTEM_PROMPT` اضافه (ADD، نه replace)؛ `productContext` هم در صورت وجود append شود.
+
+**تغییر ۴ — اگر در این مسیر محصول save می‌شود:**
+
+```typescript
+import { embedProduct } from '@/lib/product-embedding';
+embedProduct(saved.id, shopId).catch(console.error); // async, non-blocking
+```
+
+---
+
+## PHASE 4 — Auto-embed + Batch (ملاحظات مقیاس SaaS)
+
+فایل: `src/app/api/admin/products/route.ts`
+
+- در `POST` بعد از create → **mark dirty** (به‌جای embed مستقیم):
+
+```typescript
+prisma.product.update({ where: { id }, data: { embeddingUpdatedAt: null } }).catch(() => {});
+```
+
+- در `PUT` فقط اگر `title/description/brand` تغییر کرد → همان mark dirty.
+
+> دلیل مقیاس: با صدها فروشگاه، embed مستقیم روی هر save = انفجار concurrency و ته‌کشیدن quota و rate-limit. به‌جایش dirty-flag + پردازش دسته‌ای کنترل‌شده.
+
+**Endpoint:** `src/app/api/super-admin/ai/embed-products/route.ts`
+
+- auth را با همان `verifySuperAdmin` محلیِ `settings/route.ts` بساز (cookie `super_admin_token` + `jwtVerify` از `jose`) — تابع از `'@/lib/auth'` را فرض نکن.
+- body `{ shopId }` → `batchEmbedShopProducts` را بدون await اجرا کن، فوری `202` برگردان.
+- می‌توان بعداً یک cron زد که فروشگاه‌به‌فروشگاه `dirty`ها را با نرخ کنترل‌شده embed کند.
+
+---
+
+## تست نهایی
+
+```
+□ مدل‌ها به‌صورت ردیف ذخیره/خوانده می‌شوند؛ سازگاری عقب‌رو سالم است.
+□ pg_extension vector موجود؛ migration دو-مرحله‌ای بدون خطا (HNSW جدا).
+□ embedProduct با title کار می‌کند و نبودِ config را skip می‌کند.
+□ searchProducts با Prisma.sql خروجی score می‌دهد؛ shopId در SQL.
+□ products/ai-control با ۵ پرامپت فارسی: ساده، پیچیده، عمده، تخفیف، تنوع.
+□ storefront/checkout و سایر ai-controlها دست‌نخورده.
+```
+
+---
+
+## قوانین ممنوعه (FORBIDDEN) برای Cursor
+
+```
+1. هیچ ستونی به SystemSetting اضافه نکن (key/value است).
+2. هرگز product.name / tags / sku / discountedPrice / reservedStock.
+3. prisma.$raw استفاده نکن — فقط Prisma.sql / Prisma.empty.
+4. CONCURRENTLY را داخل migration transactional نگذار.
+5. embedding را به openrouter.ai نزن.
+6. rate-limiter جدید نساز — isRateLimited موجود است.
+7. shopId در هر کوئری. بدون استثنا.
+8. Phase 1 → تست → بعد Phase 2.
+```
+
+---
+
+## ترتیب اجرا
+
+```
+Phase 1 → (بدون migration) → test super admin UI + getAiModel → ✅
+Phase 2 → نصب/تأیید pgvector → migration دو-مرحله‌ای → test embedding/search → ✅
+Phase 3 → update products/ai-control → test با ۵ پرامپت → ✅
+Phase 4 → mark-dirty + batch embed برای یک فروشگاه تست → ✅
+تست نهایی → چک‌لیست کامل → ✅
+```

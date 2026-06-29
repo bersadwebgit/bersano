@@ -1,0 +1,29 @@
+// [HARDENED] — validation, error isolation, save safety
+
+interface ValidationResult {
+  valid: boolean;
+  reason?: string; // Persian message shown to user
+}
+
+export function validateAiRequest(prompt: string, context?: {
+  aiEnabled: boolean;
+  hasApiKey: boolean;
+  promptMinLength?: number;
+}): ValidationResult {
+  if (!prompt || prompt.trim().length === 0)
+    return { valid: false, reason: 'دستور خالی است. لطفاً یک دستور وارد کنید.' };
+
+  if (prompt.trim().length < (context?.promptMinLength ?? 3))
+    return { valid: false, reason: 'دستور خیلی کوتاه است.' };
+
+  if (prompt.length > 2000)
+    return { valid: false, reason: 'دستور بیش از حد مجاز طولانی است (حداکثر ۲۰۰۰ کاراکتر).' };
+
+  if (context && !context.aiEnabled)
+    return { valid: false, reason: 'سیستم هوش مصنوعی غیرفعال است. از تنظیمات پلتفرم فعال کنید.' };
+
+  if (context && !context.hasApiKey)
+    return { valid: false, reason: 'کلید API هوش مصنوعی تنظیم نشده است.' };
+
+  return { valid: true };
+}
