@@ -131,6 +131,7 @@ export default function ProductOverview({ product, brands = [], shopName }: Prod
   });
 
   const [isClient, setIsClient] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const favorites = useFavoritesStore((state) => state.items);
   const addToFavorites = useFavoritesStore((state) => state.addToFavorites);
   const removeFromFavorites = useFavoritesStore((state) => state.removeFromFavorites);
@@ -142,6 +143,13 @@ export default function ProductOverview({ product, brands = [], shopName }: Prod
 
   useEffect(() => {
     setIsClient(true);
+    fetch('/api/profile')
+      .then(res => {
+        setIsLoggedIn(res.ok);
+      })
+      .catch(() => {
+        setIsLoggedIn(false);
+      });
   }, []);
 
   const selectedVariant = hasVariants
@@ -237,6 +245,12 @@ export default function ProductOverview({ product, brands = [], shopName }: Prod
   };
 
   const toggleFavorite = () => {
+    if (isLoggedIn === false) {
+      alert('شما هنوز وارد حساب کاربری خود نشده‌اید. برای ذخیره محصولات در لیست علاقه‌مندی‌ها، لطفاً ابتدا وارد شوید.');
+      window.location.href = '/login';
+      return;
+    }
+
     if (isFavorite) {
       removeFromFavorites(product.id);
     } else {

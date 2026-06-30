@@ -40,6 +40,7 @@ export default function ProductList({
   wholesaleEnabledProp
 }: ProductListProps) {
   const [isClient, setIsClient] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<string>('suggested');
   const [isWholesaler, setIsWholesaler] = useState(isWholesalerProp ?? false);
@@ -62,14 +63,28 @@ export default function ProductList({
     setWholesaleEnabled(wholesaleEnabledProp ?? false);
   }, [isWholesalerProp, wholesaleEnabledProp]);
 
-  // To avoid hydration errors with localStorage
+  // To avoid hydration errors with localStorage and check user login
   useEffect(() => {
     setIsClient(true);
+    fetch('/api/profile')
+      .then(res => {
+        setIsLoggedIn(res.ok);
+      })
+      .catch(() => {
+        setIsLoggedIn(false);
+      });
   }, []);
 
   const toggleFavorite = (e: React.MouseEvent, product: any) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (isLoggedIn === false) {
+      alert('شما هنوز وارد حساب کاربری خود نشده‌اید. برای ذخیره محصولات در لیست علاقه‌مندی‌ها، لطفاً ابتدا وارد شوید.');
+      window.location.href = '/login';
+      return;
+    }
+
     if (isFavorite(product.id)) {
       removeFromFavorites(product.id);
     } else {
