@@ -1787,73 +1787,82 @@ Requirements:
    - Provide "footerAboutText" and "footerCopyrightText" that are highly personalized to the brand "${shopName}", including a short introduction, competitive advantage, and exclusive brand message (e.g., "${shopName} با تمرکز بر ارائه پوشاک جین باکیفیت و طراحی مدرن تلاش می‌کند تجربه‌ای متفاوت از خرید لباس را برای مشتریان خود فراهم کند.").
 8. Do NOT include any markdown formatting, do NOT wrap in \`\`\`json, do NOT include any explanation. Return ONLY the raw JSON object.`;
 
-  const models = ['openai', 'mistral', 'meta-llama'];
+  const models = ['openai'];
   let lastError: any = null;
 
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 1; attempt++) {
     const model = models[attempt] || 'openai';
     try {
       console.log(`[AI Demo Data] Attempt ${attempt + 1} using model: ${model}`);
-      const response = await fetch('https://text.pollinations.ai/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: [
-            { role: 'user', content: prompt }
-          ],
-          model: model,
-          json: true
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status} from model ${model}`);
-      }
-
-      const text = await response.text();
-      let jsonText = text.trim();
       
-      // Robust JSON extraction
-      const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        jsonText = jsonMatch[0];
-      }
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000); // Strict 4 seconds timeout
 
-      let data: any;
       try {
-        data = JSON.parse(jsonText);
-      } catch (parseErr) {
-        console.warn(`[AI Demo Data] JSON parse failed, trying to clean up text...`);
-        // If JSON parsing fails due to unescaped newlines or control characters, try basic cleanup
-        const cleanedJsonText = jsonText
-          .replace(/[\u0000-\u001F\u007F-\u009F]/g, "") // remove control characters
-          .replace(/\\n/g, "\\n")
-          .replace(/\n/g, " ");
-        data = JSON.parse(cleanedJsonText);
-      }
-      
-      // Normalize single product to array if needed (extremely robust)
-      if (data.physicalProduct && !data.physicalProducts) {
-        data.physicalProducts = [data.physicalProduct];
-      }
-      if (data.digitalProduct && !data.digitalProducts) {
-        data.digitalProducts = [data.digitalProduct];
-      }
-      if (!data.physicalProducts) {
-        data.physicalProducts = [];
-      }
-      if (!data.digitalProducts) {
-        data.digitalProducts = [];
-      }
+        const response = await fetch('https://text.pollinations.ai/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            messages: [
+              { role: 'user', content: prompt }
+            ],
+            model: model,
+            json: true
+          }),
+          signal: controller.signal
+        });
 
-      // Validate structure
-      if (data.themeColor && (data.physicalProducts.length > 0 || data.digitalProducts.length > 0)) {
-        console.log(`[AI Demo Data] Successfully generated on attempt ${attempt + 1} with model ${model}`);
-        return data as DemoData;
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status} from model ${model}`);
+        }
+
+        const text = await response.text();
+        let jsonText = text.trim();
+        
+        // Robust JSON extraction
+        const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          jsonText = jsonMatch[0];
+        }
+
+        let data: any;
+        try {
+          data = JSON.parse(jsonText);
+        } catch (parseErr) {
+          console.warn(`[AI Demo Data] JSON parse failed, trying to clean up text...`);
+          // If JSON parsing fails due to unescaped newlines or control characters, try basic cleanup
+          const cleanedJsonText = jsonText
+            .replace(/[\u0000-\u001F\u007F-\u009F]/g, "") // remove control characters
+            .replace(/\\n/g, "\\n")
+            .replace(/\n/g, " ");
+          data = JSON.parse(cleanedJsonText);
+        }
+        
+        // Normalize single product to array if needed (extremely robust)
+        if (data.physicalProduct && !data.physicalProducts) {
+          data.physicalProducts = [data.physicalProduct];
+        }
+        if (data.digitalProduct && !data.digitalProducts) {
+          data.digitalProducts = [data.digitalProduct];
+        }
+        if (!data.physicalProducts) {
+          data.physicalProducts = [];
+        }
+        if (!data.digitalProducts) {
+          data.digitalProducts = [];
+        }
+
+        // Validate structure
+        if (data.themeColor && (data.physicalProducts.length > 0 || data.digitalProducts.length > 0)) {
+          console.log(`[AI Demo Data] Successfully generated on attempt ${attempt + 1} with model ${model}`);
+          return data as DemoData;
+        }
+        throw new Error('Invalid JSON structure returned from AI');
+      } finally {
+        clearTimeout(timeoutId);
       }
-      throw new Error('Invalid JSON structure returned from AI');
     } catch (err) {
       console.warn(`[AI Demo Data] Attempt ${attempt + 1} failed:`, err);
       lastError = err;

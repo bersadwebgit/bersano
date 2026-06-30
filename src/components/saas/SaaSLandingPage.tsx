@@ -373,7 +373,7 @@ export default function SaaSLandingPage() {
 
       const data = await res.json();
 
-      if (res.ok) {
+      if (res.ok || (data && data.alreadyCreated)) {
         localApiDone = true;
         localSuccessData = data.shop;
         setApiDone(true);

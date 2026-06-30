@@ -1,4 +1,5 @@
 import StoreContainer from '@/components/store/StoreContainer';
+import { SidebarSkeleton, ProductGridSkeleton } from '@/components/store/Skeletons';
 import BottomNav from '@/components/layout/BottomNav';
 import HeroSlider from '@/components/store/HeroSlider';
 import SpecialDeals from '@/components/store/SpecialDeals';
@@ -169,7 +170,16 @@ export default async function ShopPage() {
 
       <div className="max-w-7xl mx-auto w-full">
         {/* Main Content Area with Sidebar */}
-        <Suspense fallback={<div className="p-8 text-center">در حال بارگذاری...</div>}>
+        <Suspense fallback={
+          <div className="flex flex-col lg:flex-row gap-6 sm:gap-8 pt-4">
+            <div className="hidden lg:block">
+              <SidebarSkeleton />
+            </div>
+            <div className="flex-1">
+              <ProductGridSkeleton count={8} />
+            </div>
+          </div>
+        }>
           <StoreContainer 
             initialProducts={products} 
             initialCategories={categories} 

@@ -42,7 +42,8 @@ import {
   HelpCircle,
   Trash2,
   Eye,
-  Zap
+  Zap,
+  Lock
 } from 'lucide-react';
 
 export default function SuperAdminDashboard() {
@@ -197,7 +198,27 @@ export default function SuperAdminDashboard() {
   const [isEmbeddingLoading, setIsEmbeddingLoading] = useState(false);
   const [embeddingMessage, setEmbeddingMessage] = useState('');
   const [accountInfo, setAccountInfo] = useState<any>(null);
-  const [activeSettingsTab, setActiveSettingsTab] = useState<'api_keys' | 'central_bale' | 'base_prompts' | 'advanced_prompts' | 'article_prompts' | 'faq_prompts'>('api_keys');
+  const [activeSettingsTab, setActiveSettingsTab] = useState<'api_keys' | 'central_bale' | 'base_prompts' | 'advanced_prompts' | 'article_prompts' | 'faq_prompts' | 'change_password'>('api_keys');
+
+  // Change Password State
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [adminPhone, setAdminPhone] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCountdown, setOtpCountdown] = useState(0);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+
+  // OTP Countdown Timer
+  useEffect(() => {
+    if (otpCountdown > 0) {
+      const timer = setTimeout(() => setOtpCountdown(otpCountdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [otpCountdown]);
 
   const router = useRouter();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -352,6 +373,94 @@ export default function SuperAdminDashboard() {
       setSettingsError('خطای سرور در برقراری ارتباط');
     } finally {
       setSavingSettings(false);
+    }
+  };
+
+  const handleSendPasswordOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    if (!adminPhone) {
+      setPasswordError('لطفا شماره موبایل خود را وارد کنید');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/super-admin/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'send-otp', phone: adminPhone }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'خطا در ارسال کد تایید');
+      }
+
+      setOtpSent(true);
+      setOtpCountdown(120);
+      setPasswordSuccess(data.message || 'کد تایید با موفقیت ارسال شد');
+      if (data.devCode) {
+        console.log('Dev Code:', data.devCode);
+        setPasswordSuccess(`${data.message || 'کد تایید ارسال شد'} (کد تست: ${data.devCode})`);
+      }
+    } catch (err: any) {
+      setPasswordError(err.message || 'خطا در ارسال کد تایید');
+    }
+  };
+
+  const handleChangePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    if (!currentPassword || !newPassword || !confirmPassword || !adminPhone || !otpCode) {
+      setPasswordError('لطفا تمام فیلدها را پر کنید');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('رمز عبور جدید و تکرار آن با هم مطابقت ندارند');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordError('رمز عبور جدید باید حداقل ۶ کاراکتر باشد');
+      return;
+    }
+
+    setChangingPassword(true);
+
+    try {
+      const res = await fetch('/api/super-admin/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'change-password',
+          phone: adminPhone,
+          code: otpCode,
+          currentPassword,
+          newPassword,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'خطا در تغییر رمز عبور');
+      }
+
+      setPasswordSuccess('رمز عبور با موفقیت تغییر یافت');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setOtpCode('');
+      setOtpSent(false);
+      setOtpCountdown(0);
+    } catch (err: any) {
+      setPasswordError(err.message || 'خطا در تغییر رمز عبور');
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -1937,6 +2046,7 @@ export default function SuperAdminDashboard() {
                       { id: 'advanced_prompts', label: 'پرامپت‌های پیشرفته سئو', icon: Sparkles },
                       { id: 'article_prompts', label: 'پرامپت مقاله سئو', icon: Edit3 },
                       { id: 'faq_prompts', label: 'پرامپت سوالات متداول', icon: HelpCircle },
+                      { id: 'change_password', label: 'تغییر رمز عبور', icon: Lock },
                     ].map((subTab) => {
                       const Icon = subTab.icon;
                       const isActive = activeSettingsTab === subTab.id;
@@ -1959,8 +2069,9 @@ export default function SuperAdminDashboard() {
                   </div>
                 </div>
 
-                <form onSubmit={handleSaveSettings} className="space-y-5 max-w-2xl text-right">
-                  {settingsMessage && (
+                {activeSettingsTab !== 'change_password' ? (
+                  <form onSubmit={handleSaveSettings} className="space-y-5 max-w-2xl text-right">
+                    {settingsMessage && (
                     <div className="bg-green-50 text-green-700 p-3.5 rounded-xl text-xs font-bold border border-green-100 flex items-center gap-2">
                       <CheckCircle className="w-4 h-4 text-green-600" />
                       <span>{settingsMessage}</span>
@@ -2712,6 +2823,142 @@ export default function SuperAdminDashboard() {
                     </button>
                   </div>
                 </form>
+                ) : (
+                  <div className="space-y-5 max-w-2xl text-right animate-fadeIn">
+                    <div>
+                      <h4 className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                        <Lock className="w-4 h-4 text-blue-600" />
+                        تغییر رمز عبور سوپر ادمین
+                      </h4>
+                      <p className="text-[10px] text-gray-500 font-bold leading-relaxed mt-1">
+                        برای تغییر رمز عبور سوپر ادمین، لطفاً اطلاعات زیر را تکمیل کرده و کد تایید دو مرحله‌ای را وارد کنید.
+                      </p>
+                    </div>
+
+                    {passwordSuccess && (
+                      <div className="bg-green-50 text-green-700 p-3.5 rounded-xl text-xs font-bold border border-green-100 flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        <span>{passwordSuccess}</span>
+                      </div>
+                    )}
+
+                    {passwordError && (
+                      <div className="bg-red-50 text-red-600 p-3.5 rounded-xl text-xs font-bold border border-red-100 flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-red-600" />
+                        <span>{passwordError}</span>
+                      </div>
+                    )}
+
+                    <form onSubmit={handleChangePasswordSubmit} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1.5">رمز عبور فعلی</label>
+                          <input
+                            type="password"
+                            required
+                            value={currentPassword}
+                            onChange={(e) => setCurrentPassword(e.target.value)}
+                            className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none text-xs font-bold text-gray-700 transition-all text-left"
+                            dir="ltr"
+                            placeholder="••••••••"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1.5">شماره موبایل (جهت دریافت کد دو مرحله‌ای)</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              required
+                              disabled={otpSent}
+                              value={adminPhone}
+                              onChange={(e) => setAdminPhone(e.target.value)}
+                              className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none text-xs font-bold text-gray-700 transition-all text-left disabled:opacity-60"
+                              dir="ltr"
+                              placeholder="09123456789"
+                            />
+                            <button
+                              type="button"
+                              onClick={handleSendPasswordOtp}
+                              disabled={otpCountdown > 0 || !adminPhone}
+                              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 text-white disabled:text-gray-400 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer"
+                            >
+                              {otpCountdown > 0 ? `ارسال مجدد (${otpCountdown})` : otpSent ? 'ارسال مجدد کد' : 'ارسال کد تایید'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1.5">رمز عبور جدید</label>
+                          <input
+                            type="password"
+                            required
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none text-xs font-bold text-gray-700 transition-all text-left"
+                            dir="ltr"
+                            placeholder="••••••••"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-gray-700 mb-1.5">تکرار رمز عبور جدید</label>
+                          <input
+                            type="password"
+                            required
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none text-xs font-bold text-gray-700 transition-all text-left"
+                            dir="ltr"
+                            placeholder="••••••••"
+                          />
+                        </div>
+                      </div>
+
+                      {otpSent && (
+                        <div className="max-w-xs animate-fadeIn">
+                          <label className="block text-xs font-bold text-gray-700 mb-1.5">کد تایید ۵ رقمی</label>
+                          <input
+                            type="text"
+                            maxLength={5}
+                            required
+                            value={otpCode}
+                            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                            className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none text-center font-bold text-lg tracking-widest text-gray-800 transition-all"
+                            placeholder="•••••"
+                            dir="ltr"
+                          />
+                        </div>
+                      )}
+
+                      <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
+                        <button
+                          type="submit"
+                          disabled={changingPassword || !otpSent}
+                          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 text-white disabled:text-gray-400 px-6 py-2.5 rounded-xl transition-colors font-bold text-xs cursor-pointer shadow-xs"
+                        >
+                          {changingPassword ? 'در حال تغییر رمز...' : 'تغییر رمز عبور'}
+                        </button>
+
+                        {otpSent && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOtpSent(false);
+                              setOtpCountdown(0);
+                              setOtpCode('');
+                            }}
+                            className="text-xs font-bold text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                          >
+                            تغییر شماره موبایل
+                          </button>
+                        )}
+                      </div>
+                    </form>
+                  </div>
+                )}
               </div>
             </div>
           )}

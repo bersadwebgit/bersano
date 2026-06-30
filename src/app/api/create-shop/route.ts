@@ -59,6 +59,34 @@ export async function POST(request: Request) {
     } as any);
 
     if (existingShop) {
+      // Check if the owner's phone or email matches this existing shop (recovery from previous timeout)
+      const matchingUser = await prisma.user.findFirst({
+        where: {
+          shopId: existingShop.shopId,
+          OR: [
+            { email: ownerEmail.toLowerCase().trim() },
+            { phone: normalizedPhone }
+          ]
+        },
+        allowCrossTenant: true
+      } as any);
+
+      if (matchingUser) {
+        // The same owner is retrying after a previous successful creation (e.g., due to client-side timeout)
+        return NextResponse.json({
+          alreadyCreated: true,
+          shop: {
+            shopId: existingShop.shopId,
+            shopName: existingShop.shopName,
+            subdomain: existingShop.subdomain,
+          },
+          owner: {
+            name: matchingUser.name,
+            email: matchingUser.email,
+          }
+        });
+      }
+
       return NextResponse.json(
         { error: 'این ساب‌دامین قبلاً ثبت شده است. لطفاً نام دیگری انتخاب کنید.' },
         { status: 400 }

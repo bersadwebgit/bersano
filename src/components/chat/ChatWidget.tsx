@@ -62,6 +62,29 @@ export default function ChatWidget() {
   const [uploadingFile, setUploadingFile] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
+  const [isButtonVisible, setIsButtonVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsButtonVisible(true);
+      return;
+    }
+
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      if (currentScrollY > lastScrollY && currentScrollY > 80) {
+        setIsButtonVisible(false); // scrolling down
+      } else {
+        setIsButtonVisible(true); // scrolling up
+      }
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY, isOpen]);
+
   // Form states
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -547,7 +570,7 @@ export default function ChatWidget() {
   };
 
   return (
-    <div className="fixed bottom-20 md:bottom-6 right-6 z-50 select-none font-sans print:hidden" dir="rtl">
+    <div className="fixed bottom-24 md:bottom-6 right-6 z-50 select-none font-sans print:hidden" dir="rtl">
       {/* Floating Chat Button */}
       {!isOpen && (
         <button
@@ -557,7 +580,11 @@ export default function ChatWidget() {
           }}
           aria-label="باز کردن پشتیبانی آنلاین"
           style={{ backgroundColor: themeColor }}
-          className="group flex items-center justify-center w-14 h-14 rounded-full shadow-2xl shadow-black/25 text-white hover:scale-105 active:scale-95 transition-all duration-300 relative"
+          className={`group flex items-center justify-center w-14 h-14 rounded-full shadow-2xl shadow-black/25 text-white hover:scale-105 active:scale-95 transition-all duration-300 relative ${
+            isButtonVisible 
+              ? 'translate-y-0 opacity-100 scale-100' 
+              : 'translate-y-20 opacity-0 scale-50 pointer-events-none md:translate-y-0 md:opacity-100 md:scale-100 md:pointer-events-auto'
+          }`}
         >
           <MessageCircle className="w-7 h-7 transition-transform duration-300 group-hover:scale-110" />
           <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5">
