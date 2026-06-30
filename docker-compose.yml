@@ -4,15 +4,16 @@ services:
     container_name: shop-postgres
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: shop_final
-    ports:
-      - "5432:5432"
+    # پورت 5432 عمداً حذف شده — دیتابیس فقط داخل Docker network در دسترس است
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -21,12 +22,14 @@ services:
     image: redis:7-alpine
     container_name: shop-redis
     restart: always
-    ports:
-      - "6379:6379"
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    # پورت 6379 عمداً حذف شده — Redis فقط داخل Docker network در دسترس است
     volumes:
       - redis_data:/data
+    networks:
+      - internal
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -35,15 +38,16 @@ services:
     image: hiett/serverless-redis-http:latest
     container_name: shop-redis-http-proxy
     restart: always
-    ports:
-      - "8079:80"
+    # پورت 8079 عمداً حذف شده — فقط سرویس web دسترسی دارد
     environment:
       SRH_MODE: env
-      SRH_TOKEN: local-dev-token
-      SRH_CONNECTION_STRING: "redis://redis:6379"
+      SRH_TOKEN: ${SRH_TOKEN}
+      SRH_CONNECTION_STRING: "redis://:${REDIS_PASSWORD}@redis:6379"
     depends_on:
       redis:
         condition: service_healthy
+    networks:
+      - internal
 
   web:
     build:
@@ -52,17 +56,23 @@ services:
     container_name: shop-web
     restart: always
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
-      DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/shop_final?schema=public"
+      DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/shop_final?schema=public"
       UPSTASH_REDIS_REST_URL: "http://serverless-redis-http:80"
-      UPSTASH_REDIS_REST_TOKEN: "local-dev-token"
+      UPSTASH_REDIS_REST_TOKEN: "${SRH_TOKEN}"
     depends_on:
       postgres:
         condition: service_healthy
       serverless-redis-http:
         condition: service_started
+    networks:
+      - internal
 
 volumes:
   postgres_data:
   redis_data:
+
+networks:
+  internal:
+    driver: bridge
