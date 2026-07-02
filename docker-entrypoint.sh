@@ -11,6 +11,12 @@ else
   echo "DATABASE_URL is not set. Skipping migrations."
 fi
 
-# Execute the main container command (starting nextjs server)
+# Execute custom command if arguments are provided
+if [ $# -gt 0 ]; then
+  echo "Executing command: $@"
+  exec "$@"
+fi
+
+# Execute the main Next.js standalone server
 echo "Starting Next.js server..."
 exec node server.js

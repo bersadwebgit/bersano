@@ -4,6 +4,21 @@ const net = require('net');
 const fs = require('fs');
 const path = require('path');
 
+// Safe Startup Guard
+if (!process.env.DATABASE_URL) {
+  console.log('⚠️ [STARTUP GUARD] DATABASE_URL is missing. Telegram Bot service will exit gracefully (exit code 0).');
+  process.exit(0);
+}
+
+// Uncaught Exceptions & Unhandled Rejections Handler
+process.on('uncaughtException', (err) => {
+  console.error('❌ [CRITICAL] Uncaught Exception in Telegram Bot:', err.message, err.stack);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ [CRITICAL] Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 const LOCK_PORT = 12346;
 const pidFile = path.join(__dirname, 'telegram-bot.pid');
 
@@ -27,6 +42,112 @@ function checkSingleInstance() {
       resolve(true);
     });
   });
+}
+
+/**
+ * Robust Database Ping Helper with Exponential Backoff
+ */
+async function pingDatabaseWithRetry(maxRetries = 10, initialDelay = 1000) {
+  let attempt = 1;
+  let delay = initialDelay;
+  while (attempt <= maxRetries) {
+    try {
+      // Execute a simple query to verify database is reachable
+      await prisma.$queryRaw`SELECT 1`;
+      console.log(`🟢 [INFO] Database connection verified successfully.`);
+      return true;
+    } catch (err) {
+      console.warn(`⚠️ [WARN] Database connection attempt ${attempt}/${maxRetries} failed: ${err.message}`);
+      if (attempt === maxRetries) {
+        return false;
+      }
+      console.log(`🕒 Retrying database connection in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      delay = Math.min(delay * 2, 30000); // Exponential backoff capped at 30s
+      attempt++;
+    }
+  }
+  return false;
+}
+
+/**
+ * Safe ShopSettings Query Helpers to withstand Missing Database Columns (P2022) or missing relations
+ */
+async function safeFindShopSettings(where, select = null) {
+  try {
+    const queryArgs = { where };
+    if (select) {
+      queryArgs.select = select;
+    }
+    return await prisma.shopSettings.findFirst(queryArgs);
+  } catch (err) {
+    console.warn(`[WARN] [ShopSettingsQuery]: Standard query failed. Attempting fallback safe query. Error:`, err.message);
+    if (err.code === 'P2022' || err.message.includes('column') || err.message.includes('relation')) {
+      try {
+        const fallbackSelect = {
+          id: true,
+          shopId: true,
+          shopName: true,
+          contactPhone: true,
+        };
+        const settings = await prisma.shopSettings.findFirst({
+          where,
+          select: fallbackSelect,
+        });
+        if (settings) {
+          return {
+            ...settings,
+            telegramIntegrationToken: '',
+            telegramChatId: '',
+            telegramOrderNotificationsEnabled: false,
+            telegramNotificationStatuses: '["new_order","status_change"]',
+          };
+        }
+        return null;
+      } catch (fallbackErr) {
+        console.error(`[ERROR] [ShopSettingsQuery]: Fallback query also failed:`, fallbackErr.message);
+        return null;
+      }
+    }
+    return null;
+  }
+}
+
+async function safeFindManyShopSettings(where = {}, select = null) {
+  try {
+    const queryArgs = { where };
+    if (select) {
+      queryArgs.select = select;
+    }
+    return await prisma.shopSettings.findMany(queryArgs);
+  } catch (err) {
+    console.warn(`[WARN] [ShopSettingsQueryMany]: Standard query failed. Attempting fallback. Error:`, err.message);
+    if (err.code === 'P2022' || err.message.includes('column') || err.message.includes('relation')) {
+      try {
+        const fallbackSelect = {
+          id: true,
+          shopId: true,
+          shopName: true,
+          contactPhone: true,
+        };
+        const shops = await prisma.shopSettings.findMany({
+          where,
+          select: fallbackSelect,
+        });
+        return shops.map(s => ({
+          ...s,
+          telegramIntegrationToken: '',
+          telegramChatId: '',
+          telegramOrderNotificationsEnabled: false,
+          telegramNotificationStatuses: '["new_order","status_change"]',
+        }));
+      } catch (fallbackErr) {
+        console.error(`[ERROR] [ShopSettingsQueryMany]: Fallback query also failed:`, fallbackErr.message);
+        return [];
+      }
+    }
+    return [];
+  }
 }
 
 /**
@@ -70,11 +191,47 @@ const GRAPHICAL_KEYBOARD = {
   one_time_keyboard: false
 };
 
+/**
+ * Robust Telegram API Fetch Wrapper with Rate Limit Handling & Backoff Retries
+ */
+async function fetchWithRetry(url, options, maxRetries = 3) {
+  let attempt = 1;
+  let delay = 1000;
+  while (attempt <= maxRetries) {
+    try {
+      const response = await fetch(url, options);
+      if (response.status === 429) {
+        const data = await response.clone().json().catch(() => ({}));
+        const retryAfter = (data.parameters && data.parameters.retry_after) || 5;
+        console.warn(`⚠️ [WARN] Telegram API rate limited (429). Retrying after ${retryAfter}s...`);
+        await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+        continue;
+      }
+      if (!response.ok && response.status >= 500) {
+        console.warn(`⚠️ [WARN] Telegram API returned HTTP ${response.status}. Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 2;
+        attempt++;
+        continue;
+      }
+      return response;
+    } catch (err) {
+      console.warn(`⚠️ [WARN] Telegram request failed: ${err.message}. Retrying in ${delay}ms...`);
+      if (attempt === maxRetries) {
+        throw err;
+      }
+      await new Promise(resolve => setTimeout(resolve, delay));
+      delay *= 2;
+      attempt++;
+    }
+  }
+}
+
 // Helper to send message to Telegram with keyboard
 async function sendTelegramMessage(chatId, text, replyMarkup = GRAPHICAL_KEYBOARD) {
   try {
     const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
-    const response = await fetch(url, {
+    const response = await fetchWithRetry(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -84,7 +241,7 @@ async function sendTelegramMessage(chatId, text, replyMarkup = GRAPHICAL_KEYBOAR
         reply_markup: replyMarkup ? replyMarkup : undefined,
       }),
     });
-    return response.ok;
+    return response && response.ok;
   } catch (err) {
     console.error(`[ERROR] Failed to send message to chat ${chatId}:`, err.message);
     return false;
@@ -95,7 +252,7 @@ async function sendTelegramMessage(chatId, text, replyMarkup = GRAPHICAL_KEYBOAR
 async function editTelegramMessage(chatId, messageId, text, replyMarkup = null) {
   try {
     const url = `https://api.telegram.org/bot${botToken}/editMessageText`;
-    const response = await fetch(url, {
+    const response = await fetchWithRetry(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -106,7 +263,7 @@ async function editTelegramMessage(chatId, messageId, text, replyMarkup = null) 
         reply_markup: replyMarkup ? replyMarkup : undefined,
       }),
     });
-    return response.ok;
+    return response && response.ok;
   } catch (err) {
     console.warn(`[WARN] Failed to edit message ${messageId}:`, err.message);
     return false;
@@ -117,7 +274,7 @@ async function editTelegramMessage(chatId, messageId, text, replyMarkup = null) 
 async function answerCallbackQuery(callbackQueryId) {
   try {
     const url = `https://api.telegram.org/bot${botToken}/answerCallbackQuery`;
-    await fetch(url, {
+    await fetchWithRetry(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -205,29 +362,25 @@ async function executeConnectionSilent(chatId, phone, token) {
   const normalizedInputPhone = normalizePhone(phone);
 
   try {
-    // List all shops in DB for diagnostics
-    const allShops = await prisma.shopSettings.findMany({
-      select: {
-        id: true,
-        shopName: true,
-        contactPhone: true,
-        telegramIntegrationToken: true,
-        telegramChatId: true
-      }
+    // List all shops in DB for diagnostics (safely)
+    const allShops = await safeFindManyShopSettings({}, {
+      id: true,
+      shopName: true,
+      contactPhone: true,
+      telegramIntegrationToken: true,
+      telegramChatId: true
     });
 
     if (normalizedInputPhone.length !== 10 || !normalizedInputPhone.startsWith('9')) {
       return false;
     }
 
-    // Try finding exact match or contains match
-    let shopSettings = await prisma.shopSettings.findFirst({
-      where: {
-        contactPhone: {
-          contains: normalizedInputPhone
-        },
-        telegramIntegrationToken: token,
-      }
+    // Try finding exact match or contains match safely
+    let shopSettings = await safeFindShopSettings({
+      contactPhone: {
+        contains: normalizedInputPhone
+      },
+      telegramIntegrationToken: token,
     });
 
     if (!shopSettings) {
@@ -244,13 +397,18 @@ async function executeConnectionSilent(chatId, phone, token) {
     }
 
     // Update Shop Settings to link chatId
-    await prisma.shopSettings.update({
-      where: { id: shopSettings.id },
-      data: {
-        telegramChatId: String(chatId),
-        telegramOrderNotificationsEnabled: true
-      }
-    });
+    try {
+      await prisma.shopSettings.update({
+        where: { id: shopSettings.id },
+        data: {
+          telegramChatId: String(chatId),
+          telegramOrderNotificationsEnabled: true
+        }
+      });
+    } catch (updateErr) {
+      console.error(`[ERROR] Failed to update ShopSettings with telegram chat ID. Schema might be outdated:`, updateErr.message);
+      return false;
+    }
 
     console.log(`[SUCCESS] Store "${shopSettings.shopName}" linked to Telegram ChatID: ${chatId}`);
     return true;
@@ -263,9 +421,7 @@ async function executeConnectionSilent(chatId, phone, token) {
 // Command: /orders / button "📊 گزارش سفارشات"
 async function handleOrders(chatId) {
   try {
-    const shopSettings = await prisma.shopSettings.findFirst({
-      where: { telegramChatId: String(chatId) }
-    });
+    const shopSettings = await safeFindShopSettings({ telegramChatId: String(chatId) });
 
     if (!shopSettings) {
       await sendTelegramMessage(chatId, `⚠️ ابتدا از دکمه «📥 اتصال به فروشگاه» استفاده کنید.`);
@@ -324,9 +480,7 @@ async function handleOrders(chatId) {
 // Command: /disconnect / button "❌ قطع اتصال از ربات"
 async function handleDisconnect(chatId) {
   try {
-    const shopSettings = await prisma.shopSettings.findFirst({
-      where: { telegramChatId: String(chatId) }
-    });
+    const shopSettings = await safeFindShopSettings({ telegramChatId: String(chatId) });
 
     if (!shopSettings) {
       await sendTelegramMessage(chatId, `⚠️ اکانت شما به هیچ فروشگاهی متصل نیست.`);
@@ -334,13 +488,19 @@ async function handleDisconnect(chatId) {
     }
 
     // Unlink
-    await prisma.shopSettings.update({
-      where: { id: shopSettings.id },
-      data: {
-        telegramChatId: '',
-        telegramOrderNotificationsEnabled: false
-      }
-    });
+    try {
+      await prisma.shopSettings.update({
+        where: { id: shopSettings.id },
+        data: {
+          telegramChatId: '',
+          telegramOrderNotificationsEnabled: false
+        }
+      });
+    } catch (updateErr) {
+      console.error(`[ERROR] Failed to unlink ShopSettings telegram columns:`, updateErr.message);
+      await sendTelegramMessage(chatId, `❌ خطای سیستمی در قطع اتصال از فروشگاه.`);
+      return;
+    }
 
     console.log(`[INFO] Unlinked Telegram ChatID: ${chatId} from store "${shopSettings.shopName}"`);
 
@@ -394,12 +554,10 @@ async function processUpdate(update) {
         // Update Panel to turn GREEN "🟢 متصل شد"
         await sendInlineConnectionPanel(chatId, messageId);
 
-        // Get Shop Name
-        const shopSettings = await prisma.shopSettings.findFirst({
-          where: {
-            contactPhone: { contains: normalizePhone(session.phone) },
-            telegramIntegrationToken: session.token,
-          }
+        // Get Shop Name safely
+        const shopSettings = await safeFindShopSettings({
+          contactPhone: { contains: normalizePhone(session.phone) },
+          telegramIntegrationToken: session.token,
         });
         const shopName = shopSettings ? shopSettings.shopName : 'فروشگاه شما';
         await sendTelegramMessage(chatId, `🎉 *اتصال با موفقیت برقرار شد!*\n🏪 فروشگاه: *${shopName}*`);
@@ -487,10 +645,10 @@ async function startPolling() {
   while (isPolling) {
     try {
       const url = `https://api.telegram.org/bot${botToken}/getUpdates?offset=${offset}&timeout=10`;
-      const response = await fetch(url, { signal: AbortSignal.timeout(15000) });
+      const response = await fetchWithRetry(url, { signal: AbortSignal.timeout(15000) });
       
-      if (!response.ok) {
-        console.warn(`[WARN] Telegram API returned status ${response.status}. Retrying in 5s...`);
+      if (!response || !response.ok) {
+        console.warn(`[WARN] Telegram API returned status ${response ? response.status : 'unknown'}. Retrying in 5s...`);
         await new Promise(resolve => setTimeout(resolve, 5000));
         continue;
       }
@@ -518,6 +676,12 @@ async function main() {
   console.log(`🚀 [TELEGRAM BOT RUNNER] Starting central bot service`);
   console.log(`=================================================`);
   
+  const dbOk = await pingDatabaseWithRetry();
+  if (!dbOk) {
+    console.error(`❌ Can't start bot: Database connection failed after multiple retries.`);
+    process.exit(1);
+  }
+
   await checkSingleInstance();
   
   const ok = await loadBotToken();
@@ -527,17 +691,20 @@ async function main() {
   }
 
   // Handle termination signals gracefully
-  process.on('SIGINT', () => {
-    console.log('\n🛑 Stopping bot service...');
+  const gracefulShutdown = () => {
+    console.log('\n🛑 Stopping bot service gracefully...');
     isPolling = false;
     try {
       if (fs.existsSync(pidFile)) {
         fs.unlinkSync(pidFile);
       }
     } catch (e) {}
-    prisma.$disconnect();
+    prisma.$disconnect().catch(() => {});
     process.exit(0);
-  });
+  };
+
+  process.on('SIGINT', gracefulShutdown);
+  process.on('SIGTERM', gracefulShutdown);
 
   await startPolling();
 }

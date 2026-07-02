@@ -75,8 +75,8 @@ services:
   bale-bot:
     image: shop-web:latest
     container_name: shop-bale-bot
-    restart: always
-    entrypoint: ["node", "scripts/bale-bot.js"]
+    restart: unless-stopped
+    command: ["node", "scripts/bale-bot.js"]
     environment:
       DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/shop_final?schema=public"
     depends_on:
@@ -90,8 +90,8 @@ services:
   telegram-bot:
     image: shop-web:latest
     container_name: shop-telegram-bot
-    restart: always
-    entrypoint: ["node", "scripts/telegram-bot.js"]
+    restart: unless-stopped
+    command: ["node", "scripts/telegram-bot.js"]
     environment:
       DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/shop_final?schema=public"
     depends_on:

@@ -27,53 +27,90 @@ export function normalizeTelegramPhone(phone: string): string {
 }
 
 /**
- * Sends a notification message via a Telegram Bot
+ * Sends a notification message via a Telegram Bot with backoff retries and rate limit awareness
  * API URL: https://api.telegram.org/bot<token>/sendMessage
  */
 export async function sendTelegramBotMessage(
   botToken: string,
   chatId: string,
-  text: string
+  text: string,
+  maxRetries = 3
 ): Promise<TelegramResult> {
-  try {
-    if (!botToken || !chatId) {
-      return { success: false, error: 'توکن بات تلگرام یا چت‌آیدی وارد نشده است' };
-    }
-
-    console.log(`[INFO] [TelegramBot]: Sending message to chat ${chatId}`);
-
-    const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: text,
-        parse_mode: 'Markdown',
-      }),
-    });
-
-    const data = await response.json();
-
-    if (response.ok && data.ok) {
-      return {
-        success: true,
-        messageId: data.result?.message_id?.toString() || 'sent',
-      };
-    } else {
-      console.error('[ERROR] [TelegramBot]: Error from Telegram API |', data);
-      return {
-        success: false,
-        error: data.description || 'خطا در ارسال پیام به تلگرام',
-      };
-    }
-  } catch (error: any) {
-    console.error('[ERROR] [TelegramBot]: Exception while sending message |', error);
-    return {
-      success: false,
-      error: error?.message || 'خطای شبکه در اتصال به تلگرام',
-    };
+  if (!botToken || !chatId) {
+    return { success: false, error: 'توکن بات تلگرام یا چت‌آیدی وارد نشده است' };
   }
+
+  let attempt = 1;
+  let delay = 1000; // start with 1s delay
+
+  while (attempt <= maxRetries) {
+    try {
+      console.log(`[INFO] [TelegramBot]: Sending message to chat ${chatId} (Attempt ${attempt}/${maxRetries})`);
+
+      const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: text,
+          parse_mode: 'Markdown',
+        }),
+        // Add a signal timeout of 10s so requests never hang infinitely
+        signal: AbortSignal.timeout(10000),
+      });
+
+      // Handle HTTP 429 Rate Limit gracefully
+      if (response.status === 429) {
+        const data = await response.clone().json().catch(() => ({}));
+        const retryAfter = (data.parameters && data.parameters.retry_after) || 5;
+        console.warn(`[WARN] [TelegramBot]: Rate limited (429). Retrying after ${retryAfter} seconds...`);
+        await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
+        continue; // Do not increment attempt count as this is a rate limit, retry the same attempt
+      }
+
+      // Handle server error on Telegram's side (HTTP 5xx), transient issue
+      if (!response.ok && response.status >= 500) {
+        console.warn(`[WARN] [TelegramBot]: Telegram API returned server error ${response.status}. Retrying in ${delay}ms...`);
+        if (attempt === maxRetries) {
+          return { success: false, error: `خطای سرور تلگرام با کد ${response.status}` };
+        }
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        delay *= 2;
+        attempt++;
+        continue;
+      }
+
+      const data = await response.json();
+
+      if (response.ok && data.ok) {
+        return {
+          success: true,
+          messageId: data.result?.message_id?.toString() || 'sent',
+        };
+      } else {
+        console.error('[ERROR] [TelegramBot]: Error response from Telegram API |', data);
+        // If it's a permanent bad request (e.g. invalid chat ID), do not retry
+        return {
+          success: false,
+          error: data.description || 'خطا در ارسال پیام به تلگرام',
+        };
+      }
+    } catch (error: any) {
+      console.error(`[ERROR] [TelegramBot]: Exception on attempt ${attempt}/${maxRetries} |`, error.message);
+      if (attempt === maxRetries) {
+        return {
+          success: false,
+          error: error?.message || 'خطای شبکه در اتصال به تلگرام',
+        };
+      }
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      delay *= 2;
+      attempt++;
+    }
+  }
+
+  return { success: false, error: 'تعداد تلاش‌های مجدد به پایان رسید' };
 }
