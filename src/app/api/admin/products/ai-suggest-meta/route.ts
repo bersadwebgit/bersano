@@ -1,30 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/auth';
-import { getAiModel } from '@/lib/ai-model-resolver';
-
-function cleanAndParseJson(text: string) {
-  try {
-    return JSON.parse(text);
-  } catch (e) {
-    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-    if (jsonMatch) {
-      try {
-        return JSON.parse(jsonMatch[1]);
-      } catch (innerError) {}
-    }
-    
-    const firstBracket = text.indexOf('{');
-    const lastBracket = text.lastIndexOf('}');
-    if (firstBracket !== -1 && lastBracket !== -1) {
-      try {
-        return JSON.parse(text.substring(firstBracket, lastBracket + 1));
-      } catch (innerError) {}
-    }
-    
-    throw new Error('Failed to parse AI response as JSON Object');
-  }
-}
+import { callAiGateway } from '@/lib/ai-gateway';
 
 export async function POST(request: Request) {
   try {
@@ -41,17 +18,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'لطفاً عنوان محصول را وارد کنید.' }, { status: 400 });
     }
 
-    const [shop, settings, categories] = await Promise.all([
+    const [shop, categories] = await Promise.all([
       prisma.shopSettings.findUnique({
         where: { shopId },
         include: { package: true },
-      }),
-      prisma.systemSetting.findMany({
-        where: {
-          key: {
-            in: ['ai_enabled', 'openrouter_api_key', 'openrouter_model', 'openrouter_control_model']
-          }
-        }
       }),
       prisma.category.findMany({
         where: { shopId, isActive: true },
@@ -70,19 +40,6 @@ export async function POST(request: Request) {
 
     if (!shop) {
       return NextResponse.json({ error: 'تنظیمات فروشگاه یافت نشد.' }, { status: 404 });
-    }
-
-    const settingsMap = new Map(settings.map(s => [s.key, s.value]));
-
-    if (settingsMap.get('ai_enabled') === 'false') {
-      return NextResponse.json({ error: 'سرویس هوش مصنوعی در حال حاضر توسط مدیر سیستم غیرفعال شده است.' }, { status: 503 });
-    }
-
-    const apiKey = settingsMap.get('openrouter_api_key') || '';
-    const openrouterModel = await getAiModel('simple', shopId);
-
-    if (!apiKey) {
-      return NextResponse.json({ error: 'سرویس هوش مصنوعی در حال حاضر پیکربندی نشده است.' }, { status: 503 });
     }
 
     // Format categories to show their hierarchical structure to the AI for better matching
@@ -132,41 +89,41 @@ ${JSON.stringify(formattedCategories, null, 2)}
   "explanation": "توضیح کوتاه و حرفه‌ای فارسی درباره علت انتخاب این برند، دسته‌بندی و اصلاح عنوان"
 }`;
 
-    const openRouterResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': 'http://localhost:3000',
-        'X-Title': 'SaaS Shop Builder - Meta Suggestion',
+    // Call the central AI Gateway
+    const result = await callAiGateway<{
+      suggestedTitle: string;
+      brand: string | null;
+      categoryId: string | null;
+      suggestedCategoryName: string | null;
+      explanation: string | null;
+    }>({
+      shopId,
+      endpoint: 'products:ai-suggest-meta',
+      slot: 'simple',
+      messages: [
+        {
+          role: 'user',
+          content: prompt,
+        }
+      ],
+      mode: 'json',
+      temperature: 0.2,
+      maxTokens: 600,
+      requiredFields: ['suggestedTitle'],
+      fallbackValue: {
+        suggestedTitle: title,
+        brand: null,
+        categoryId: null,
+        suggestedCategoryName: null,
+        explanation: null,
       },
-      body: JSON.stringify({
-        model: openrouterModel,
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.2,
-        max_tokens: 600,
-      }),
     });
 
-    if (!openRouterResponse.ok) {
-      const errorText = await openRouterResponse.text();
-      throw new Error(`OpenRouter API error (status ${openRouterResponse.status}): ${errorText}`);
+    if (!result.success || !result.data) {
+      return NextResponse.json({ error: result.error || 'پردازش هوشمند محصول ناموفق بود.' }, { status: 502 });
     }
 
-    const responseData = await openRouterResponse.json();
-    const aiText = responseData.choices?.[0]?.message?.content;
-
-    if (!aiText) {
-      throw new Error('No content returned from AI model');
-    }
-
-    const parsedData = cleanAndParseJson(aiText);
+    const parsedData = result.data;
 
     let finalCategoryId = parsedData.categoryId || null;
     let finalSuggestedCategoryName = parsedData.suggestedCategoryName || null;
@@ -206,6 +163,6 @@ ${JSON.stringify(formattedCategories, null, 2)}
 
   } catch (error: any) {
     console.error('Error suggesting category and brand:', error);
-    return NextResponse.json({ error: error.message || 'خطای داخلی سرور' }, { status: 500 });
+    return NextResponse.json({ error: 'خطای سرور در پردازش درخواست.' }, { status: 500 });
   }
 }

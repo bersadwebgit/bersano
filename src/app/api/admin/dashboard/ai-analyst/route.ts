@@ -3,10 +3,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/auth';
-import { openRouterFetch } from '@/lib/openrouter-fetch';
 import crypto from 'crypto';
-import { parseAiJson } from '@/lib/parse-ai-json';
-import { getAiModel } from '@/lib/ai-model-resolver';
+import { callAiGateway } from '@/lib/ai-gateway';
 
 export const dynamic = 'force-dynamic';
 
@@ -131,7 +129,7 @@ export async function GET(request: Request) {
 
   } catch (error: any) {
     console.error('[ERROR] [AI Analyst GET]:', error);
-    return NextResponse.json({ error: error.message || 'خطای داخلی سرور' }, { status: 500 });
+    return NextResponse.json({ error: 'خطای سرور در پردازش درخواست.' }, { status: 500 });
   }
 }
 
@@ -219,7 +217,7 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error('[ERROR] [AI Analyst POST]:', error);
-    return NextResponse.json({ error: error.message || 'خطای داخلی سرور' }, { status: 500 });
+    return NextResponse.json({ error: 'خطای سرور در پردازش درخواست.' }, { status: 500 });
   }
 }
 
@@ -432,25 +430,8 @@ async function getFormattedData(shopId: string, type: string, shopName: string) 
   };
 }
 
-// Core function to generate analysis using OpenRouter
+// Core function to generate analysis using central AI Gateway
 async function generateAnalysis(shopId: string, type: string, formattedData: any) {
-  // Fetch AI provider settings
-  const systemSettings = await prisma.systemSetting.findMany({
-    where: {
-      key: {
-        in: ['ai_enabled', 'openrouter_api_key', 'openrouter_model', 'openrouter_control_model']
-      }
-    }
-  });
-
-  const settingsMap = new Map(systemSettings.map(s => [s.key, s.value]));
-  const apiKey = settingsMap.get('openrouter_api_key') || '';
-  const openrouterModel = await getAiModel('complex', shopId);
-
-  if (!apiKey) {
-    throw new Error('سرویس هوش مصنوعی پیکربندی نشده است.');
-  }
-
   const SYSTEM_PROMPT = `تو یک تحلیلگر حرفه‌ای و فوق‌العاده باهوش فروشگاه اینترنتی با تخصص در هک رشد و مارکتینگ هستی.
 وظیفه تو این است که داده‌های فروشگاه را دریافت کرده و فقط و فقط هشدارهای حیاتی و ترفندهای طلایی (Tricks) فوق‌العاده کوتاه، کاربردی و سریع برای افزایش فروش ارائه دهی.
 
@@ -504,33 +485,24 @@ async function generateAnalysis(shopId: string, type: string, formattedData: any
   }
 }`;
 
-  const openRouterResponse = await openRouterFetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-      'HTTP-Referer': 'http://localhost:3000',
-      'X-Title': 'SaaS Shop Builder AI Analyst',
-    },
-    body: JSON.stringify({
-      model: openrouterModel,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: `داده‌های واقعی فروشگاه برای تحلیل (${type}):\n${JSON.stringify(formattedData, null, 2)}` }
-      ],
-      temperature: 0.1,
-      max_tokens: 1000
-    })
+  const result = await callAiGateway<any>({
+    shopId,
+    endpoint: 'dashboard:ai-analyst',
+    slot: 'complex',
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: `داده‌های واقعی فروشگاه برای تحلیل (${type}):\n${JSON.stringify(formattedData, null, 2)}` }
+    ],
+    mode: 'json',
+    temperature: 0.1,
+    maxTokens: 1000,
+    requiredFields: [],
+    fallbackValue: {},
   });
 
-  if (!openRouterResponse.ok) {
-    const errorText = await openRouterResponse.text();
-    throw new Error(`OpenRouter API error: ${errorText}`);
+  if (!result.success || !result.data) {
+    throw new Error(result.error || 'تحلیل هوشمند داشبورد ناموفق بود.');
   }
 
-  const responseData = await openRouterResponse.json();
-  const aiText = responseData.choices?.[0]?.message?.content || '{}';
-  const { data } = parseAiJson<any>(aiText, [], {});
-  return data;
+  return result.data;
 }

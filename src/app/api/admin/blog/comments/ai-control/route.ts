@@ -1,30 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { verifyAuth } from '@/lib/auth';
-import { getAiModel } from '@/lib/ai-model-resolver';
-
-function cleanAndParseJson(text: string) {
-  try {
-    return JSON.parse(text);
-  } catch (e) {
-    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-    if (jsonMatch) {
-      try {
-        return JSON.parse(jsonMatch[1]);
-      } catch (innerError) {}
-    }
-    
-    const firstBracket = text.indexOf('{');
-    const lastBracket = text.lastIndexOf('}');
-    if (firstBracket !== -1 && lastBracket !== -1) {
-      try {
-        return JSON.parse(text.substring(firstBracket, lastBracket + 1));
-      } catch (innerError) {}
-    }
-    
-    throw new Error('Failed to parse AI response as JSON Object');
-  }
-}
+import { callAiGateway } from '@/lib/ai-gateway';
 
 const SYSTEM_PROMPT = `تو یک مدیر/پشتیبان واقعی، صمیمی، بسیار مودب و خوش‌صحبت برای یک فروشگاه اینترنتی هستی. پاسخ تو باید کاملاً شبیه به یک انسان (مدیر واقعی فروشگاه) باشد و لحن خشک، رسمی یا هوش مصنوعی‌مانند نداشته باشد.
 
@@ -95,13 +72,6 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'تنظیمات فروشگاه یافت نشد.' }, { status: 404 });
       }
 
-      const apiKeySetting = await prisma.systemSetting.findUnique({ where: { key: 'openrouter_api_key' } });
-      const batchApiKey = apiKeySetting?.value;
-      if (!batchApiKey) {
-        return NextResponse.json({ error: 'سرویس هوش مصنوعی (OpenRouter) پیکربندی نشده است.' }, { status: 503 });
-      }
-      const batchModel = await getAiModel('simple', shopId);
-
       // Unanswered, non-rejected top-level comments (no admin reply yet).
       const candidates = await prisma.blogComment.findMany({
         where: { shopId, parentId: null, status: { in: ['pending', 'approved'] }, replies: { none: {} } },
@@ -149,35 +119,25 @@ ${JSON.stringify(batchProducts.map(p => ({ id: p.id, title: p.title, price: p.pr
 
 لطفاً بهترین پاسخ مناسب و بهینه را بر اساس دستورالعمل‌ها به صورت شیء JSON با فیلد "response" تولید کن.`;
 
-          const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${batchApiKey}`,
-              'HTTP-Referer': 'http://localhost:3000',
-              'X-Title': 'SaaS Shop Builder Comment AI (Batch)',
-            },
-            body: JSON.stringify({
-              model: batchModel,
-              response_format: { type: 'json_object' },
-              messages: [
-                { role: 'system', content: SYSTEM_PROMPT },
-                { role: 'user', content: perCommentContent },
-              ],
-              temperature: 0.7,
-              max_tokens: 1200,
-            }),
+          const result = await callAiGateway<{ response: string }>({
+            shopId,
+            endpoint: 'blog:comments:ai-control:batch',
+            slot: 'simple',
+            messages: [
+              { role: 'system', content: SYSTEM_PROMPT },
+              { role: 'user', content: perCommentContent },
+            ],
+            mode: 'json',
+            temperature: 0.7,
+            maxTokens: 1200,
+            requiredFields: ['response'],
+            fallbackValue: { response: '' },
           });
 
-          if (!resp.ok) return;
-          const rd = await resp.json();
-          const txt = rd.choices?.[0]?.message?.content;
-          if (!txt) return;
-          const parsed = cleanAndParseJson(txt);
-          const suggested = typeof parsed?.response === 'string'
-            ? parsed.response
-            : (typeof parsed === 'string' ? parsed : '');
+          if (!result.success || !result.data) return;
+          const suggested = result.data.response;
           if (!suggested.trim()) return;
+
           replies.push({
             commentId: c.id,
             postId: c.postId,
@@ -254,21 +214,7 @@ ${JSON.stringify(batchProducts.map(p => ({ id: p.id, title: p.title, price: p.pr
       }
     });
 
-    // 4. Fetch OpenRouter Configurations
-    const openrouterApiKeySetting = await prisma.systemSetting.findUnique({
-      where: { key: 'openrouter_api_key' },
-    });
-
-    const openrouterApiKey = openrouterApiKeySetting?.value;
-    const openrouterModel = await getAiModel('simple', shopId);
-
-    if (!openrouterApiKey) {
-      return NextResponse.json({ 
-        error: 'سرویس هوش مصنوعی (OpenRouter) پیکربندی نشده است. لطفاً کلید API را در تنظیمات سیستم وارد کنید.' 
-      }, { status: 503 });
-    }
-
-    // 5. Prepare prompt data
+    // 4. Prepare prompt data
     const shopDomain = shop.customDomain || (shop.subdomain ? `${shop.subdomain}.localhost:3000` : 'localhost:3000');
     const host = req.headers.get('host') || shopDomain;
     const shopUrl = `http://${host}`;
@@ -294,50 +240,35 @@ ${JSON.stringify(products.map(p => ({ id: p.id, title: p.title, price: p.price, 
 لطفاً بهترین پاسخ مناسب و بهینه را بر اساس دستورالعمل‌ها به صورت شیء JSON با فیلد "response" تولید کن.
 `;
 
-    // 6. Call OpenRouter
-    const openRouterResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${openrouterApiKey}`,
-        'HTTP-Referer': 'http://localhost:3000',
-        'X-Title': 'SaaS Shop Builder Comment AI',
-      },
-      body: JSON.stringify({
-        model: openrouterModel,
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: 'system',
-            content: SYSTEM_PROMPT,
-          },
-          {
-            role: 'user',
-            content: userMessageContent,
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 1500,
-      }),
+    // 5. Call OpenRouter via central AI Gateway
+    const result = await callAiGateway<{ response: string }>({
+      shopId,
+      endpoint: 'blog:comments:ai-control',
+      slot: 'simple',
+      messages: [
+        {
+          role: 'system',
+          content: SYSTEM_PROMPT,
+        },
+        {
+          role: 'user',
+          content: userMessageContent,
+        }
+      ],
+      mode: 'json',
+      temperature: 0.7,
+      maxTokens: 1500,
+      requiredFields: ['response'],
+      fallbackValue: { response: '' },
     });
 
-    if (!openRouterResponse.ok) {
-      const errorText = await openRouterResponse.text();
-      return NextResponse.json({ error: `خطا در فراخوانی هوش مصنوعی: ${errorText}` }, { status: 502 });
+    if (!result.success || !result.data) {
+      return NextResponse.json({ error: result.error || 'پاسخ هوش مصنوعی کامل نبود.' }, { status: 502 });
     }
-
-    const responseData = await openRouterResponse.json();
-    const aiText = responseData.choices?.[0]?.message?.content;
-
-    if (!aiText) {
-      return NextResponse.json({ error: 'پاسخی از هوش مصنوعی دریافت نشد.' }, { status: 502 });
-    }
-
-    const parsedResult = cleanAndParseJson(aiText);
 
     return NextResponse.json({
       success: true,
-      response: parsedResult.response || parsedResult,
+      response: result.data.response,
     });
 
   } catch (error: any) {

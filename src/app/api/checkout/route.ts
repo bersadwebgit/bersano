@@ -4,6 +4,7 @@ import { verifyAuth } from '@/lib/auth';
 import { calculateWholesalePrice } from '@/lib/wholesale';
 import crypto from 'crypto';
 import { sendBaleBotMessage } from '@/lib/bale';
+import { sendTelegramBotMessage } from '@/lib/telegram';
 import { getDigipayToken, createDigipayTicket } from '@/lib/digipay';
 import { sendStoreSms } from '@/lib/sms';
 
@@ -1009,6 +1010,58 @@ export async function POST(request: Request) {
         }
       } catch (baleErr) {
         console.error('[ERROR] [BaleNotification]: Failed to send order notification:', baleErr);
+      }
+    }
+
+    // Send Telegram Bot notification if enabled
+    if (settings?.telegramOrderNotificationsEnabled && settings?.telegramChatId) {
+      try {
+        // Enforce customized notification statuses if set
+        let shouldSend = true;
+        if (settings.telegramNotificationStatuses) {
+          try {
+            const allowedStatuses = JSON.parse(settings.telegramNotificationStatuses);
+            if (Array.isArray(allowedStatuses) && !allowedStatuses.includes('new_order')) {
+              shouldSend = false;
+            }
+          } catch (e) {}
+        }
+
+        if (shouldSend) {
+          const systemBotToken = await prisma.systemSetting.findUnique({
+            where: { key: 'central_telegram_bot_token' }
+          });
+
+          if (systemBotToken && systemBotToken.value) {
+            const pMethodMap: Record<string, string> = {
+              online: 'پرداخت آنلاین',
+              card_to_card: 'کارت به کارت',
+              deposit: 'بیعانه (پرداخت چندمرحله‌ای)',
+              credit: 'پرداخت اعتباری (اقساطی)',
+            };
+            const methodText = pMethodMap[paymentMethod] || paymentMethod;
+            const customerName = buyerName || user.name || dbUser?.name || 'مشتری مهمان';
+            const customerPhone = buyerPhone || otherReceiverPhone || dbUser?.phone || user.phone || 'ثبت نشده';
+            const currencyText = settings.currency === 'IRT' ? 'تومان' : 'ریال';
+            
+            const messageText = `🛒 *سفارش جدید ثبت شد!*
+🏪 فروشگاه: ${settings.shopName}
+🆔 شماره سفارش: \`${order.id}\`
+💰 مبلغ نهایی: *${finalAmount.toLocaleString('fa-IR')}* ${currencyText}
+👤 خریدار: ${customerName}
+📞 تلفن خریدار: ${customerPhone}
+💳 روش پرداخت: ${methodText}
+📍 آدرس تحویل: ${finalAddress}`;
+
+            await sendTelegramBotMessage(
+              systemBotToken.value.trim(),
+              settings.telegramChatId,
+              messageText
+            );
+          }
+        }
+      } catch (telegramErr) {
+        console.error('[ERROR] [TelegramNotification]: Failed to send order notification:', telegramErr);
       }
     }
 

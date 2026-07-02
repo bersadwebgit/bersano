@@ -295,6 +295,59 @@ export async function PATCH(
       console.error('[ERROR] [BaleNotification]: Failed to send status update notification:', baleErr);
     }
 
+    // Send Real-time Notification to Telegram Bot on Status Changes
+    try {
+      const shopSettings = await prisma.shopSettings.findUnique({
+        where: { shopId: decoded.shopId }
+      });
+
+      if (shopSettings?.telegramOrderNotificationsEnabled && shopSettings?.telegramChatId) {
+        let shouldSend = true;
+        if (shopSettings.telegramNotificationStatuses) {
+          try {
+            const allowedStatuses = JSON.parse(shopSettings.telegramNotificationStatuses);
+            if (Array.isArray(allowedStatuses) && !allowedStatuses.includes(status)) {
+              shouldSend = false;
+            }
+          } catch (e) {}
+        }
+
+        if (shouldSend) {
+          const systemBotToken = await prisma.systemSetting.findUnique({
+            where: { key: 'central_telegram_bot_token' }
+          });
+
+          if (systemBotToken && systemBotToken.value) {
+            const currencyText = shopSettings.currency === 'IRT' ? 'تومان' : 'ریال';
+            const statusMap: Record<string, string> = {
+              pending: '⏳ در انتظار پرداخت',
+              paid: '✅ پرداخت شده',
+              shipped: '🚚 ارسال شده',
+              delivered: '📦 تحویل شده',
+              cancelled: '❌ لغو شده',
+              returned: '🔄 مرجوع شده',
+            };
+            const statusText = statusMap[status] || status;
+
+            const messageText = `🔔 *تغییر وضعیت سفارش!*
+🏪 فروشگاه: ${shopSettings.shopName}
+🆔 شماره سفارش: \`${order.id}\`
+💰 مبلغ نهایی: *${order.finalAmount.toLocaleString('fa-IR')}* ${currencyText}
+وضعیت جدید: ${statusText}`;
+
+            const { sendTelegramBotMessage } = await import('@/lib/telegram');
+            await sendTelegramBotMessage(
+              systemBotToken.value.trim(),
+              shopSettings.telegramChatId,
+              messageText
+            );
+          }
+        }
+      }
+    } catch (telegramErr) {
+      console.error('[ERROR] [TelegramNotification]: Failed to send status update notification:', telegramErr);
+    }
+
     // Award loyalty points if the order becomes paid
     const isBecomingPaid = (paymentStatus === 'paid' && order.paymentStatus !== 'paid') || (status === 'paid' && order.status !== 'paid');
     if (isBecomingPaid) {

@@ -1,29 +1,6 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
 import { verifyAuth } from '@/lib/auth';
-
-function cleanAndParseJson(text: string) {
-  try {
-    return JSON.parse(text);
-  } catch (e) {
-    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-    if (jsonMatch) {
-      try {
-        return JSON.parse(jsonMatch[1]);
-      } catch (innerError) {}
-    }
-    
-    const firstBracket = text.indexOf('{');
-    const lastBracket = text.lastIndexOf('}');
-    if (firstBracket !== -1 && lastBracket !== -1) {
-      try {
-        return JSON.parse(text.substring(firstBracket, lastBracket + 1));
-      } catch (innerError) {}
-    }
-    
-    throw new Error('Failed to parse AI response as JSON Object');
-  }
-}
+import { callAiGateway } from '@/lib/ai-gateway';
 
 const SYSTEM_PROMPT = `تو یک دستیار هوش مصنوعی فوق‌العاده دقیق برای استخراج و تمیز کردن اطلاعات برندهای تجاری هستی.
 وظیفه تو این است که یک متن توضیحی، آشفته، طولانی یا نامنظم درباره یک برند تجاری را دریافت کنی و آن را به اطلاعات تمیز و استاندارد تبدیل کنی.
@@ -54,88 +31,36 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'لطفاً متن توضیحات برند را وارد کنید.' }, { status: 400 });
     }
 
-    // 1. Fetch OpenRouter Configuration
-    const openrouterApiKeySetting = await prisma.systemSetting.findUnique({
-      where: { key: 'openrouter_api_key' },
+    // Call the central AI Gateway
+    const result = await callAiGateway<{ success: boolean; name: string; logoUrl: string | null }>({
+      shopId: payload.shopId,
+      endpoint: 'brands:ai-clean',
+      slot: 'simple',
+      messages: [
+        {
+          role: 'system',
+          content: SYSTEM_PROMPT,
+        },
+        {
+          role: 'user',
+          content: `متن ورودی کاربر برای استخراج برند:\n"${prompt}"`,
+        }
+      ],
+      mode: 'json',
+      temperature: 0.1,
+      maxTokens: 1000,
+      requiredFields: ['success', 'name'],
+      fallbackValue: { success: false, name: '', logoUrl: null },
     });
-    const openrouterModelSetting = await prisma.systemSetting.findUnique({
-      where: { key: 'openrouter_model' },
-    });
 
-    const openrouterApiKey = openrouterApiKeySetting?.value;
-    const openrouterModel = openrouterModelSetting?.value || 'google/gemini-2.5-flash';
-
-    if (!openrouterApiKey) {
-      return NextResponse.json({ error: 'سرویس هوش مصنوعی در حال حاضر پیکربندی نشده است. لطفاً به پشتیبانی سیستم اطلاع دهید.' }, { status: 503 });
-    }
-
-    // 2. Request to OpenRouter with Retry Logic
-    let attempts = 0;
-    const maxAttempts = 3;
-    let parsedResult: any = null;
-    let lastError: any = null;
-
-    while (attempts < maxAttempts) {
-      attempts++;
-      try {
-        const openRouterResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${openrouterApiKey}`,
-            'HTTP-Referer': 'http://localhost:3000',
-            'X-Title': 'SaaS Shop Builder',
-          },
-          body: JSON.stringify({
-            model: openrouterModel,
-            response_format: { type: "json_object" },
-            messages: [
-              {
-                role: 'system',
-                content: SYSTEM_PROMPT,
-              },
-              {
-                role: 'user',
-                content: `متن ورودی کاربر برای استخراج برند:\n"${prompt}"`,
-              }
-            ],
-            temperature: 0.1,
-            max_tokens: 1000,
-          }),
-        });
-
-        if (!openRouterResponse.ok) {
-          const errorText = await openRouterResponse.text();
-          throw new Error(`OpenRouter API error (status ${openRouterResponse.status}): ${errorText}`);
-        }
-
-        const responseData = await openRouterResponse.json();
-        let aiText = responseData.choices?.[0]?.message?.content;
-
-        if (!aiText) {
-          throw new Error('No content returned from AI model');
-        }
-
-        parsedResult = cleanAndParseJson(aiText);
-        break; // Success!
-      } catch (err: any) {
-        console.error(`Attempt ${attempts} failed for Brand AI Clean:`, err);
-        lastError = err;
-        parsedResult = null;
-        if (attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
-    }
-
-    if (!parsedResult || !parsedResult.success) {
-      return NextResponse.json({ error: `پردازش هوشمند برند ناموفق بود: ${lastError?.message || 'خطای ناشناخته'}` }, { status: 502 });
+    if (!result.success || !result.data || !result.data.success) {
+      return NextResponse.json({ error: result.error || 'پردازش هوشمند برند ناموفق بود.' }, { status: 502 });
     }
 
     return NextResponse.json({
       success: true,
-      name: parsedResult.name,
-      logoUrl: parsedResult.logoUrl,
+      name: result.data.name,
+      logoUrl: result.data.logoUrl,
     });
 
   } catch (error) {

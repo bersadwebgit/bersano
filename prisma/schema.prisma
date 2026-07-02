@@ -180,6 +180,12 @@ model ShopSettings {
   baleOrderNotificationsEnabled Boolean  @default(false) @map("bale_order_notifications_enabled")
   baleNotificationStatuses      String?  @default("[\"new_order\",\"status_change\"]") @map("bale_notification_statuses") // JSON string of statuses, e.g. ["new_order", "paid", "shipped", "delivered", "cancelled"]
   
+  // Telegram Integration Settings
+  telegramIntegrationToken          String?  @default("") @map("telegram_integration_token")
+  telegramChatId                    String?  @default("") @map("telegram_chat_id")
+  telegramOrderNotificationsEnabled Boolean  @default(false) @map("telegram_order_notifications_enabled")
+  telegramNotificationStatuses      String?  @default("[\"new_order\",\"status_change\"]") @map("telegram_notification_statuses") // JSON string of statuses, e.g. ["new_order", "paid", "shipped", "delivered", "cancelled"]
+  
   // Google Analytics & Tag Manager Settings
   googleAnalyticsId             String?  @default("") @map("google_analytics_id")
   googleTagManagerId            String?  @default("") @map("google_tag_manager_id")

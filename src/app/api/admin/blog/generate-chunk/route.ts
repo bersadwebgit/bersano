@@ -1,29 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/auth';
-
-function cleanAndParseJson(text: string) {
-  try {
-    return JSON.parse(text);
-  } catch (e) {
-    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-    if (jsonMatch) {
-      try {
-        return JSON.parse(jsonMatch[1]);
-      } catch (innerError) {}
-    }
-    
-    const firstBracket = text.indexOf('{');
-    const lastBracket = text.lastIndexOf('}');
-    if (firstBracket !== -1 && lastBracket !== -1) {
-      try {
-        return JSON.parse(text.substring(firstBracket, lastBracket + 1));
-      } catch (innerError) {}
-    }
-    
-    throw new Error('Failed to parse AI response as JSON Object');
-  }
-}
+import { callAiGateway } from '@/lib/ai-gateway';
 
 export async function POST(request: Request) {
   try {
@@ -62,28 +40,7 @@ export async function POST(request: Request) {
       fields = []
     } = body;
 
-    // 1. Fetch OpenRouter Configuration
-    const openrouterApiKeySetting = await prisma.systemSetting.findUnique({
-      where: { key: 'openrouter_api_key' },
-    });
-    const openrouterModelSetting = await prisma.systemSetting.findUnique({
-      where: { key: 'openrouter_model' },
-    });
-    const openrouterControlModelSetting = await prisma.systemSetting.findUnique({
-      where: { key: 'openrouter_control_model' },
-    });
-    const openrouterBlogModelSetting = await prisma.systemSetting.findUnique({
-      where: { key: 'openrouter_blog_model' },
-    });
-
-    const openrouterApiKey = openrouterApiKeySetting?.value;
-    const openrouterModel = openrouterBlogModelSetting?.value || openrouterControlModelSetting?.value || openrouterModelSetting?.value || 'google/gemini-2.5-flash';
-
-    if (!openrouterApiKey) {
-      return NextResponse.json({ error: 'سرویس هوش مصنوعی در حال حاضر پیکربندی نشده است. لطفاً به پشتیبانی سیستم اطلاع دهید.' }, { status: 503 });
-    }
-
-    // 2. Fetch Shop Info for branding fallback
+    // 1. Fetch Shop Info for branding fallback
     const shop = await prisma.shopSettings.findUnique({
       where: { shopId },
     });
@@ -94,7 +51,7 @@ export async function POST(request: Request) {
     const host = request.headers.get('host') || shopDomain;
     const shopUrl = `http://${host}`;
 
-    // 3. Resolve Product Context (using id since product has no slug field in Prisma schema)
+    // 2. Resolve Product Context (using id since product has no slug field in Prisma schema)
     let resolvedProductIds: string[] = [];
     if (productId && typeof productId === 'string') {
       resolvedProductIds.push(productId);
@@ -159,9 +116,9 @@ export async function POST(request: Request) {
 - آدرس عکس محصول (imageUrl): ${p.imageUrl || 'ندارد'}
 `).join('\n---\n');
 
-    // 4. Handle Actions
+    // 3. Handle Actions
     if (action === 'outline') {
-      const systemPrompt = `تو یک متخصص سئو، سردبیر مجله اینترنتی و استراتژیست محتوا هستی.
+      const systemPrompt = `تو یک نویسنده محتوای سئو، سردبیر مجله اینترنتی و استراتژیست محتوا هستی.
 وظیفه تو این است که بر اساس موضوع درخواستی کاربر، اطلاعات برند و محصولات مرتبط، یک **پلن محتوای فوق‌العاده حرفه‌ای و جامع (Outline)** برای تولید مقاله وبلاگ طراحی کنی.
 
 قوانین طراحی Outline و تعیین طول مقاله (Article Length Model):
@@ -197,8 +154,7 @@ export async function POST(request: Request) {
       "status": "pending"
     }
   ]
-}
-`;
+}`;
 
       const userContent = `
 موضوع مقاله / پرامپت کاربر: "${prompt}"
@@ -210,34 +166,27 @@ export async function POST(request: Request) {
 ${productsContext || 'محصولی انتخاب نشده است.'}
 `;
 
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openrouterApiKey}`,
-          'HTTP-Referer': 'http://localhost:3000',
-          'X-Title': 'SaaS Shop Builder',
-        },
-        body: JSON.stringify({
-          model: openrouterModel,
-          response_format: { type: "json_object" },
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userContent }
-          ],
-          temperature: 0.2,
-        }),
+      const result = await callAiGateway<any>({
+        shopId,
+        endpoint: 'blog:generate-chunk:outline',
+        slot: 'content',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userContent }
+        ],
+        mode: 'json',
+        temperature: 0.2,
+        maxTokens: 2000,
+        requiredFields: ['title'],
+        fallbackValue: { title: '', sections: [] },
       });
 
-      if (!response.ok) {
-        throw new Error(`OpenRouter error: ${await response.text()}`);
+      if (!result.success || !result.data) {
+        return NextResponse.json({ error: result.error || 'تولید Outline ناموفق بود.' }, { status: 502 });
       }
 
-      const resData = await response.json();
-      const aiText = resData.choices?.[0]?.message?.content;
-      const parsed = cleanAndParseJson(aiText);
+      const parsed = result.data;
 
-      // Return both mapped formats for maximum compatibility
       return NextResponse.json({
         success: true,
         outline: {
@@ -249,7 +198,7 @@ ${productsContext || 'محصولی انتخاب نشده است.'}
             status: 'pending'
           })) || []
         },
-        warnings: []
+        warnings: result.warnings || []
       });
     }
 
@@ -310,7 +259,7 @@ ${productsContext || 'محصولی انتخاب نشده است.'}
 5. **اثر انگشت سبک (Style Fingerprint)**: اگر این بخش اول (index = 0) است، تو باید ویژگی‌های سبک نگارش خودت (طول جملات، نوع افعال، لحن) را در قالب ۲ الی ۳ جمله توصیف کنی و در فیلد "styleFingerprint" خروجی قرار دهی.
 6. **پایان طبیعی**: اگر به محدودیت کلمه نزدیک شدی، محتوا را در انتهای یک پاراگراف به صورت کاملاً طبیعی تمام کن (جمله یا پاراگراف را نصفه رها نکن).
 7. **فرمت محتوای تولید شده**: خروجی باید به صورت کدهای HTML تمیز و سئو شده باشد. از تگ h1 یا h2 استفاده نکن (چون هدرهای اصلی بیرونی هستند).
-${isLastSection ? `8. **تولید متادیتا (فقط برای بخش آخر)**: چون این بخش آخر مقاله است، باید متادیتا (metadata) شامل عنوان مقاله، خلاصه مقاله، عنوان سئو، توضیحات متا سئو، برعسب‌ها (tags) و سوالات متداول (faqs) را نیز تولید کنی.` : ''}
+${isLastSection ? `8. **تولید متادیتا (فقط برای بخش آخر)**: چون این بخش آخر مقاله است، باید متادیتا (metadata) شامل عنوان مقاله، خلاصه مقاله، عنوان سئو، توضیحات متا سئو، برچسب‌ها (tags) و سوالات متداول (faqs) را نیز تولید کنی.` : ''}
 
 خروجی تو باید دقیقاً یک شیء JSON با ساختار زیر باشد و هیچ متن اضافی دیگر بازنگردانی:
 {
@@ -329,8 +278,7 @@ ${isLastSection ? `8. **تولید متادیتا (فقط برای بخش آخر
     ],
     "slug": "slug-english-lowercase-with-hyphens"
   }` : ''}
-}
-`;
+}`;
 
       // Slice to include only the last generated chunk for continuity, reducing token usage significantly!
       const lastChunksToInclude = previousChunks.slice(-1);
@@ -357,32 +305,26 @@ ${previousContentString}
 ${productsContext || 'محصولی انتخاب نشده است.'}
 `;
 
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openrouterApiKey}`,
-          'HTTP-Referer': 'http://localhost:3000',
-          'X-Title': 'SaaS Shop Builder',
-        },
-        body: JSON.stringify({
-          model: openrouterModel,
-          response_format: { type: "json_object" },
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userContent }
-          ],
-          temperature: 0.3,
-        }),
+      const result = await callAiGateway<any>({
+        shopId,
+        endpoint: 'blog:generate-chunk:section',
+        slot: 'content',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userContent }
+        ],
+        mode: 'json',
+        temperature: 0.3,
+        maxTokens: 3000,
+        requiredFields: ['sectionContent'],
+        fallbackValue: { sectionContent: '', styleFingerprint: '', lastParagraphs: '' },
       });
 
-      if (!response.ok) {
-        throw new Error(`OpenRouter error: ${await response.text()}`);
+      if (!result.success || !result.data) {
+        return NextResponse.json({ error: result.error || 'تولید بخش محتوا ناموفق بود.' }, { status: 502 });
       }
 
-      const resData = await response.json();
-      const aiText = resData.choices?.[0]?.message?.content;
-      const parsed = cleanAndParseJson(aiText);
+      const parsed = result.data;
 
       return NextResponse.json({
         success: true,
@@ -417,8 +359,7 @@ ${productsContext || 'محصولی انتخاب نشده است.'}
 خروجی تو باید دقیقاً یک شیء JSON با ساختار زیر باشد و هیچ متن اضافی دیگر بازنگردانی:
 {
   "value": ${activeField === 'tags' || activeField === 'faqs' ? 'آرایه جیسان متناسب با فیلد' : '"رشته متنی مقدار تولید شده برای فیلد"'}
-}
-`;
+}`;
 
       const userContent = `
 عنوان مقاله: "${articleTitle}"
@@ -428,32 +369,26 @@ ${articleText || 'هنوز محتوایی وارد نشده است.'}
 فیلد درخواستی جهت تولید: "${activeField}"
 `;
 
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openrouterApiKey}`,
-          'HTTP-Referer': 'http://localhost:3000',
-          'X-Title': 'SaaS Shop Builder',
-        },
-        body: JSON.stringify({
-          model: openrouterModel,
-          response_format: { type: "json_object" },
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userContent }
-          ],
-          temperature: 0.2,
-        }),
+      const result = await callAiGateway<any>({
+        shopId,
+        endpoint: 'blog:generate-chunk:field',
+        slot: 'content',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userContent }
+        ],
+        mode: 'json',
+        temperature: 0.2,
+        maxTokens: 1500,
+        requiredFields: ['value'],
+        fallbackValue: { value: '' },
       });
 
-      if (!response.ok) {
-        throw new Error(`OpenRouter error: ${await response.text()}`);
+      if (!result.success || !result.data) {
+        return NextResponse.json({ error: result.error || 'تولید فیلد ناموفق بود.' }, { status: 502 });
       }
 
-      const resData = await response.json();
-      const aiText = resData.choices?.[0]?.message?.content;
-      const parsed = cleanAndParseJson(aiText);
+      const parsed = result.data;
 
       return NextResponse.json({
         success: true,
@@ -515,8 +450,7 @@ ${articleText || 'هنوز محتوایی وارد نشده است.'}
     { "question": "سوال اول؟", "answer": "پاسخ سوال اول." }
   ],
   "schemaMarkup": "کد اسکیما JSON-LD کامل و معتبر برای این مقاله"
-}
-`;
+}`;
 
       const userContent = `
 موضوع مقاله / پرامپت کاربر: "${prompt}"
@@ -528,33 +462,26 @@ ${articleText || 'هنوز محتوایی وارد نشده است.'}
 ${productsContext || 'محصولی انتخاب نشده است.'}
 `;
 
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openrouterApiKey}`,
-          'HTTP-Referer': 'http://localhost:3000',
-          'X-Title': 'SaaS Shop Builder',
-        },
-        body: JSON.stringify({
-          model: openrouterModel,
-          response_format: { type: "json_object" },
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userContent }
-          ],
-          temperature: 0.3,
-          max_tokens: 3500,
-        }),
+      const result = await callAiGateway<any>({
+        shopId,
+        endpoint: 'blog:generate-chunk:all-in-one',
+        slot: 'content',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userContent }
+        ],
+        mode: 'json',
+        temperature: 0.3,
+        maxTokens: 3500,
+        requiredFields: ['title', 'content'],
+        fallbackValue: { title: '', content: '', summary: '', seoTitle: '', seoDescription: '', tags: [], faqs: [] },
       });
 
-      if (!response.ok) {
-        throw new Error(`OpenRouter error: ${await response.text()}`);
+      if (!result.success || !result.data) {
+        return NextResponse.json({ error: result.error || 'تولید یکجای مقاله ناموفق بود.' }, { status: 502 });
       }
 
-      const resData = await response.json();
-      const aiText = resData.choices?.[0]?.message?.content;
-      const parsed = cleanAndParseJson(aiText);
+      const parsed = result.data;
 
       return NextResponse.json(parsed);
     }
@@ -563,6 +490,6 @@ ${productsContext || 'محصولی انتخاب نشده است.'}
 
   } catch (error: any) {
     console.error('Error in generate-chunk API:', error);
-    return NextResponse.json({ error: error.message || 'خطای سرور در پردازش درخواست.' }, { status: 500 });
+    return NextResponse.json({ error: 'خطای سرور در پردازش درخواست.' }, { status: 500 });
   }
 }

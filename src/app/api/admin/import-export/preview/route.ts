@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { verifyAuth } from '@/lib/auth';
 import { getColorHexFromName } from '@/lib/colors';
+import { callAiGateway } from '@/lib/ai-gateway';
 
 // Robust CSV Parser (RFC 4180 compliant)
 function parseCSV(csvText: string): string[][] {
@@ -103,27 +104,6 @@ function chunkArray<T>(array: T[], size: number): T[][] {
     chunks.push(array.slice(i, i + size));
   }
   return chunks;
-}
-
-function cleanAndParseJson(text: string) {
-  try {
-    return JSON.parse(text);
-  } catch (e) {
-    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-    if (jsonMatch) {
-      try {
-        return JSON.parse(jsonMatch[1]);
-      } catch (innerError) {}
-    }
-    const firstBracket = text.indexOf('{');
-    const lastBracket = text.lastIndexOf('}');
-    if (firstBracket !== -1 && lastBracket !== -1) {
-      try {
-        return JSON.parse(text.substring(firstBracket, lastBracket + 1));
-      } catch (innerError) {}
-    }
-    throw new Error('Failed to parse AI response as JSON Object');
-  }
 }
 
 // Flexible header mapping for standard CSV
@@ -261,6 +241,7 @@ export async function POST(req: NextRequest) {
     if (!payload || !payload.shopId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const shopId = payload.shopId;
 
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
@@ -286,20 +267,6 @@ export async function POST(req: NextRequest) {
 
     // --- AI METHOD PREVIEW ---
     if (method === 'ai') {
-      const openrouterApiKeySetting = await prisma.systemSetting.findUnique({
-        where: { key: 'openrouter_api_key' },
-      });
-      const openrouterModelSetting = await prisma.systemSetting.findUnique({
-        where: { key: 'openrouter_model' },
-      });
-
-      const openrouterApiKey = openrouterApiKeySetting?.value;
-      const openrouterModel = openrouterModelSetting?.value || 'google/gemini-2.5-flash';
-
-      if (!openrouterApiKey) {
-        return NextResponse.json({ error: 'سرویس هوش مصنوعی در حال حاضر پیکربندی نشده است. لطفاً به پشتیبانی سیستم اطلاع دهید.' }, { status: 503 });
-      }
-
       let chunks: string[] = [];
       const isStructured = filename.endsWith('.json') || filename.endsWith('.csv');
 
@@ -325,35 +292,23 @@ export async function POST(req: NextRequest) {
       for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i];
         try {
-          const openRouterResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${openrouterApiKey}`,
-              'HTTP-Referer': 'http://localhost:3000',
-              'X-Title': 'SaaS Shop Builder AI Import Preview',
-            },
-            body: JSON.stringify({
-              model: openrouterModel,
-              messages: [
-                { role: 'system', content: AI_IMPORT_SYSTEM_PROMPT },
-                { role: 'user', content: `داده‌های زیر را آنالیز و استخراج کن:\n\n${chunk}` }
-              ],
-              temperature: 0.2,
-              max_tokens: 2500, // Explicitly set max_tokens to prevent OpenRouter from defaulting to 65535 tokens and blocking low-credit accounts
-              response_format: { type: "json_object" }
-            }),
+          const result = await callAiGateway<{ products: any[]; categories: any[] }>({
+            shopId,
+            endpoint: 'import-export:preview:ai',
+            slot: 'simple',
+            messages: [
+              { role: 'system', content: AI_IMPORT_SYSTEM_PROMPT },
+              { role: 'user', content: `داده‌های زیر را آنالیز و استخراج کن:\n\n${chunk}` }
+            ],
+            mode: 'json',
+            temperature: 0.2,
+            maxTokens: 2500,
+            requiredFields: [],
+            fallbackValue: { products: [], categories: [] },
           });
 
-          if (!openRouterResponse.ok) {
-            const errorText = await openRouterResponse.text();
-            throw new Error(`OpenRouter API error (status ${openRouterResponse.status}): ${errorText}`);
-          }
-
-          const responseData = await openRouterResponse.json();
-          const aiText = responseData.choices?.[0]?.message?.content;
-          if (aiText) {
-            const parsed = cleanAndParseJson(aiText);
+          if (result.success && result.data) {
+            const parsed = result.data;
             if (parsed.products && Array.isArray(parsed.products)) {
               products.push(...parsed.products);
             }
@@ -361,6 +316,8 @@ export async function POST(req: NextRequest) {
               categories.push(...parsed.categories);
             }
             successCount++;
+          } else {
+            throw new Error(result.error || 'خطا در پردازش سگمنت هوش مصنوعی.');
           }
         } catch (err: any) {
           console.error(`AI Preview Chunk ${i + 1} Error:`, err);
@@ -532,6 +489,6 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error('Preview Error:', error);
-    return NextResponse.json({ error: 'خطا در آنالیز و پیش‌نمایش داده‌ها.', details: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'خطا در آنالیز و پیش‌نمایش داده‌ها.' }, { status: 500 });
   }
 }

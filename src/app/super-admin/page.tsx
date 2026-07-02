@@ -189,6 +189,8 @@ export default function SuperAdminDashboard() {
   const [aiEnabled, setAiEnabled] = useState(true);
   const [centralBaleBotToken, setCentralBaleBotToken] = useState('');
   const [centralBaleBotApiKey, setCentralBaleBotApiKey] = useState('');
+  const [centralTelegramBotToken, setCentralTelegramBotToken] = useState('');
+  const [centralTelegramBotApiKey, setCentralTelegramBotApiKey] = useState('');
   const [prompts, setPrompts] = useState<Record<string, string>>({});
   const [loadingSettings, setLoadingSettings] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
@@ -198,7 +200,7 @@ export default function SuperAdminDashboard() {
   const [isEmbeddingLoading, setIsEmbeddingLoading] = useState(false);
   const [embeddingMessage, setEmbeddingMessage] = useState('');
   const [accountInfo, setAccountInfo] = useState<any>(null);
-  const [activeSettingsTab, setActiveSettingsTab] = useState<'api_keys' | 'central_bale' | 'base_prompts' | 'advanced_prompts' | 'article_prompts' | 'faq_prompts' | 'change_password'>('api_keys');
+  const [activeSettingsTab, setActiveSettingsTab] = useState<'api_keys' | 'central_bale' | 'central_telegram' | 'base_prompts' | 'advanced_prompts' | 'article_prompts' | 'faq_prompts' | 'change_password'>('api_keys');
 
   // Change Password State
   const [currentPassword, setCurrentPassword] = useState('');
@@ -304,6 +306,8 @@ export default function SuperAdminDashboard() {
         setAiEnabled(data.aiEnabled !== undefined ? data.aiEnabled : true);
         setCentralBaleBotToken(data.centralBaleBotToken || '');
         setCentralBaleBotApiKey(data.centralBaleBotApiKey || '');
+        setCentralTelegramBotToken(data.centralTelegramBotToken || '');
+        setCentralTelegramBotApiKey(data.centralTelegramBotApiKey || '');
         setPrompts(data.prompts || {});
         setAccountInfo(data.accountInfo || null);
         setAiModelRouter(data.aiModelRouter || '');
@@ -349,6 +353,8 @@ export default function SuperAdminDashboard() {
           prompts,
           centralBaleBotToken,
           centralBaleBotApiKey,
+          centralTelegramBotToken,
+          centralTelegramBotApiKey,
           aiModelRouter,
           aiModelSimple,
           aiModelComplex,
@@ -2042,6 +2048,7 @@ export default function SuperAdminDashboard() {
                     {[
                       { id: 'api_keys', label: 'کلیدهای API سیستم', icon: Key },
                       { id: 'central_bale', label: 'مدیریت ربات بله', icon: MessageSquare },
+                      { id: 'central_telegram', label: 'مدیریت ربات تلگرام', icon: Send },
                       { id: 'base_prompts', label: 'پرامپت‌های پایه سئو', icon: FileText },
                       { id: 'advanced_prompts', label: 'پرامپت‌های پیشرفته سئو', icon: Sparkles },
                       { id: 'article_prompts', label: 'پرامپت مقاله سئو', icon: Edit3 },
@@ -2676,6 +2683,63 @@ export default function SuperAdminDashboard() {
                         />
                         <p className="text-[10px] text-gray-500 font-bold leading-relaxed pt-1.5">
                           این کلید امنیتی جهت احراز هویت درخواست‌های ارسال شده از سرور ربات بله به درگاه <code className="bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-[9px] font-mono">/api/bale/gateway</code> استفاده می‌شود. این فیلد باید در هدر Authorization درخواست‌های ربات مرکزی قرار بگیرد.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* SUB TAB: CENTRAL TELEGRAM BOT */}
+                  {activeSettingsTab === 'central_telegram' && (
+                    <div className="space-y-5 animate-fadeIn">
+                      <div className="space-y-4">
+                        <h4 className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                          <Send className="w-4 h-4 text-blue-500" />
+                          تنظیمات اتصال متمرکز پیام‌رسان تلگرام (Centralized Telegram Bot)
+                        </h4>
+                        <p className="text-[10px] text-gray-500 font-bold leading-relaxed">
+                          تنظیمات ربات تلگرام مرکزی و درگاه توکن‌های اتصال فروشگاه‌ها جهت ارسال گزارشات و سفارشات جدید به حساب‌های تلگرام ادمین‌ها.
+                        </p>
+                      </div>
+
+                      <div className="bg-blue-50/50 border border-blue-100/80 rounded-xl p-3 flex gap-3 items-start">
+                        <div className="bg-blue-100 p-1.5 rounded-lg text-blue-500">
+                          <Zap className="w-4 h-4 animate-pulse" />
+                        </div>
+                        <div>
+                          <h5 className="text-[11px] font-bold text-blue-800">راه‌اندازی خودکار سرور ربات تلگرام</h5>
+                          <p className="text-[10px] text-blue-700/80 font-bold leading-relaxed mt-1">
+                            پس از ذخیره‌سازی اطلاعات، اسکریپت رانر ربات تلگرام به صورت کاملاً خودکار و خودکفا در پس‌زمینه سرور راه‌اندازی و بروزرسانی خواهد شد. نیازی به اجرای دستور دستی در ترمینال سرور نیست.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="block text-xs font-bold text-gray-700 mb-1">توکن بات مرکزی تلگرام (Central Bot Token)</label>
+                        <input
+                          type="password"
+                          value={centralTelegramBotToken}
+                          onChange={(e) => setCentralTelegramBotToken(e.target.value)}
+                          placeholder="e.g. 123456789:abcdef..."
+                          className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none text-xs font-mono text-gray-800 transition-all text-left"
+                          dir="ltr"
+                        />
+                        <p className="text-[10px] text-gray-500 font-bold leading-relaxed pt-1.5">
+                          توکن دریافتی از BotFather تلگرام برای ربات مرکزی کل سیستم. تمامی سفارشات و کدهای اتصال از طریق این ربات با کاربران مبادله می‌شود.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="block text-xs font-bold text-gray-700 mb-1">کلید امنیتی درگاه ربات مرکزی (Central Bot API Key)</label>
+                        <input
+                          type="text"
+                          value={centralTelegramBotApiKey}
+                          onChange={(e) => setCentralTelegramBotApiKey(e.target.value)}
+                          placeholder="یک کلید امن رندوم وارد کنید"
+                          className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none text-xs font-mono text-gray-800 transition-all text-left"
+                          dir="ltr"
+                        />
+                        <p className="text-[10px] text-gray-500 font-bold leading-relaxed pt-1.5">
+                          این کلید امنیتی جهت احراز هویت درخواست‌های ارسال شده از سرور ربات تلگرام به درگاه <code className="bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-[9px] font-mono">/api/telegram/gateway</code> استفاده می‌شود. این فیلد باید در هدر Authorization درخواست‌های ربات مرکزی قرار بگیرد.
                         </p>
                       </div>
                     </div>

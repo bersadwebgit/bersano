@@ -436,6 +436,16 @@ export async function GET() {
     const centralBaleBotToken = centralBaleBotTokenSetting?.value || '';
     const centralBaleBotApiKey = centralBaleBotApiKeySetting?.value || '';
 
+    const centralTelegramBotTokenSetting = await prisma.systemSetting.findUnique({
+      where: { key: 'central_telegram_bot_token' }
+    });
+    const centralTelegramBotApiKeySetting = await prisma.systemSetting.findUnique({
+      where: { key: 'central_telegram_bot_api_key' }
+    });
+
+    const centralTelegramBotToken = centralTelegramBotTokenSetting?.value || '';
+    const centralTelegramBotApiKey = centralTelegramBotApiKeySetting?.value || '';
+
     const prompts: Record<string, string> = { ...DEFAULT_PROMPTS };
     savedPrompts.forEach(p => {
       prompts[p.key] = p.value;
@@ -510,6 +520,8 @@ export async function GET() {
       accountInfo,
       centralBaleBotToken,
       centralBaleBotApiKey,
+      centralTelegramBotToken,
+      centralTelegramBotApiKey,
       aiModelRouter,
       aiModelSimple,
       aiModelComplex,
@@ -549,6 +561,8 @@ export async function POST(request: Request) {
       prompts,
       centralBaleBotToken,
       centralBaleBotApiKey,
+      centralTelegramBotToken,
+      centralTelegramBotApiKey,
       aiModelRouter,
       aiModelSimple,
       aiModelComplex,
@@ -578,6 +592,22 @@ export async function POST(request: Request) {
         where: { key: 'central_bale_bot_api_key' },
         update: { value: centralBaleBotApiKey },
         create: { key: 'central_bale_bot_api_key', value: centralBaleBotApiKey },
+      });
+    }
+
+    if (centralTelegramBotToken !== undefined) {
+      await prisma.systemSetting.upsert({
+        where: { key: 'central_telegram_bot_token' },
+        update: { value: centralTelegramBotToken },
+        create: { key: 'central_telegram_bot_token', value: centralTelegramBotToken },
+      });
+    }
+
+    if (centralTelegramBotApiKey !== undefined) {
+      await prisma.systemSetting.upsert({
+        where: { key: 'central_telegram_bot_api_key' },
+        update: { value: centralTelegramBotApiKey },
+        create: { key: 'central_telegram_bot_api_key', value: centralTelegramBotApiKey },
       });
     }
 
@@ -751,6 +781,57 @@ export async function POST(request: Request) {
           });
         } else {
           exec('pkill -f bale-bot.js', () => {
+            setTimeout(spawnNewProcess, 1000);
+          });
+        }
+      }
+    }
+
+    // Automatically trigger starting or restarting the Telegram Bot Runner process on the server
+    if (centralTelegramBotToken && process.env.DISABLE_AUTO_TELEGRAM_BOT !== 'true') {
+      console.log('[INFO] [TelegramBotManager]: Automatically launching/restarting Telegram Bot Runner process...');
+      
+      const pidFilePath = path.join(process.cwd(), 'scripts', 'telegram-bot.pid');
+      
+      const spawnNewProcess = () => {
+        const botProcess = spawn('npm', ['run', 'telegram-bot'], {
+          detached: true,
+          stdio: 'ignore',
+          shell: true
+        });
+        botProcess.unref();
+        console.log('[INFO] [TelegramBotManager]: Successfully spawned Telegram Bot process.');
+      };
+
+      if (fs.existsSync(pidFilePath)) {
+        try {
+          const oldPid = fs.readFileSync(pidFilePath, 'utf8').trim();
+          if (oldPid) {
+            console.log(`[INFO] [TelegramBotManager]: Found old PID ${oldPid}, killing...`);
+            if (process.platform === 'win32') {
+              exec(`taskkill /F /PID ${oldPid} 2>nul`, () => {
+                setTimeout(spawnNewProcess, 1000);
+              });
+            } else {
+              try {
+                process.kill(Number(oldPid), 'SIGKILL');
+              } catch (e) {}
+              setTimeout(spawnNewProcess, 1000);
+            }
+          } else {
+            spawnNewProcess();
+          }
+        } catch (err) {
+          console.error('[WARN] Failed to read or kill old PID, spawning anyway:', err);
+          spawnNewProcess();
+        }
+      } else {
+        if (process.platform === 'win32') {
+          exec('taskkill /F /FI "WINDOWTITLE eq npm run telegram-bot*" /T 2>nul || taskkill /F /FI "COMMANDLINE eq *telegram-bot.js*" /T 2>nul', () => {
+            setTimeout(spawnNewProcess, 1000);
+          });
+        } else {
+          exec('pkill -f telegram-bot.js', () => {
             setTimeout(spawnNewProcess, 1000);
           });
         }

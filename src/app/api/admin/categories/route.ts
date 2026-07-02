@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getTenantShop } from '@/lib/tenant';
 import { verifyAuth } from '@/lib/auth';
 import { Invalidate } from '@/lib/invalidate';
+import { callAiGateway } from '@/lib/ai-gateway';
 
 const iconKeywords = [
   {
@@ -123,29 +124,8 @@ function getIconFromKeywords(name: string, description?: string): string | null 
   return null;
 }
 
-async function getIconFromAi(name: string, description?: string): Promise<string | null> {
+async function getIconFromAi(shopId: string, name: string, description?: string): Promise<string | null> {
   try {
-    const settings = await prisma.systemSetting.findMany({
-      where: {
-        key: {
-          in: ['ai_enabled', 'openrouter_api_key', 'openrouter_model', 'openrouter_control_model']
-        }
-      }
-    });
-
-    const settingsMap = new Map(settings.map(s => [s.key, s.value]));
-
-    if (settingsMap.get('ai_enabled') === 'false') {
-      return null;
-    }
-
-    const apiKey = settingsMap.get('openrouter_api_key') || '';
-    const openrouterModel = settingsMap.get('openrouter_control_model') || settingsMap.get('openrouter_model') || 'google/gemini-2.5-flash';
-
-    if (!apiKey) {
-      return null;
-    }
-
     const prompt = `تو یک دستیار هوشمند طراحی رابط کاربری (UI/UX) هستی.
 وظیفه تو این است که بر اساس نام و توضیحات یک دسته‌بندی فروشگاهی، مناسب‌ترین نام آیکون از کتابخانه معروف Lucide Icons را پیشنهاد دهی.
 
@@ -161,32 +141,24 @@ async function getIconFromAi(name: string, description?: string): Promise<string
 مثال خروجی:
 Smartphone`;
 
-    const openRouterResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': 'http://localhost:3000',
-        'X-Title': 'SaaS Shop Builder - Category Icon Auto Generator',
-      },
-      body: JSON.stringify({
-        model: openrouterModel,
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.1,
-        max_tokens: 30,
-      }),
+    const result = await callAiGateway({
+      shopId,
+      endpoint: 'categories:icon',
+      slot: 'simple',
+      messages: [
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      mode: 'text',
+      temperature: 0.1,
+      maxTokens: 30,
     });
 
-    if (openRouterResponse.ok) {
-      const responseData = await openRouterResponse.json();
-      const aiText = responseData.choices?.[0]?.message?.content?.trim();
-      if (aiText && aiText.length < 50) {
-        const cleanedIcon = aiText.replace(/[^a-zA-Z0-9]/g, '');
+    if (result.success && result.text) {
+      const cleanedIcon = result.text.trim().replace(/[^a-zA-Z0-9]/g, '');
+      if (cleanedIcon && cleanedIcon.length < 50) {
         return cleanedIcon;
       }
     }
@@ -258,7 +230,7 @@ export async function POST(request: Request) {
       if (keywordIcon) {
         icon = keywordIcon;
       } else {
-        const aiIcon = await getIconFromAi(name, description);
+        const aiIcon = await getIconFromAi(shop.shopId, name, description);
         icon = aiIcon || 'Folder';
       }
     }

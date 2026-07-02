@@ -144,6 +144,9 @@ export default function SettingsPage() {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [testingBale, setTestingBale] = useState(false);
   const [tokenChanged, setTokenChanged] = useState(false);
+  const [telegramTokenChanged, setTelegramTokenChanged] = useState(false);
+  const [testingTelegram, setTestingTelegram] = useState(false);
+  const [telegramTestResult, setTelegramTestResult] = useState<{ type: 'success' | 'error' | '', text: string }>({ type: '', text: '' });
   const [testResult, setTestResult] = useState<{ type: 'success' | 'error' | '', text: string }>({ type: '', text: '' });
   const [testingSms, setTestingSms] = useState(false);
   const [smsTestPhone, setSmsTestPhone] = useState('');
@@ -387,6 +390,10 @@ export default function SettingsPage() {
   baleChatId: '',
   baleOrderNotificationsEnabled: false,
   baleNotificationStatuses: ['new_order', 'status_change'],
+  telegramIntegrationToken: '',
+  telegramChatId: '',
+  telegramOrderNotificationsEnabled: false,
+  telegramNotificationStatuses: ['new_order', 'status_change'],
   googleAnalyticsId: '',
   googleTagManagerId: '',
   microsoftClarityId: '',
@@ -599,6 +606,10 @@ export default function SettingsPage() {
             baleChatId: data.settings.baleChatId || '',
             baleOrderNotificationsEnabled: data.settings.baleOrderNotificationsEnabled || false,
             baleNotificationStatuses: data.settings.baleNotificationStatuses ? JSON.parse(data.settings.baleNotificationStatuses) : ['new_order', 'status_change'],
+            telegramIntegrationToken: data.settings.telegramIntegrationToken || '',
+            telegramChatId: data.settings.telegramChatId || '',
+            telegramOrderNotificationsEnabled: data.settings.telegramOrderNotificationsEnabled || false,
+            telegramNotificationStatuses: data.settings.telegramNotificationStatuses ? JSON.parse(data.settings.telegramNotificationStatuses) : ['new_order', 'status_change'],
             googleAnalyticsId: data.settings.googleAnalyticsId || '',
             googleTagManagerId: data.settings.googleTagManagerId || '',
             microsoftClarityId: data.settings.microsoftClarityId || '',
@@ -881,6 +892,17 @@ export default function SettingsPage() {
     }
     setFormData(prev => ({ ...prev, baleIntegrationToken: token }));
     setTokenChanged(true);
+  };
+
+  const handleGenerateTelegramToken = () => {
+    // Generate an 8-character unique uppercase random token
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let token = 'TELE-';
+    for (let i = 0; i < 8; i++) {
+      token += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setFormData(prev => ({ ...prev, telegramIntegrationToken: token }));
+    setTelegramTokenChanged(true);
   };
 
   const handleSendTestSms = async () => {
@@ -3677,6 +3699,177 @@ export default function SettingsPage() {
                     <div className="text-[9.5px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
                       <Info className="w-3.5 h-3.5" />
                       <span>برای شروع، دکمه «اعلان‌های بات سفارشات بله» را در کارت روبه‌رو فعال کرده و رمز اتصال بسازید.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 1.2 TELEGRAM Service */}
+              <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800/80 space-y-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-50 dark:border-slate-850 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center text-blue-500 shrink-0">
+                      <Send className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-black text-slate-850 dark:text-white flex items-center gap-2">
+                        پیام‌رسان تلگرام (Telegram Messenger)
+                        <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[9px] font-black px-2 py-0.5 rounded-full">
+                          {formData.telegramOrderNotificationsEnabled && formData.telegramChatId ? 'متصل شده' : 'آماده اتصال'}
+                        </span>
+                      </h3>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold mt-0.5">
+                        فعال‌سازی ارسال گزارشات و اعلان سفارشات جدید از طریق ربات مرکزی پلتفرم در پیام‌رسان تلگرام
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Centralized Bot Connection Card */}
+                  <div className="bg-slate-50/50 dark:bg-slate-950/20 p-6 rounded-2xl border border-slate-100/50 dark:border-slate-800/40 space-y-5">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <Bell className="w-4.5 h-4.5 text-blue-500" />
+                        <h4 className="text-xs font-black text-slate-800 dark:text-slate-200">اتصال به ربات مرکزی تلگرام</h4>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, telegramOrderNotificationsEnabled: !prev.telegramOrderNotificationsEnabled }))}
+                        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                          formData.telegramOrderNotificationsEnabled ? 'bg-blue-600' : 'bg-slate-200 dark:bg-slate-800'
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                            formData.telegramOrderNotificationsEnabled ? 'translate-x-4' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    </div>
+
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold leading-relaxed">
+                      دیگر نیازی به ساخت ربات شخصی در BotFather ندارید! از طریق اتصال امن به ربات مرکزی، سفارشات جدید و گزارشات را مستقیماً در اکانت شخصی تلگرام خود دریافت کنید.
+                    </p>
+
+                    {formData.telegramOrderNotificationsEnabled && (
+                      <div className="space-y-4 pt-1 animate-in fade-in slide-in-from-top-2 duration-200">
+                        {/* Token Gen/View Section */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-1.5">
+                            <label className="text-[10px] font-black text-slate-650 dark:text-slate-350">رمز اتصال یکتا (Telegram Integration Token)</label>
+                            <div className="relative group inline-block">
+                              <HelpCircle className="w-3.5 h-3.5 text-slate-400 hover:text-blue-500 cursor-pointer transition-colors" />
+                              <div className="absolute bottom-full right-0 mb-2 w-64 p-4 bg-slate-900 dark:bg-slate-950 text-white rounded-2xl shadow-xl border border-slate-800 hidden group-hover:block transition-all duration-200 z-50 text-[10px] leading-relaxed">
+                                <div className="font-black text-blue-400 mb-1.5 flex items-center gap-1 border-b border-slate-800 pb-1">
+                                  <span>آموزش گام‌به‌گام اتصال به ربات مرکزی:</span>
+                                </div>
+                                <ol className="list-decimal list-inside space-y-1.5 text-slate-300 font-bold">
+                                  <li>رمز اتصال زیر را تولید کنید. (تنظیمات را ذخیره کنید)</li>
+                                  <li>وارد ربات مرکزی پلتفرم در تلگرام شوید.</li>
+                                  <li>شماره موبایل ثبت‌شده در پنل خود را وارد کنید.</li>
+                                  <li>رمز اتصال زیر را برای ربات بفرستید تا حساب شما متصل شود!</li>
+                                </ol>
+                                <div className="absolute top-full right-4 w-2 h-2 bg-slate-900 dark:bg-slate-950 border-r border-b border-slate-800 transform rotate-45" />
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              readOnly
+                              value={formData.telegramIntegrationToken || ''}
+                              className="grow text-[11px] font-mono p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-350 focus:outline-none select-all text-center tracking-widest font-black"
+                              placeholder="رمزی هنوز ساخته نشده است"
+                            />
+                            <button
+                              type="button"
+                              onClick={handleGenerateTelegramToken}
+                              className="px-3 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/30 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/40 rounded-xl text-[10px] font-black transition-colors shrink-0"
+                            >
+                              ساخت رمز جدید
+                            </button>
+                          </div>
+
+                          {telegramTokenChanged && (
+                            <p className="text-[9.5px] text-amber-600 dark:text-amber-400 font-bold bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/20 p-2.5 rounded-xl animate-pulse leading-normal">
+                              ⚠️ رمز اتصال تغییر کرد. برای ثبت نهایی حتماً روی دکمه <strong>«ذخیره تغییرات»</strong> در بالای صفحه کلیک کنید.
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Linked Chat ID Status */}
+                        <div className="bg-slate-100/60 dark:bg-slate-950/40 p-3.5 rounded-xl border border-slate-150 dark:border-slate-850">
+                          <div className="flex justify-between items-center text-[10px] font-bold">
+                            <span className="text-slate-500">وضعیت اتصال چت تلگرام:</span>
+                            {formData.telegramChatId ? (
+                              <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-black">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                متصل شده (شناسه چت: {formData.telegramChatId})
+                              </span>
+                            ) : (
+                              <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1 font-black">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                منتظر تایید در ربات
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Status Customization Checklist */}
+                        <div className="space-y-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+                          <label className="text-[10px] font-black text-slate-650 dark:text-slate-350 block">مراحل و وضعیت‌های سفارش ارسالی به تلگرام:</label>
+                          <div className="grid grid-cols-2 gap-2 text-[10px] font-bold text-slate-600 dark:text-slate-400">
+                            {[
+                              { id: 'new_order', label: '🛒 ثبت سفارش جدید' },
+                              { id: 'paid', label: '✅ پرداخت شده' },
+                              { id: 'shipped', label: '🚚 ارسال شده' },
+                              { id: 'delivered', label: '📦 تحویل شده' },
+                              { id: 'cancelled', label: '❌ لغو شده' },
+                            ].map((statusItem) => {
+                              const isChecked = Array.isArray(formData.telegramNotificationStatuses) 
+                                ? formData.telegramNotificationStatuses.includes(statusItem.id)
+                                : false;
+                              return (
+                                <label key={statusItem.id} className="flex items-center gap-2 cursor-pointer p-1.5 hover:bg-slate-100/40 dark:hover:bg-slate-950/20 rounded-lg transition-colors">
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={(e) => {
+                                      const current = Array.isArray(formData.telegramNotificationStatuses) ? [...formData.telegramNotificationStatuses] : [];
+                                      let updated;
+                                      if (e.target.checked) {
+                                        updated = [...current, statusItem.id];
+                                      } else {
+                                        updated = current.filter(x => x !== statusItem.id);
+                                      }
+                                      setFormData(prev => ({ ...prev, telegramNotificationStatuses: updated }));
+                                    }}
+                                    className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
+                                  />
+                                  <span>{statusItem.label}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Informational Guidance Box */}
+                  <div className="bg-slate-50/50 dark:bg-slate-950/20 p-6 rounded-2xl border border-slate-100/50 dark:border-slate-800/40 space-y-4 flex flex-col justify-center">
+                    <h4 className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                      <Sparkles className="w-4.5 h-4.5 text-blue-500" />
+                      مکانیزم یکپارچه و امن ربات مرکزی تلگرام
+                    </h4>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold leading-relaxed">
+                      سیستم هوشمند ربات مرکزی پلتفرم ما به صورت کاملاً ایزوله و رمزنگاری شده اجرا می‌شود. هر فروشگاه دارای یک رمز امنیتی یکتای تصادفی است. با به اشتراک‌گذاری این رمز منحصراً با ربات مرکزی، چت‌آیدی شما به صورت رمزگذاری شده متصل شده و تمامی گزارشات سفارشات شما در بستری فوق‌العاده امن، سریع و بدون تاخیر ارسال خواهد شد.
+                    </p>
+                    <div className="text-[9.5px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                      <Info className="w-3.5 h-3.5" />
+                      <span>برای شروع، دکمه «اعلان‌های بات سفارشات تلگرام» را در کارت روبه‌رو فعال کرده و رمز اتصال بسازید.</span>
                     </div>
                   </div>
                 </div>
