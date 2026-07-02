@@ -61,11 +61,27 @@ services:
       DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/shop_final?schema=public"
       UPSTASH_REDIS_REST_URL: "http://serverless-redis-http:80"
       UPSTASH_REDIS_REST_TOKEN: "${SRH_TOKEN}"
+      DISABLE_AUTO_BALE_BOT: "true"
     depends_on:
       postgres:
         condition: service_healthy
       serverless-redis-http:
         condition: service_started
+    networks:
+      - internal
+
+  bale-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: shop-bale-bot
+    restart: always
+    command: ["node", "scripts/bale-bot.js"]
+    environment:
+      DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/shop_final?schema=public"
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - internal
 

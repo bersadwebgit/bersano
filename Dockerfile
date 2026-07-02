@@ -58,6 +58,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/client ./nod
 # Copy Prisma schema and migrations to be able to run migrations on startup
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
+# Copy scripts folder for Bale Bot or other utility scripts
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
+
 # Copy docker-entrypoint script
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh

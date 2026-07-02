@@ -707,7 +707,7 @@ export async function POST(request: Request) {
     invalidateModelCache();
 
     // Automatically trigger starting or restarting the Bale Bot Runner process on the server
-    if (centralBaleBotToken) {
+    if (centralBaleBotToken && process.env.DISABLE_AUTO_BALE_BOT !== 'true') {
       console.log('[INFO] [BaleBotManager]: Automatically launching/restarting Bale Bot Runner process...');
       
       const pidFilePath = path.join(process.cwd(), 'scripts', 'bale-bot.pid');
