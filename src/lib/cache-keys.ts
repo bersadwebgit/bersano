@@ -8,6 +8,10 @@ export const TTL = {
   BLOG_POST: 900,           // 15 min
   BLOG_LIST: 300,           // 5 min
   FOOTER_CONFIG: 3600,      // 1 hour
+  MENU: 3600,               // 1 hour
+  BRANDS: 3600,             // 1 hour
+  BLOG_HOME: 900,           // 15 min
+  HOME_DATA: 300,           // 5 min
 } as const
 
 export const CacheKeys = {
@@ -24,4 +28,8 @@ export const CacheKeys = {
   blogList:      (shopId: string, page: number) =>
                    `shop:${shopId}:blog:list:${page}`,
   footerConfig:  (shopId: string) => `shop:${shopId}:footer`,
+  menu:          (shopId: string) => `shop:${shopId}:menu`,
+  brands:        (shopId: string) => `shop:${shopId}:brands`,
+  blogHome:      (shopId: string) => `shop:${shopId}:blog:home`,
+  homeData:      (shopId: string) => `shop:${shopId}:home`,
 }

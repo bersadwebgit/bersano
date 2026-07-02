@@ -18,6 +18,7 @@ export const Invalidate = {
           await redis.del(CacheKeys.shopSettings(settings.customDomain))
         }
       }
+      await redis.del(CacheKeys.homeData(shopId))
     } catch (err) {
       console.warn('Failed to invalidate shop settings:', err)
     }
@@ -27,6 +28,7 @@ export const Invalidate = {
     if (!redis) return
     try {
       await redis.del(CacheKeys.categories(shopId))
+      await redis.del(CacheKeys.homeData(shopId))
     } catch {}
   },
 
@@ -34,18 +36,24 @@ export const Invalidate = {
     if (!redis) return
     try {
       await redis.del(CacheKeys.productDetail(shopId, productId))
+      await redis.del(CacheKeys.homeData(shopId))
       await invalidatePattern(`shop:${shopId}:products:*`)
     } catch {}
   },
 
   products: async (shopId: string) => {
-    await invalidatePattern(`shop:${shopId}:products:*`)
+    if (!redis) return
+    try {
+      await redis.del(CacheKeys.homeData(shopId))
+      await invalidatePattern(`shop:${shopId}:products:*`)
+    } catch {}
   },
 
   heroSlides: async (shopId: string) => {
     if (!redis) return
     try {
       await redis.del(CacheKeys.heroSlides(shopId))
+      await redis.del(CacheKeys.homeData(shopId))
     } catch {}
   },
 
@@ -60,6 +68,7 @@ export const Invalidate = {
     if (!redis) return
     try {
       await redis.del(CacheKeys.blogPost(shopId, slug))
+      await redis.del(CacheKeys.homeData(shopId))
       await invalidatePattern(`shop:${shopId}:blog:list:*`)
     } catch {}
   },
@@ -68,6 +77,7 @@ export const Invalidate = {
     if (!redis) return
     try {
       await redis.del(CacheKeys.footerConfig(shopId))
+      await redis.del(CacheKeys.homeData(shopId))
     } catch {}
   },
 

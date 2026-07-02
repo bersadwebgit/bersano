@@ -1,5 +1,7 @@
 import { getTenantShop } from '@/lib/tenant';
 import { prisma } from '@/lib/prisma';
+import { getCachedCategories, getCachedMenuItems } from '@/lib/cached-queries';
+import { logPerf } from '@/lib/perf-logger';
 import { notFound } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
@@ -57,7 +59,9 @@ interface BlogListPageProps {
 }
 
 export default async function BlogListPage({ searchParams }: BlogListPageProps) {
+  const startBlog = performance.now();
   const shop = await getTenantShop();
+  logPerf('blog.tenant_resolve', startBlog);
   
   if (!shop) {
     return notFound();
@@ -114,6 +118,7 @@ export default async function BlogListPage({ searchParams }: BlogListPageProps) 
     orderBy = { viewCount: 'desc' };
   }
 
+  const startData = performance.now();
   // Fetch blog data on the server
   const [posts, totalCount, popularPosts, categories, allPostsWithTags] = await Promise.all([
     prisma.blogPost.findMany({
@@ -180,6 +185,7 @@ export default async function BlogListPage({ searchParams }: BlogListPageProps) 
       select: { tags: true }
     })
   ]);
+  logPerf('blog.data_load', startData);
 
   // Compile popular tags
   const tagCounts: Record<string, number> = {};
@@ -201,15 +207,8 @@ export default async function BlogListPage({ searchParams }: BlogListPageProps) 
 
   // Fetch header layout items (product categories and menu items)
   const [productCategories, menuItems] = await Promise.all([
-    prisma.category.findMany({
-      where: { shopId: shop.shopId, isActive: true },
-      include: { children: { where: { isActive: true } } },
-      orderBy: { createdAt: 'desc' }
-    }),
-    prisma.menuItem.findMany({
-      where: { shopId: shop.shopId, isActive: true },
-      orderBy: { order: 'asc' }
-    })
+    getCachedCategories(shop.shopId),
+    getCachedMenuItems(shop.shopId)
   ]);
 
   let headerConfig = undefined;
@@ -261,6 +260,8 @@ export default async function BlogListPage({ searchParams }: BlogListPageProps) 
       'url': `${protocol}://${host}/blog/${p.slug}`,
     })),
   };
+
+  logPerf('blog.total', startBlog);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black font-sans pb-20 lg:pb-0" dir="rtl">

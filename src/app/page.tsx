@@ -18,7 +18,8 @@ import SaaSLandingPage from '@/components/saas/SaaSLandingPage';
 import ScrollReveal from '@/components/store/ScrollReveal';
 import { getTenantShop } from '@/lib/tenant';
 import { prisma } from '@/lib/prisma';
-import { ensureDemoProduct } from '@/lib/demo-product';
+import { getStoreHomeData } from '@/lib/store-home-data';
+import { logPerf } from '@/lib/perf-logger';
 import { notFound } from 'next/navigation';
 import { headers, cookies } from 'next/headers';
 import { Suspense } from 'react';
@@ -56,7 +57,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function Home() {
+  const startHome = performance.now();
   const shop = await getTenantShop(undefined, true);
+  logPerf('tenant.resolve', startHome);
   
   if (!shop) {
     return <SaaSLandingPage />;
@@ -122,7 +125,21 @@ export default async function Home() {
     );
   }
 
-  await ensureDemoProduct(shop.shopId);
+  const startData = performance.now();
+  const {
+    products,
+    slides,
+    categories,
+    menuItems,
+    settings,
+    specialProducts,
+    bestSellers,
+    discountedProducts,
+    homepageReviews,
+    blogPosts,
+    dbBrands
+  } = await getStoreHomeData(shop.shopId);
+  logPerf('home.data_load', startData);
 
   const cookieStore = await cookies();
   const customerToken = cookieStore.get('customer_token')?.value;
@@ -137,114 +154,6 @@ export default async function Home() {
       isWholesaler = !!user?.isWholesaler;
     } catch (err) {}
   }
-
-  const [products, slides, categories, menuItems, settings, specialProducts, bestSellers, discountedProducts, homepageReviews, blogPosts, dbBrands] = await Promise.all([
-    prisma.product.findMany({
-      where: { shopId: shop.shopId, isActive: true },
-      orderBy: { createdAt: 'desc' }
-    }),
-    prisma.heroSlide.findMany({
-      where: { shopId: shop.shopId, isActive: true },
-      orderBy: { order: 'asc' }
-    }),
-    prisma.category.findMany({
-      where: { shopId: shop.shopId, isActive: true },
-      include: {
-        children: {
-          where: { isActive: true }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    }),
-    prisma.menuItem.findMany({
-      where: { shopId: shop.shopId, isActive: true },
-      orderBy: { order: 'asc' }
-    }),
-    prisma.shopSettings.findUnique({
-      where: { shopId: shop.shopId },
-      select: { headerConfig: true, specialDealsEnabled: true, specialDealsLimit: true, homePageType: true, customHomeConfig: true, wholesaleEnabled: true }
-    }),
-    prisma.product.findMany({
-      where: { shopId: shop.shopId, isSpecial: true, isActive: true },
-      include: {
-        orderItems: {
-          select: {
-            quantity: true
-          }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    }),
-    prisma.product.findMany({
-      where: { shopId: shop.shopId, isActive: true },
-      orderBy: {
-        orderItems: {
-          _count: 'desc'
-        }
-      },
-      take: 8
-    }),
-    prisma.product.findMany({
-      where: {
-        shopId: shop.shopId,
-        isActive: true,
-        OR: [
-          { discount: { gt: 0 } },
-          { isSpecial: true }
-        ]
-      },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        price: true,
-        discount: true,
-        imageUrl: true,
-        stock: true,
-        isSpecial: true,
-        specialEndsAt: true
-      },
-      orderBy: [
-        { discount: 'desc' },
-        { createdAt: 'desc' }
-      ],
-      take: 8
-    }),
-    prisma.review.findMany({
-      where: { shopId: shop.shopId, showOnHomepage: true, status: 'approved' },
-      include: {
-        user: { select: { name: true, avatarUrl: true } },
-        product: { select: { title: true } }
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 12
-    }),
-    prisma.blogPost.findMany({
-      where: {
-        shopId: shop.shopId,
-        status: 'published',
-        publishedAt: { lte: new Date() }
-      },
-      orderBy: { publishedAt: 'desc' },
-      take: 12,
-      include: {
-        category: true,
-        author: {
-          select: {
-            name: true,
-            avatarUrl: true,
-          }
-        },
-        _count: {
-          select: { comments: { where: { status: 'approved' } } }
-        }
-      }
-    }),
-    prisma.brand.findMany({
-      where: { shopId: shop.shopId },
-      orderBy: { name: 'asc' }
-    })
-  ]);
 
   const mappedSpecialProducts = specialProducts.map(product => {
     const soldCount = (product as any).orderItems?.reduce((sum: number, item: any) => sum + item.quantity, 0) || 0;
@@ -424,6 +333,7 @@ export default async function Home() {
   // Render Shop Page directly if type is 'shop'
   if (homePageType === 'shop') {
     const showSliderInShop = customHome.showSlider && (customHome.sliderDisplayLocation === 'shop' || customHome.sliderDisplayLocation === 'both');
+    logPerf('home.total', startHome);
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-black font-sans pb-20 lg:pb-0 relative overflow-hidden">
         {/* Ambient Glow Blobs (static — no perpetual animation for battery/repaint friendliness) */}
@@ -980,6 +890,8 @@ export default async function Home() {
         return null;
     }
   };
+
+  logPerf('home.total', startHome);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black font-sans pb-20 lg:pb-0 relative overflow-hidden">

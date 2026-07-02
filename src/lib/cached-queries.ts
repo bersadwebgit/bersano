@@ -1,33 +1,80 @@
-import { unstable_cache } from 'next/cache'
 import { prisma } from './prisma'
+import { cached } from './redis'
+import { CacheKeys, TTL } from './cache-keys'
 
-export const getCachedCategories = (shopId: string) =>
-  unstable_cache(
-    () => prisma.category.findMany({
-      where: { shopId, parentId: null },
-      include: { children: true },
-      orderBy: { name: 'asc' }
-    }),
-    [`categories-${shopId}`],
-    { revalidate: 1800, tags: [`categories-${shopId}`] }
-  )()
+export async function getCachedCategories(shopId: string) {
+  return cached(
+    CacheKeys.categories(shopId),
+    TTL.CATEGORIES,
+    async () => prisma.category.findMany({
+      where: { shopId, isActive: true },
+      include: {
+        children: {
+          where: { isActive: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+  );
+}
 
-export const getCachedHeroSlides = (shopId: string) =>
-  unstable_cache(
-    () => prisma.heroSlide.findMany({
+export async function getCachedHeroSlides(shopId: string) {
+  return cached(
+    CacheKeys.heroSlides(shopId),
+    TTL.HERO_SLIDES,
+    async () => prisma.heroSlide.findMany({
       where: { shopId, isActive: true },
       orderBy: { order: 'asc' }
-    }),
-    [`hero-${shopId}`],
-    { revalidate: 3600, tags: [`hero-${shopId}`] }
-  )()
+    })
+  );
+}
 
-export const getCachedProductDetail = (shopId: string, productId: string) =>
-  unstable_cache(
-    () => prisma.product.findFirst({
+export async function getCachedMenuItems(shopId: string) {
+  return cached(
+    CacheKeys.menu(shopId),
+    TTL.MENU,
+    async () => prisma.menuItem.findMany({
+      where: { shopId, isActive: true },
+      orderBy: { order: 'asc' }
+    })
+  );
+}
+
+export async function getCachedBrands(shopId: string) {
+  return cached(
+    CacheKeys.brands(shopId),
+    TTL.BRANDS,
+    async () => prisma.brand.findMany({
+      where: { shopId },
+      orderBy: { name: 'asc' }
+    })
+  );
+}
+
+export async function getCachedProductDetail(shopId: string, productId: string) {
+  return cached(
+    CacheKeys.productDetail(shopId, productId),
+    TTL.PRODUCT_DETAIL,
+    async () => prisma.product.findFirst({
       where: { id: productId, shopId, isActive: true },
-      include: { variants: true, category: true }
-    }),
-    [`product-${shopId}-${productId}`],
-    { revalidate: 600, tags: [`product-${shopId}-${productId}`] }
-  )()
+      include: {
+        variants: true,
+        category: {
+          select: { id: true, name: true, slug: true }
+        },
+        categories: {
+          select: { id: true, name: true, slug: true }
+        },
+        reviews: {
+          where: { status: 'approved' },
+          include: {
+            user: {
+              select: { name: true }
+            }
+          },
+          orderBy: { createdAt: 'desc' }
+        }
+      }
+    })
+  );
+}

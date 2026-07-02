@@ -9,7 +9,8 @@ import { getFooterConfig } from '@/app/actions/footer';
 import StoryList from '@/components/stories/StoryList';
 import { getTenantShop } from '@/lib/tenant';
 import { prisma } from '@/lib/prisma';
-import { ensureDemoProduct } from '@/lib/demo-product';
+import { getCachedCategories, getCachedMenuItems, getCachedBrands, getCachedHeroSlides } from '@/lib/cached-queries';
+import { logPerf } from '@/lib/perf-logger';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
@@ -43,13 +44,13 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ShopPage() {
+  const startShop = performance.now();
   const shop = await getTenantShop();
+  logPerf('shop.tenant_resolve', startShop);
   
   if (!shop) {
     return notFound();
   }
-
-  await ensureDemoProduct(shop.shopId);
 
   const cookieStore = await cookies();
   const customerToken = cookieStore.get('customer_token')?.value;
@@ -65,41 +66,51 @@ export default async function ShopPage() {
     } catch (err) {}
   }
 
+  const startData = performance.now();
+  const productListSelect = {
+    id: true,
+    title: true,
+    type: true,
+    categoryId: true,
+    description: true,
+    price: true,
+    discount: true,
+    imageUrl: true,
+    stock: true,
+    isSpecial: true,
+    specialEndsAt: true,
+    isActive: true,
+    brand: true,
+    createdAt: true,
+    isWholesaleOnly: true,
+    wholesalePrice: true,
+    wholesaleUnit: true,
+    moq: true,
+  };
+
   const [products, slides, categories, menuItems, settings, specialProducts, dbBrands] = await Promise.all([
     prisma.product.findMany({
       where: { shopId: shop.shopId, isActive: true },
-      orderBy: { createdAt: 'desc' }
+      select: productListSelect,
+      orderBy: { createdAt: 'desc' },
+      take: 40
     }),
-    prisma.heroSlide.findMany({
-      where: { shopId: shop.shopId, isActive: true },
-      orderBy: { order: 'asc' }
-    }),
-    prisma.category.findMany({
-      where: { shopId: shop.shopId, isActive: true },
-      include: {
-        children: {
-          where: { isActive: true }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    }),
-    prisma.menuItem.findMany({
-      where: { shopId: shop.shopId, isActive: true },
-      orderBy: { order: 'asc' }
-    }),
+    getCachedHeroSlides(shop.shopId),
+    getCachedCategories(shop.shopId),
+    getCachedMenuItems(shop.shopId),
     prisma.shopSettings.findUnique({
       where: { shopId: shop.shopId },
       select: { headerConfig: true, specialDealsEnabled: true, specialDealsLimit: true, customHomeConfig: true, wholesaleEnabled: true }
     }),
     prisma.product.findMany({
       where: { shopId: shop.shopId, isSpecial: true, isActive: true },
-      orderBy: { createdAt: 'desc' }
+      select: productListSelect,
+      orderBy: { createdAt: 'desc' },
+      take: 8
     }),
-    prisma.brand.findMany({
-      where: { shopId: shop.shopId },
-      orderBy: { name: 'asc' }
-    })
+    getCachedBrands(shop.shopId)
   ]);
+  logPerf('shop.data_load', startData);
 
   let headerConfig = undefined;
   const footerConfig = await getFooterConfig();
@@ -132,6 +143,8 @@ export default async function ShopPage() {
     : ((customHome as any).brands || []);
 
   const showSliderInShop = customHome.showSlider && (customHome.sliderDisplayLocation === 'shop' || customHome.sliderDisplayLocation === 'both');
+
+  logPerf('shop.total', startShop);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black font-sans pb-20 lg:pb-0">

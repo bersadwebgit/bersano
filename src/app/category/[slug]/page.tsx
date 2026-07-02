@@ -7,7 +7,8 @@ import { getFooterConfig } from '@/app/actions/footer';
 import CategorySeoSection from '@/components/store/CategorySeoSection';
 import { getTenantShop } from '@/lib/tenant';
 import { prisma } from '@/lib/prisma';
-import { ensureDemoProduct } from '@/lib/demo-product';
+import { getCachedCategories, getCachedMenuItems, getCachedBrands } from '@/lib/cached-queries';
+import { logPerf } from '@/lib/perf-logger';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
@@ -54,7 +55,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function CategoryPage({ params }: Props) {
+  const startCategory = performance.now();
   const shop = await getTenantShop();
+  logPerf('category.tenant_resolve', startCategory);
   
   if (!shop) {
     return notFound();
@@ -62,8 +65,6 @@ export default async function CategoryPage({ params }: Props) {
 
   const { slug } = await params;
   const decodedSlug = decodeURIComponent(slug);
-
-  await ensureDemoProduct(shop.shopId);
 
   const cookieStore = await cookies();
   const customerToken = cookieStore.get('customer_token')?.value;
@@ -120,6 +121,7 @@ export default async function CategoryPage({ params }: Props) {
   });
   const categoryIds = [category.id, ...subCategories.map(c => c.id)];
 
+  const startData = performance.now();
   const [products, categories, menuItems, settings, dbBrands] = await Promise.all([
     prisma.product.findMany({
       where: { 
@@ -130,30 +132,38 @@ export default async function CategoryPage({ params }: Props) {
           { categories: { some: { id: { in: categoryIds } } } }
         ]
       },
-      orderBy: { createdAt: 'desc' }
-    }),
-    prisma.category.findMany({
-      where: { shopId: shop.shopId, isActive: true },
-      include: {
-        children: {
-          where: { isActive: true }
-        }
+      select: {
+        id: true,
+        title: true,
+        type: true,
+        categoryId: true,
+        description: true,
+        price: true,
+        discount: true,
+        imageUrl: true,
+        stock: true,
+        isSpecial: true,
+        specialEndsAt: true,
+        isActive: true,
+        brand: true,
+        createdAt: true,
+        isWholesaleOnly: true,
+        wholesalePrice: true,
+        wholesaleUnit: true,
+        moq: true,
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      take: 40
     }),
-    prisma.menuItem.findMany({
-      where: { shopId: shop.shopId, isActive: true },
-      orderBy: { order: 'asc' }
-    }),
+    getCachedCategories(shop.shopId),
+    getCachedMenuItems(shop.shopId),
     prisma.shopSettings.findUnique({
       where: { shopId: shop.shopId },
       select: { headerConfig: true, customHomeConfig: true, wholesaleEnabled: true }
     }),
-    prisma.brand.findMany({
-      where: { shopId: shop.shopId },
-      orderBy: { name: 'asc' }
-    })
+    getCachedBrands(shop.shopId)
   ]);
+  logPerf('category.data_load', startData);
 
   let headerConfig = undefined;
   const footerConfig = await getFooterConfig();
@@ -180,6 +190,8 @@ export default async function CategoryPage({ params }: Props) {
   if (dbBrands && dbBrands.length > 0) {
     finalBrands = dbBrands.map(b => ({ id: b.id, name: b.name, logoUrl: b.logoUrl || '' }));
   }
+
+  logPerf('category.total', startCategory);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black font-sans pb-20 lg:pb-0">

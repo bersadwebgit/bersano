@@ -1,7 +1,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
-import { ensureDemoProduct } from '@/lib/demo-product';
+import { getCachedProductDetail, getCachedCategories, getCachedMenuItems, getCachedBrands } from '@/lib/cached-queries';
+import { logPerf } from '@/lib/perf-logger';
 import ProductOverview from '@/components/store/ProductOverview';
 import ProductTabs from '@/components/store/ProductTabs';
 import { getTenantShop } from '@/lib/tenant';
@@ -126,14 +127,16 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 }
 
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
+  const startProduct = performance.now();
   const { id } = await params;
 
   const shop = await getTenantShop();
+  logPerf('product.tenant_resolve', startProduct);
   if (!shop) {
     return notFound();
   }
 
-  await ensureDemoProduct(shop.shopId);
+  const startData = performance.now();
 
   // Find product making sure it belongs to the current tenant
   let product: any = null;
@@ -147,51 +150,14 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
 
   try {
     const [fetchedProduct, fetchedCategories, fetchedMenuItems, fetchedSettings, fetchedBrands] = await Promise.all([
-      prisma.product.findFirst({
-        where: { 
-          id,
-          shopId: shop.shopId
-        },
-        include: {
-          variants: true,
-          category: {
-            select: { id: true, name: true, slug: true }
-          },
-          categories: {
-            select: { id: true, name: true, slug: true }
-          },
-          reviews: {
-            where: { status: 'approved' },
-            include: {
-              user: {
-                select: { name: true }
-              }
-            },
-            orderBy: { createdAt: 'desc' }
-          }
-        }
-      }),
-      prisma.category.findMany({
-        where: { shopId: shop.shopId, isActive: true },
-        include: {
-          children: {
-            where: { isActive: true }
-          }
-        },
-        orderBy: { createdAt: 'desc' }
-      }),
-      prisma.menuItem.findMany({
-        where: { shopId: shop.shopId, isActive: true },
-        orderBy: { order: 'asc' }
-      }),
+      getCachedProductDetail(shop.shopId, id),
+      getCachedCategories(shop.shopId),
+      getCachedMenuItems(shop.shopId),
       prisma.shopSettings.findUnique({
         where: { shopId: shop.shopId },
         select: { headerConfig: true, relatedProductsEnabled: true, customHomeConfig: true }
       }),
-      prisma.brand.findMany({
-        where: { shopId: shop.shopId },
-        orderBy: { name: 'asc' }
-      })
+      getCachedBrands(shop.shopId)
     ]);
 
     product = fetchedProduct;
@@ -208,6 +174,27 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
         ...(product.categories ? product.categories.map((c: any) => c.id) : [])
       ].filter(Boolean) as string[];
 
+      const productListSelect = {
+        id: true,
+        title: true,
+        type: true,
+        categoryId: true,
+        description: true,
+        price: true,
+        discount: true,
+        imageUrl: true,
+        stock: true,
+        isSpecial: true,
+        specialEndsAt: true,
+        isActive: true,
+        brand: true,
+        createdAt: true,
+        isWholesaleOnly: true,
+        wholesalePrice: true,
+        wholesaleUnit: true,
+        moq: true,
+      };
+
       // Fetch related products (same category, different product)
       const fetchedRelated = await prisma.product.findMany({
         where: {
@@ -219,6 +206,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             { categories: { some: { id: { in: relatedCategoryIds } } } }
           ]
         },
+        select: productListSelect,
         take: 8,
         orderBy: { createdAt: 'desc' }
       });
@@ -234,6 +222,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             isActive: true,
             id: { notIn: excludeIds }
           },
+          select: productListSelect,
           take: 8 - relatedProducts.length,
           orderBy: { createdAt: 'desc' }
         });
@@ -251,6 +240,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   } catch (error) {
     console.error('[ERROR] [ProductPage]: Error loading product data:', error);
   }
+  logPerf('product.data_load', startData);
 
   let finalBrands = [];
   if (settings?.customHomeConfig) {
@@ -449,6 +439,8 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
       createdAt: typeof r.createdAt === 'string' ? r.createdAt : r.createdAt.toISOString()
     }))
   );
+
+  logPerf('product.total', startProduct);
 
   return (
     <div className="min-h-screen bg-white md:bg-gray-50 dark:bg-gray-900 md:dark:bg-black font-sans pb-28 md:pb-12">
