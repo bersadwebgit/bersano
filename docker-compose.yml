@@ -53,6 +53,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: shop-web:latest
     container_name: shop-web
     restart: always
     ports:
@@ -71,17 +72,17 @@ services:
       - internal
 
   bale-bot:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: shop-web:latest
     container_name: shop-bale-bot
     restart: always
-    command: ["node", "scripts/bale-bot.js"]
+    entrypoint: ["node", "scripts/bale-bot.js"]
     environment:
       DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/shop_final?schema=public"
     depends_on:
       postgres:
         condition: service_healthy
+      web:
+        condition: service_started
     networks:
       - internal
 
