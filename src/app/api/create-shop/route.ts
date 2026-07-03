@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
-import { getDemoSeedingData } from '@/lib/demo-data';
 
 export async function POST(request: Request) {
   try {
@@ -148,8 +147,6 @@ export async function POST(request: Request) {
     // Generate unique shopId
     const shopId = `shop_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const hashedPassword = await bcrypt.hash(ownerPassword, 10);
-    const customField = body.customBusinessField?.trim() || (businessField === 'general' ? shopName : '');
-    const demoData = await getDemoSeedingData(businessField, customField, 'both');
 
     // Create Shop and User in a transaction
     const result = await prisma.$transaction(async (tx) => {
@@ -168,13 +165,13 @@ export async function POST(request: Request) {
       const customFooterConfig = {
         enabled: true,
         theme: 'dark',
-        bgColor: demoData.themeColor || '#0f172a',
+        bgColor: '#0f172a',
         textColor: '#f8fafc',
         linkColor: '#f8fafc',
         linkHoverColor: '#cbd5e1',
         borderColor: 'rgba(148, 163, 184, 0.15)',
-        aboutText: demoData.footerAboutText || `ما در ${shopName} همواره تلاش می‌کنیم تا بهترین و باکیفیت‌ترین محصولات را با مناسب‌ترین قیمت به دست شما برسانیم. رضایت شما بزرگترین سرمایه ماست.`,
-        copyrightText: demoData.footerCopyrightText || `تمامی حقوق مادی و معنوی این سایت متعلق به ${shopName} می‌باشد.`,
+        aboutText: `ما در ${shopName} همواره تلاش می‌کنیم تا بهترین و باکیفیت‌ترین محصولات را با مناسب‌ترین قیمت به دست شما برسانیم. رضایت شما بزرگترین سرمایه ماست.`,
+        copyrightText: `تمامی حقوق مادی و معنوی این سایت متعلق به ${shopName} می‌باشد.`,
         showSocials: true,
         socials: [
           { platform: 'instagram', url: 'https://instagram.com', enabled: true },
@@ -229,15 +226,13 @@ export async function POST(request: Request) {
           contactPhone: normalizedPhone,
           isApproved: true, // Newly registered shops start as active/approved by default
           isActive: true,
-          themeColor: demoData.themeColor, // Customized based on business field
+          themeColor: '#2563eb', // Default blue theme
           currency: 'IRT', // Default Iranian Toman
           language: 'fa',
           homePageType: 'custom',
-          hasDemoData: true,
+          hasDemoData: false, // Starts without demo data, completed via setup wizard
+          setupWizardCompleted: false,
           footerConfig: JSON.stringify(customFooterConfig),
-          aboutUsPage: demoData.aboutUsPage || undefined,
-          termsPage: demoData.termsPage || undefined,
-          faqsConfig: demoData.faqsConfig ? JSON.stringify(demoData.faqsConfig) : undefined,
           customHomeConfig: JSON.stringify({
             heroTitle: `به فروشگاه ${shopName} خوش آمدید`,
             heroSubtitle: `بهترین و باکیفیت‌ترین محصولات را با مناسب‌ترین قیمت از ما بخواهید.`,
@@ -247,7 +242,7 @@ export async function POST(request: Request) {
             showSlider: true,
             showHero: true,
             showWelcomeBanner: true,
-            welcomeTitle: 'به فروشگاه رسمی {shopName} خوش آمدید',
+            welcomeTitle: `به فروشگاه رسمی ${shopName} خوش آمدید`,
             welcomeFeature1: 'ضمانت اصالت کالا',
             welcomeFeature2: 'پشتیبانی سریع',
             welcomeFeature3: 'ارسال به سراسر کشور',
@@ -260,170 +255,7 @@ export async function POST(request: Request) {
         }
       });
 
-      // 3. Create Categories
-      const categoryPhysical = await tx.category.create({
-        data: {
-          shopId,
-          name: demoData.physicalCategory.name,
-          slug: demoData.physicalCategory.slug,
-          isActive: true,
-          isDemo: true,
-        }
-      });
-
-      const categoryDigital = await tx.category.create({
-        data: {
-          shopId,
-          name: demoData.digitalCategory.name,
-          slug: demoData.digitalCategory.slug,
-          isActive: true,
-          isDemo: true,
-        }
-      });
-
-      // 4. Create Sample Customer Users for reviews
-      const customer1 = await tx.user.create({
-        data: {
-          email: 'amir@example.com',
-          password: hashedPassword,
-          name: 'امیرحسین رضایی',
-          phone: '09121111111',
-          shopId,
-          role: 'customer',
-          isDemo: true,
-        }
-      });
-
-      const customer2 = await tx.user.create({
-        data: {
-          email: 'maryam@example.com',
-          password: hashedPassword,
-          name: 'مریم حسینی',
-          phone: '09122222222',
-          shopId,
-          role: 'customer',
-          isDemo: true,
-        }
-      });
-
-      // 5. Create Physical Products (Multiple)
-      let firstPhysicalProduct = null;
-      const physicalProductsToCreate = demoData.physicalProducts && demoData.physicalProducts.length > 0
-        ? demoData.physicalProducts
-        : (demoData.physicalProduct ? [demoData.physicalProduct] : []);
-
-      if (physicalProductsToCreate.length > 0) {
-        for (const prod of physicalProductsToCreate) {
-          const createdProd = await tx.product.create({
-            data: {
-              shopId,
-              title: prod.title,
-              type: 'physical',
-              categoryId: categoryPhysical.id,
-              price: prod.price,
-              discount: prod.discount,
-              stock: prod.stock,
-              description: prod.description,
-              fullDescription: prod.fullDescription,
-              features: JSON.stringify(prod.features),
-              specs: JSON.stringify(prod.specs),
-              galleryUrls: JSON.stringify(prod.galleryUrls),
-              imageUrl: prod.imageUrl,
-              isActive: true,
-              isDemo: true,
-              variants: {
-                create: (prod.variants || []).map(v => ({
-                  shopId,
-                  name: v.name,
-                  price: v.price,
-                  stock: v.stock,
-                  colorCode: v.colorCode,
-                }))
-              }
-            }
-          });
-          if (!firstPhysicalProduct) {
-            firstPhysicalProduct = createdProd;
-          }
-        }
-      }
-
-      // 6. Create Digital Products (Multiple)
-      let firstDigitalProduct = null;
-      const digitalProductsToCreate = demoData.digitalProducts && demoData.digitalProducts.length > 0
-        ? demoData.digitalProducts
-        : (demoData.digitalProduct ? [demoData.digitalProduct] : []);
-
-      if (digitalProductsToCreate.length > 0) {
-        for (const prod of digitalProductsToCreate) {
-          const createdProd = await tx.product.create({
-            data: {
-              shopId,
-              title: prod.title,
-              type: 'digital',
-              categoryId: categoryDigital.id,
-              price: prod.price,
-              discount: prod.discount,
-              stock: prod.stock,
-              description: prod.description,
-              fullDescription: prod.fullDescription,
-              features: JSON.stringify(prod.features),
-              specs: JSON.stringify(prod.specs),
-              galleryUrls: JSON.stringify(prod.galleryUrls),
-              imageUrl: prod.imageUrl,
-              fileUrl: prod.fileUrl || '/downloads/demo-digital-file.pdf',
-              fileFormat: prod.fileFormat || 'PDF',
-              fileSize: prod.fileSize || '4.8 MB',
-              previewUrl: prod.previewUrl || prod.imageUrl,
-              techSpecs: prod.techSpecs || 'قابل اجرا در تمامی دستگاه‌ها.',
-              downloadFiles: JSON.stringify(prod.downloadFiles || [
-                { name: prod.title, url: '/downloads/demo-digital-file.pdf', size: '4.8 MB', format: 'PDF' }
-              ]),
-              isActive: true,
-              isDemo: true,
-            }
-          });
-          if (!firstDigitalProduct) {
-            firstDigitalProduct = createdProd;
-          }
-        }
-      }
-
-      // 7. Create Reviews for Physical Product
-      if (firstPhysicalProduct) {
-        await tx.review.createMany({
-          data: demoData.physicalReviews.map(r => ({
-            shopId,
-            productId: firstPhysicalProduct.id,
-            userId: r.customerName === 'امیرحسین رضایی' ? customer1.id : customer2.id,
-            rating: r.rating,
-            comment: r.comment,
-            status: 'approved',
-            isBuyer: true,
-            showOnHomepage: true,
-            isDemo: true,
-          }))
-        });
-      }
-
-      // 8. Create Reviews for Digital Product
-      if (firstDigitalProduct) {
-        await tx.review.createMany({
-          data: demoData.digitalReviews.map(r => ({
-            shopId,
-            productId: firstDigitalProduct.id,
-            userId: r.customerName === 'امیرحسین رضایی' ? customer1.id : customer2.id,
-            rating: r.rating,
-            comment: r.comment,
-            status: 'approved',
-            isBuyer: true,
-            showOnHomepage: true,
-            isDemo: true,
-          }))
-        });
-      }
-
-      // 9. Create default Menu Items
+      // 3. Create default Menu Items
       await tx.menuItem.createMany({
         data: [
           { shopId, title: 'صفحه اصلی', url: '/', order: 1 },
@@ -432,78 +264,30 @@ export async function POST(request: Request) {
         ]
       });
 
-      // 10. Create Blog Category
-      const blogCategory = await tx.blogCategory.create({
+      // 4. Initialize Shop Seed Profile
+      await tx.shopSeedProfile.create({
         data: {
           shopId,
-          name: demoData.blogCategory.name,
-          slug: demoData.blogCategory.slug,
-          description: 'مطالب، راهنماها و آموزش‌های تخصصی متناسب با کسب‌وکار شما',
-          isDemo: true,
+          businessType: businessField,
+          niche: '',
+          targetAudience: '[]',
+          priceLevel: 'medium',
+          brandTone: 'trust',
+          mainCategories: '[]',
+          source: 'onboarding'
         }
       });
 
-      // 11. Create Sample Blog Post
-      await tx.blogPost.create({
+      // 5. Initialize Shop Seed Job
+      await tx.shopSeedJob.create({
         data: {
           shopId,
-          title: demoData.blogPost.title,
-          slug: demoData.blogPost.slug,
-          summary: demoData.blogPost.summary,
-          content: demoData.blogPost.content,
-          featuredImage: demoData.blogPost.featuredImage,
-          status: 'published',
-          publishedAt: new Date(),
-          authorId: user.id,
-          categoryId: blogCategory.id,
-          tags: JSON.stringify(demoData.blogPost.tags),
-          seoTitle: demoData.blogPost.seoTitle,
-          seoDescription: demoData.blogPost.seoDescription,
-          allowComments: true,
-          faqs: JSON.stringify(demoData.blogPost.faqs),
-          isDemo: true,
+          status: 'pending',
+          progress: 0
         }
       });
 
-      // 12. Create Hero Slides
-      if (demoData.slides && demoData.slides.length > 0) {
-        await tx.heroSlide.createMany({
-          data: demoData.slides.map((s, idx) => ({
-            shopId,
-            imageUrl: s.imageUrl,
-            title: s.title,
-            subtitle: s.subtitle,
-            linkText: s.linkText,
-            linkUrl: s.linkUrl,
-            order: idx,
-            isActive: true,
-            displayLocation: 'both',
-            isDemo: true,
-          }))
-        });
-      }
-
-      // 13. Create Stories
-      if (demoData.stories && demoData.stories.length > 0) {
-        await tx.story.createMany({
-          data: demoData.stories.map(s => ({
-            shopId,
-            title: s.title,
-            thumbnailUrl: s.thumbnailUrl,
-            mediaUrl: s.mediaUrl,
-            mediaType: s.mediaType,
-            text: s.text,
-            linkText: s.linkText,
-            linkUrl: s.linkUrl,
-            isActive: true,
-            displayLocation: 'both',
-            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // expires in 30 days
-            isDemo: true,
-          }))
-        });
-      }
-
-      // 14. Delete OTP record as the last step of the transaction to prevent replay only after successful shop creation
+      // 6. Delete OTP record
       await tx.otp.deleteMany({
         where: {
           phone: normalizedPhone,

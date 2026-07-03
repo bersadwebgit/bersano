@@ -251,6 +251,9 @@ model Category {
   icon        String?   // For category icon
   isActive    Boolean   @default(true)
   isDemo      Boolean   @default(false) @map("is_demo")
+  isSampleData  Boolean  @default(false) @map("is_sample_data")
+  generatedByAi Boolean  @default(false) @map("generated_by_ai")
+  seedJobId     String?  @map("seed_job_id")
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -309,6 +312,9 @@ model Product {
   volume      Float     @default(0)
   isWholesaleOnly Boolean @default(false)
   isDemo      Boolean   @default(false) @map("is_demo")
+  isSampleData  Boolean  @default(false) @map("is_sample_data")
+  generatedByAi Boolean  @default(false) @map("generated_by_ai")
+  seedJobId     String?  @map("seed_job_id")
   embedding   Unsupported("vector(1536)")?
   embeddingUpdatedAt DateTime?
   createdAt   DateTime  @default(now())
@@ -670,6 +676,9 @@ model BlogPost {
   viewCount    Int           @default(0)
   faqs         String        @default("[]") // JSON array of {question: string, answer: string}
   isDemo       Boolean       @default(false) @map("is_demo")
+  isSampleData  Boolean  @default(false) @map("is_sample_data")
+  generatedByAi Boolean  @default(false) @map("generated_by_ai")
+  seedJobId     String?  @map("seed_job_id")
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   comments     BlogComment[]
@@ -883,6 +892,42 @@ model ShopDomain {
 
   @@index([shopId])
   @@index([domain])
+}
+
+model ShopSeedProfile {
+  id              String   @id @default(cuid())
+  shopId          String   @unique @map("shop_id")
+  businessType    String?  @map("business_type")
+  niche           String?
+  targetAudience  Json?    @map("target_audience")
+  priceLevel      String?  @map("price_level")
+  brandTone       String?  @map("brand_tone")
+  mainCategories  Json?    @map("main_categories")
+  productRules    Json?    @map("product_rules")
+  seoKeywords     Json?    @map("seo_keywords")
+  contentTopics   Json?    @map("content_topics")
+  imageStyle      String?  @map("image_style")
+  confidence      Float?
+  source          String?  // onboarding | ai_inferred | admin
+  seedVersion     Int      @default(1) @map("seed_version")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([shopId])
+}
+
+model ShopSeedJob {
+  id          String   @id @default(cuid())
+  shopId      String   @map("shop_id")
+  status      String   // pending | blueprint_ready | preview_ready | saved | failed
+  phase       String?
+  progress    Int      @default(0)
+  error       String?
+  previewJson Json?    @map("preview_json")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([shopId])
 }
 
 
