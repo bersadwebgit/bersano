@@ -135,7 +135,14 @@ export async function GET(req: NextRequest) {
         });
       } else {
         // JSON format
-        return new NextResponse(JSON.stringify(products, null, 2), {
+        const exportData = {
+          version: '2.0',
+          type: 'products',
+          shopId,
+          exportedAt: new Date().toISOString(),
+          products,
+        };
+        return new NextResponse(JSON.stringify(exportData, null, 2), {
           headers: {
             'Content-Type': 'application/json',
             'Content-Disposition': `attachment; filename="products_${shopId}_${Date.now()}.json"`,
@@ -179,7 +186,14 @@ export async function GET(req: NextRequest) {
           },
         });
       } else {
-        return new NextResponse(JSON.stringify(categories, null, 2), {
+        const exportData = {
+          version: '2.0',
+          type: 'categories',
+          shopId,
+          exportedAt: new Date().toISOString(),
+          categories,
+        };
+        return new NextResponse(JSON.stringify(exportData, null, 2), {
           headers: {
             'Content-Type': 'application/json',
             'Content-Disposition': `attachment; filename="categories_${shopId}_${Date.now()}.json"`,
@@ -193,7 +207,15 @@ export async function GET(req: NextRequest) {
         where: { shopId },
       });
 
-      return new NextResponse(JSON.stringify(settings, null, 2), {
+      const exportData = {
+        version: '2.0',
+        type: 'settings',
+        shopId,
+        exportedAt: new Date().toISOString(),
+        settings,
+      };
+
+      return new NextResponse(JSON.stringify(exportData, null, 2), {
         headers: {
           'Content-Type': 'application/json',
           'Content-Disposition': `attachment; filename="settings_${shopId}_${Date.now()}.json"`,
@@ -224,7 +246,8 @@ export async function GET(req: NextRequest) {
       });
 
       const fullBackup = {
-        version: '1.0',
+        version: '2.0',
+        type: 'full',
         shopId,
         exportedAt: new Date().toISOString(),
         settings,

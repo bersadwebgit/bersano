@@ -62,7 +62,7 @@ function toEnglishDigits(str: string): string {
   return clean;
 }
 
-function parseNumber(val: any, defaultValue: number = 0): number {
+function parseNumber(val: any, defaultValue: any = 0): any {
   if (val === undefined || val === null) return defaultValue;
   let str = String(val).trim();
   if (!str) return defaultValue;
@@ -75,6 +75,220 @@ function parseBoolean(val: any): boolean {
   if (val === undefined || val === null) return false;
   const str = String(val).trim().toLowerCase();
   return str === 'true' || str === '1' || str === 'yes' || str === 'فعال' || str === 'بله';
+}
+
+function toSlug(text: string): string {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w\u0600-\u06FF-]+/g, '')
+    .replace(/--+/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
+}
+
+// Sanitization & Tenant-Safety Helpers
+function sanitizeProduct(item: any): any {
+  if (!item || typeof item !== 'object') return null;
+
+  const title = String(item.title || item.name || '').trim();
+  if (!title) return null;
+
+  let price = parseNumber(item.price, 0);
+  if (price < 0) price = 0;
+
+  let discount = parseNumber(item.discount, 0);
+  if (discount < 0) discount = 0;
+
+  let stock = item.type === 'digital' ? 999999 : parseNumber(item.stock, 10);
+  if (stock < 0) stock = 0;
+
+  let variants: any[] = [];
+  if (item.variants && Array.isArray(item.variants)) {
+    variants = item.variants.map((v: any) => {
+      const vName = String(v.name || '').trim();
+      if (!vName) return null;
+      let vPrice = parseNumber(v.price, price);
+      if (vPrice < 0) vPrice = price;
+      let vStock = parseNumber(v.stock, 10);
+      if (vStock < 0) vStock = 0;
+      return {
+        id: v.id || undefined,
+        name: vName,
+        price: vPrice,
+        stock: vStock,
+        colorCode: v.colorCode || getColorHexFromName(vName) || null,
+        imageUrl: v.imageUrl || null,
+        isDefault: v.isDefault !== undefined ? !!v.isDefault : false
+      };
+    }).filter(Boolean);
+  }
+
+  return {
+    id: item.id || undefined,
+    title,
+    type: item.type === 'digital' ? 'digital' : 'physical',
+    categoryId: item.categoryId || null,
+    categoryName: item.categoryName ? String(item.categoryName).trim() : null,
+    price,
+    discount,
+    discountMinQty: parseNumber(item.discountMinQty, 0),
+    imageUrl: item.imageUrl || null,
+    stock,
+    description: item.description || null,
+    fullDescription: item.fullDescription || null,
+    brand: item.brand || null,
+    isActive: item.isActive !== undefined ? parseBoolean(item.isActive) : true,
+    isSpecial: parseBoolean(item.isSpecial),
+    specialEndsAt: item.specialEndsAt || null,
+    faqs: typeof item.faqs === 'string' ? item.faqs : JSON.stringify(item.faqs || []),
+    features: typeof item.features === 'string' ? item.features : JSON.stringify(item.features || []),
+    specs: typeof item.specs === 'string' ? item.specs : JSON.stringify(item.specs || []),
+    galleryUrls: typeof item.galleryUrls === 'string' ? item.galleryUrls : JSON.stringify(item.galleryUrls || []),
+    fileUrl: item.fileUrl || null,
+    downloadLimit: item.downloadLimit !== undefined && item.downloadLimit !== null ? parseNumber(item.downloadLimit, null) : null,
+    downloadExpiryDays: item.downloadExpiryDays !== undefined && item.downloadExpiryDays !== null ? parseNumber(item.downloadExpiryDays, null) : null,
+    downloadIpRestriction: parseBoolean(item.downloadIpRestriction),
+    fileFormat: item.fileFormat || null,
+    fileSize: item.fileSize || null,
+    previewUrl: item.previewUrl || null,
+    techSpecs: item.techSpecs || null,
+    downloadFiles: typeof item.downloadFiles === 'string' ? item.downloadFiles : JSON.stringify(item.downloadFiles || []),
+    wholesalePrice: item.wholesalePrice !== undefined && item.wholesalePrice !== null ? parseNumber(item.wholesalePrice, null) : null,
+    wholesaleTiers: typeof item.wholesaleTiers === 'string' ? item.wholesaleTiers : JSON.stringify(item.wholesaleTiers || []),
+    wholesaleExclusivePrices: typeof item.wholesaleExclusivePrices === 'string' ? item.wholesaleExclusivePrices : JSON.stringify(item.wholesaleExclusivePrices || []),
+    moq: parseNumber(item.moq, 1),
+    wholesaleUnit: item.wholesaleUnit || 'عدد',
+    wholesaleUnitSize: parseNumber(item.wholesaleUnitSize, 1),
+    weight: parseNumber(item.weight, 0),
+    volume: parseNumber(item.volume, 0),
+    isWholesaleOnly: parseBoolean(item.isWholesaleOnly),
+    isDemo: parseBoolean(item.isDemo),
+    isSampleData: parseBoolean(item.isSampleData),
+    generatedByAi: parseBoolean(item.generatedByAi),
+    seedJobId: item.seedJobId || null,
+    variants
+  };
+}
+
+function sanitizeCategory(item: any): any {
+  if (!item || typeof item !== 'object') return null;
+
+  const name = String(item.name || item.title || '').trim();
+  if (!name) return null;
+
+  const slug = String(item.slug || toSlug(name)).trim();
+
+  return {
+    id: item.id || undefined,
+    name,
+    slug,
+    description: item.description || null,
+    imageUrl: item.imageUrl || null,
+    icon: item.icon || null,
+    parentId: item.parentId || null,
+    isActive: item.isActive !== undefined ? parseBoolean(item.isActive) : true,
+    isDemo: parseBoolean(item.isDemo),
+    isSampleData: parseBoolean(item.isSampleData),
+    generatedByAi: parseBoolean(item.generatedByAi),
+    seedJobId: item.seedJobId || null
+  };
+}
+
+function sanitizeSettings(item: any): any {
+  if (!item || typeof item !== 'object') return null;
+  
+  const {
+    id,
+    shopId,
+    subdomain,
+    customDomain,
+    isApproved,
+    isActive,
+    packageId,
+    packageExpiresAt,
+    bgRemovalCount,
+    setupWizardCompleted,
+    createdAt,
+    updatedAt,
+    aiMemory,
+    ...safeSettings
+  } = item;
+
+  return safeSettings;
+}
+
+function sanitizeBrand(item: any): any {
+  if (!item || typeof item !== 'object') return null;
+  const name = String(item.name || '').trim();
+  if (!name) return null;
+  return {
+    name,
+    logoUrl: item.logoUrl || null
+  };
+}
+
+function sanitizeSlider(item: any): any {
+  if (!item || typeof item !== 'object') return null;
+  const imageUrl = String(item.imageUrl || '').trim();
+  if (!imageUrl) return null;
+  return {
+    imageUrl,
+    mobileImageUrl: item.mobileImageUrl || null,
+    title: item.title || null,
+    subtitle: item.subtitle || null,
+    linkUrl: item.linkUrl || null,
+    linkText: item.linkText || null,
+    order: parseNumber(item.order, 0),
+    isActive: item.isActive !== undefined ? parseBoolean(item.isActive) : true,
+    displayLocation: item.displayLocation || 'both',
+    isDemo: parseBoolean(item.isDemo)
+  };
+}
+
+// Smart detection helper
+function detectAndExtractJSON(parsed: any) {
+  let rawProducts: any[] = [];
+  let rawCategories: any[] = [];
+  let rawSettings: any = null;
+  let rawBrands: any[] = [];
+  let rawSliders: any[] = [];
+
+  if (Array.isArray(parsed)) {
+    if (parsed.length > 0) {
+      const first = parsed[0];
+      if (first && typeof first === 'object') {
+        if ('title' in first || 'price' in first) {
+          rawProducts = parsed;
+        } else if ('name' in first || 'slug' in first) {
+          rawCategories = parsed;
+        } else {
+          rawProducts = parsed;
+        }
+      }
+    }
+  } else if (parsed && typeof parsed === 'object') {
+    const hasWrappedKeys = 'products' in parsed || 'categories' in parsed || 'settings' in parsed || 'brands' in parsed || 'sliders' in parsed;
+    
+    if (hasWrappedKeys) {
+      if (Array.isArray(parsed.products)) rawProducts = parsed.products;
+      if (Array.isArray(parsed.categories)) rawCategories = parsed.categories;
+      if (parsed.settings) rawSettings = parsed.settings;
+      if (Array.isArray(parsed.brands)) rawBrands = parsed.brands;
+      if (Array.isArray(parsed.sliders)) rawSliders = parsed.sliders;
+    } else {
+      if ('title' in parsed || 'price' in parsed) {
+        rawProducts = [parsed];
+      } else if ('name' in parsed || 'slug' in parsed) {
+        rawCategories = [parsed];
+      } else if ('shopName' in parsed || 'currency' in parsed || 'themeColor' in parsed) {
+        rawSettings = parsed;
+      }
+    }
+  }
+  return { rawProducts, rawCategories, rawSettings, rawBrands, rawSliders };
 }
 
 // Helper to chunk text
@@ -325,10 +539,16 @@ export async function POST(req: NextRequest) {
         } else if (res.result.success && res.result.data) {
           const parsed = res.result.data;
           if (parsed.products && Array.isArray(parsed.products)) {
-            products.push(...parsed.products);
+            for (const prod of parsed.products) {
+              const sanitized = sanitizeProduct(prod);
+              if (sanitized) products.push(sanitized);
+            }
           }
           if (parsed.categories && Array.isArray(parsed.categories)) {
-            categories.push(...parsed.categories);
+            for (const cat of parsed.categories) {
+              const sanitized = sanitizeCategory(cat);
+              if (sanitized) categories.push(sanitized);
+            }
           }
           successCount++;
         } else {
@@ -378,14 +598,12 @@ export async function POST(req: NextRequest) {
             let variants: any[] = [];
             const variantsStr = getVal('variants');
             
-            // If there's a specific "variant" column and it's not a JSON, we can treat it as a single variant name
             if (variantsStr) {
               if (variantsStr.startsWith('[') || variantsStr.startsWith('{')) {
                 try {
                   variants = JSON.parse(variantsStr);
                 } catch (e) {}
               } else {
-                // Single variant name
                 variants = [{
                   name: variantsStr,
                   price: parseNumber(getVal('price'), 0),
@@ -394,7 +612,7 @@ export async function POST(req: NextRequest) {
               }
             }
 
-            products.push({
+            const rawProduct = {
               id: getVal('id') || undefined,
               title,
               type: getVal('type') || 'physical',
@@ -424,7 +642,10 @@ export async function POST(req: NextRequest) {
               techSpecs: getVal('techSpecs') || null,
               downloadFiles: getVal('downloadFiles') || '[]',
               variants
-            });
+            };
+
+            const sanitized = sanitizeProduct(rawProduct);
+            if (sanitized) products.push(sanitized);
           }
         } else if (type === 'categories') {
           if (colIndices['title'] === undefined) { // category name mapped to 'title'
@@ -441,7 +662,7 @@ export async function POST(req: NextRequest) {
             const name = getVal('title'); // mapped from category name
             if (!name) continue;
 
-            categories.push({
+            const rawCategory = {
               id: getVal('id') || undefined,
               name,
               slug: getVal('slug') || name,
@@ -449,30 +670,64 @@ export async function POST(req: NextRequest) {
               imageUrl: getVal('imageUrl') || null,
               parentId: getVal('parentId') || null,
               isActive: colIndices['isActive'] !== undefined ? parseBoolean(getVal('isActive')) : true
-            });
+            };
+
+            const sanitized = sanitizeCategory(rawCategory);
+            if (sanitized) categories.push(sanitized);
           }
         }
       } else {
         // Standard JSON Preview
         try {
           const parsed = JSON.parse(contentToProcess);
+          
+          // Use smart schema auto-detection
+          const { rawProducts, rawCategories, rawSettings, rawBrands, rawSliders } = detectAndExtractJSON(parsed);
+
           if (type === 'products') {
-            const list = Array.isArray(parsed) ? parsed : [parsed];
-            products.push(...list);
+            for (const prod of rawProducts) {
+              const sanitized = sanitizeProduct(prod);
+              if (sanitized) products.push(sanitized);
+            }
           } else if (type === 'categories') {
-            const list = Array.isArray(parsed) ? parsed : [parsed];
-            categories.push(...list);
-          } else if (type === 'full') {
-            if (parsed.products) products.push(...parsed.products);
-            if (parsed.categories) categories.push(...parsed.categories);
-            if (parsed.settings) settings = parsed.settings;
-            if (parsed.brands) brands.push(...parsed.brands);
-            if (parsed.sliders) sliders.push(...parsed.sliders);
+            for (const cat of rawCategories) {
+              const sanitized = sanitizeCategory(cat);
+              if (sanitized) categories.push(sanitized);
+            }
           } else if (type === 'settings') {
+            const sanitized = sanitizeSettings(rawSettings);
+            if (sanitized) {
+              settings = sanitized;
+            }
+          } else if (type === 'full') {
+            for (const prod of rawProducts) {
+              const sanitized = sanitizeProduct(prod);
+              if (sanitized) products.push(sanitized);
+            }
+            for (const cat of rawCategories) {
+              const sanitized = sanitizeCategory(cat);
+              if (sanitized) categories.push(sanitized);
+            }
+            const sanitizedSet = sanitizeSettings(rawSettings);
+            if (sanitizedSet) {
+              settings = sanitizedSet;
+            }
+            for (const brand of rawBrands) {
+              const sanitized = sanitizeBrand(brand);
+              if (sanitized) brands.push(sanitized);
+            }
+            for (const slider of rawSliders) {
+              const sanitized = sanitizeSlider(slider);
+              if (sanitized) sliders.push(sanitized);
+            }
+          }
+
+          // Special return formatting for settings only preview if selected
+          if (type === 'settings' && settings) {
             return NextResponse.json({
               success: true,
               isSettingsOnly: true,
-              settings: parsed
+              settings
             });
           }
         } catch (e) {
@@ -493,6 +748,13 @@ export async function POST(req: NextRequest) {
           }
         }
       }
+    }
+
+    // Honest reporting: Fail if no valid entries were parsed/extracted
+    if (products.length === 0 && categories.length === 0 && !settings && brands.length === 0 && sliders.length === 0) {
+      return NextResponse.json({
+        error: 'هیچ داده معتبری (محصول، دسته‌بندی یا تنظیمات) هماهنگ با فیلتر انتخاب شده در فایل یافت نشد. لطفاً ساختار فایل و نوع انتخاب شده را بررسی کنید.'
+      }, { status: 400 });
     }
 
     return NextResponse.json({
