@@ -214,10 +214,49 @@ function sanitizeSettings(item: any): any {
     createdAt,
     updatedAt,
     aiMemory,
+    // Sensitive credentials
+    zarinpalMerchantId,
+    zibalMerchantId,
+    digipayClientId,
+    digipayClientSecret,
+    digipayUsername,
+    digipayPassword,
+    tipaxUsername,
+    tipaxPassword,
+    tipaxApiKey,
+    mahakApiKey,
+    mahakServerUrl,
+    mahakUsername,
+    mahakPassword,
+    baleIntegrationToken,
+    baleChatId,
+    telegramIntegrationToken,
+    telegramChatId,
+    smsConfig,
     ...safeSettings
   } = item;
 
-  return safeSettings;
+  return {
+    ...safeSettings,
+    zarinpalMerchantId: "",
+    zibalMerchantId: "",
+    digipayClientId: "",
+    digipayClientSecret: "",
+    digipayUsername: "",
+    digipayPassword: "",
+    tipaxUsername: "",
+    tipaxPassword: "",
+    tipaxApiKey: "",
+    mahakApiKey: "",
+    mahakServerUrl: "",
+    mahakUsername: "",
+    mahakPassword: "",
+    baleIntegrationToken: "",
+    baleChatId: "",
+    telegramIntegrationToken: "",
+    telegramChatId: "",
+    smsConfig: JSON.stringify({ enabled: false, provider: "", credentials: {}, patterns: {}, adminPhone: "" })
+  };
 }
 
 function sanitizeBrand(item: any): any {
@@ -248,6 +287,169 @@ function sanitizeSlider(item: any): any {
   };
 }
 
+function sanitizeMenu(item: any): any {
+  if (!item || typeof item !== 'object') return null;
+  const title = String(item.title || '').trim();
+  const url = String(item.url || '').trim();
+  if (!title || !url) return null;
+  return {
+    id: item.id || undefined,
+    title,
+    url,
+    order: parseNumber(item.order, 0),
+    color: item.color || null,
+    icon: item.icon || null,
+    isActive: item.isActive !== undefined ? parseBoolean(item.isActive) : true,
+  };
+}
+
+function sanitizeDiscount(item: any): any {
+  if (!item || typeof item !== 'object') return null;
+  const code = String(item.code || '').trim();
+  if (!code) return null;
+  return {
+    id: item.id || undefined,
+    code,
+    discount: parseNumber(item.discount, 0),
+    type: item.type === 'flat' ? 'flat' : 'percentage',
+    maxUses: item.maxUses !== undefined && item.maxUses !== null ? parseNumber(item.maxUses, null) : null,
+    usedCount: parseNumber(item.usedCount, 0),
+    isActive: item.isActive !== undefined ? parseBoolean(item.isActive) : true,
+    expiresAt: item.expiresAt || null,
+    startDate: item.startDate || null,
+    minOrderAmount: item.minOrderAmount !== undefined && item.minOrderAmount !== null ? parseNumber(item.minOrderAmount, null) : null,
+    minQuantity: parseNumber(item.minQuantity, 0),
+    maxDiscountAmount: item.maxDiscountAmount !== undefined && item.maxDiscountAmount !== null ? parseNumber(item.maxDiscountAmount, null) : null,
+    maxUsesPerUser: item.maxUsesPerUser !== undefined && item.maxUsesPerUser !== null ? parseNumber(item.maxUsesPerUser, 1) : 1,
+    firstOrderOnly: parseBoolean(item.firstOrderOnly),
+    targetCategoryIds: typeof item.targetCategoryIds === 'string' ? item.targetCategoryIds : JSON.stringify(item.targetCategoryIds || []),
+    targetProductIds: typeof item.targetProductIds === 'string' ? item.targetProductIds : JSON.stringify(item.targetProductIds || []),
+    allowedGender: item.allowedGender || 'all',
+    allowedCategories: typeof item.allowedCategories === 'string' ? item.allowedCategories : JSON.stringify(item.allowedCategories || []),
+    targetUserId: item.targetUserId || ""
+  };
+}
+
+function sanitizeBlogCategory(item: any): any {
+  if (!item || typeof item !== 'object') return null;
+  const name = String(item.name || '').trim();
+  if (!name) return null;
+  return {
+    id: item.id || undefined,
+    name,
+    slug: String(item.slug || toSlug(name)).trim(),
+    description: item.description || null,
+    isDemo: parseBoolean(item.isDemo)
+  };
+}
+
+function sanitizeBlogPost(item: any): any {
+  if (!item || typeof item !== 'object') return null;
+  const title = String(item.title || '').trim();
+  const content = String(item.content || '').trim();
+  if (!title || !content) return null;
+  return {
+    id: item.id || undefined,
+    title,
+    slug: String(item.slug || toSlug(title)).trim(),
+    content,
+    summary: item.summary || null,
+    featuredImage: item.featuredImage || null,
+    status: item.status || 'draft',
+    publishedAt: item.publishedAt || null,
+    authorName: item.authorName || null,
+    categoryId: item.categoryId || null,
+    tags: typeof item.tags === 'string' ? item.tags : JSON.stringify(item.tags || []),
+    seoTitle: item.seoTitle || null,
+    seoDescription: item.seoDescription || null,
+    seoSlug: item.seoSlug || null,
+    ogImage: item.ogImage || null,
+    allowComments: item.allowComments !== undefined ? parseBoolean(item.allowComments) : true,
+    viewCount: parseNumber(item.viewCount, 0),
+    faqs: typeof item.faqs === 'string' ? item.faqs : JSON.stringify(item.faqs || []),
+    isDemo: parseBoolean(item.isDemo),
+    isSampleData: parseBoolean(item.isSampleData),
+    generatedByAi: parseBoolean(item.generatedByAi),
+    seedJobId: item.seedJobId || null
+  };
+}
+
+function sanitizeProductSet(item: any): any {
+  if (!item || typeof item !== 'object') return null;
+  const name = String(item.name || '').trim();
+  const imageUrl = String(item.imageUrl || item.image_url || '').trim();
+  if (!name || !imageUrl) return null;
+
+  let items: any[] = [];
+  if (item.items && Array.isArray(item.items)) {
+    items = item.items.map((it: any) => {
+      if (!it || typeof it !== 'object') return null;
+      return {
+        id: it.id || undefined,
+        productId: it.productId || it.product_id,
+        x: parseNumber(it.x, 0),
+        y: parseNumber(it.y, 0)
+      };
+    }).filter(Boolean);
+  }
+
+  return {
+    id: item.id || undefined,
+    name,
+    slug: String(item.slug || toSlug(name)).trim(),
+    imageUrl,
+    isActive: item.isActive !== undefined ? parseBoolean(item.isActive) : true,
+    order: parseNumber(item.order, 0),
+    views: parseNumber(item.views, 0),
+    tagClicks: parseNumber(item.tagClicks || item.tag_clicks, 0),
+    addToCarts: parseNumber(item.addToCarts || item.add_to_carts, 0),
+    discount: parseNumber(item.discount, 0),
+    items
+  };
+}
+
+function sanitizeStory(item: any): any {
+  if (!item || typeof item !== 'object') return null;
+  const title = String(item.title || '').trim();
+  const thumbnailUrl = String(item.thumbnailUrl || '').trim();
+  const mediaUrl = String(item.mediaUrl || '').trim();
+  if (!title || !thumbnailUrl || !mediaUrl) return null;
+  return {
+    id: item.id || undefined,
+    title,
+    thumbnailUrl,
+    mediaUrl,
+    mediaType: item.mediaType || 'image',
+    text: item.text || null,
+    linkUrl: item.linkUrl || null,
+    linkText: item.linkText || null,
+    duration: parseNumber(item.duration, 5),
+    category: item.category || null,
+    isActive: item.isActive !== undefined ? parseBoolean(item.isActive) : true,
+    displayLocation: item.displayLocation || 'both',
+    isDemo: parseBoolean(item.isDemo),
+    expiresAt: item.expiresAt || null
+  };
+}
+
+function sanitizeMedia(item: any): any {
+  if (!item || typeof item !== 'object') return null;
+  const url = String(item.url || '').trim();
+  const type = String(item.type || 'image').trim();
+  const name = String(item.name || 'imported-image').trim();
+  if (!url) return null;
+  return {
+    id: item.id || undefined,
+    url,
+    type,
+    name,
+    alt: item.alt || null,
+    size: item.size !== undefined && item.size !== null ? parseNumber(item.size, null) : null,
+    originalId: item.originalId || null,
+    originalUrl: item.originalUrl || null
+  };
+}
+
 // Smart detection helper
 function detectAndExtractJSON(parsed: any) {
   let rawProducts: any[] = [];
@@ -255,40 +457,60 @@ function detectAndExtractJSON(parsed: any) {
   let rawSettings: any = null;
   let rawBrands: any[] = [];
   let rawSliders: any[] = [];
+  let rawMenus: any[] = [];
+  let rawDiscounts: any[] = [];
+  let rawBlogCategories: any[] = [];
+  let rawBlogPosts: any[] = [];
+  let rawProductSets: any[] = [];
+  let rawStories: any[] = [];
+  let rawMedia: any[] = [];
 
-  if (Array.isArray(parsed)) {
-    if (parsed.length > 0) {
-      const first = parsed[0];
+  let dataObj = parsed;
+  // If v3.0, unwrap data
+  if (parsed && typeof parsed === 'object' && parsed.version === '3.0' && parsed.data && typeof parsed.data === 'object') {
+    dataObj = parsed.data;
+  }
+
+  if (Array.isArray(dataObj)) {
+    if (dataObj.length > 0) {
+      const first = dataObj[0];
       if (first && typeof first === 'object') {
         if ('title' in first || 'price' in first) {
-          rawProducts = parsed;
+          rawProducts = dataObj;
         } else if ('name' in first || 'slug' in first) {
-          rawCategories = parsed;
+          rawCategories = dataObj;
         } else {
-          rawProducts = parsed;
+          rawProducts = dataObj;
         }
       }
     }
-  } else if (parsed && typeof parsed === 'object') {
-    const hasWrappedKeys = 'products' in parsed || 'categories' in parsed || 'settings' in parsed || 'brands' in parsed || 'sliders' in parsed;
+  } else if (dataObj && typeof dataObj === 'object') {
+    const hasWrappedKeys = 'products' in dataObj || 'categories' in dataObj || 'settings' in dataObj || 'brands' in dataObj || 'sliders' in dataObj || 'menus' in dataObj || 'discounts' in dataObj || 'blogCategories' in dataObj || 'blogPosts' in dataObj || 'productSets' in dataObj || 'stories' in dataObj || 'media' in dataObj;
     
     if (hasWrappedKeys) {
-      if (Array.isArray(parsed.products)) rawProducts = parsed.products;
-      if (Array.isArray(parsed.categories)) rawCategories = parsed.categories;
-      if (parsed.settings) rawSettings = parsed.settings;
-      if (Array.isArray(parsed.brands)) rawBrands = parsed.brands;
-      if (Array.isArray(parsed.sliders)) rawSliders = parsed.sliders;
+      if (Array.isArray(dataObj.products)) rawProducts = dataObj.products;
+      if (Array.isArray(dataObj.categories)) rawCategories = dataObj.categories;
+      if (dataObj.settings) rawSettings = dataObj.settings;
+      if (Array.isArray(dataObj.brands)) rawBrands = dataObj.brands;
+      if (Array.isArray(dataObj.sliders)) rawSliders = dataObj.sliders;
+      if (Array.isArray(dataObj.menus)) rawMenus = dataObj.menus;
+      if (Array.isArray(dataObj.discounts)) rawDiscounts = dataObj.discounts;
+      if (Array.isArray(dataObj.blogCategories)) rawBlogCategories = dataObj.blogCategories;
+      if (Array.isArray(dataObj.blogPosts)) rawBlogPosts = dataObj.blogPosts;
+      if (Array.isArray(dataObj.productSets)) rawProductSets = dataObj.productSets;
+      if (Array.isArray(dataObj.stories)) rawStories = dataObj.stories;
+      if (Array.isArray(dataObj.media)) rawMedia = dataObj.media;
     } else {
-      if ('title' in parsed || 'price' in parsed) {
-        rawProducts = [parsed];
-      } else if ('name' in parsed || 'slug' in parsed) {
-        rawCategories = [parsed];
-      } else if ('shopName' in parsed || 'currency' in parsed || 'themeColor' in parsed) {
-        rawSettings = parsed;
+      if ('title' in dataObj || 'price' in dataObj) {
+        rawProducts = [dataObj];
+      } else if ('name' in dataObj || 'slug' in dataObj) {
+        rawCategories = [dataObj];
+      } else if ('shopName' in dataObj || 'currency' in dataObj || 'themeColor' in dataObj) {
+        rawSettings = dataObj;
       }
     }
   }
-  return { rawProducts, rawCategories, rawSettings, rawBrands, rawSliders };
+  return { rawProducts, rawCategories, rawSettings, rawBrands, rawSliders, rawMenus, rawDiscounts, rawBlogCategories, rawBlogPosts, rawProductSets, rawStories, rawMedia };
 }
 
 // Helper to chunk text
@@ -481,6 +703,13 @@ export async function POST(req: NextRequest) {
     let settings: any = null;
     const brands: any[] = [];
     const sliders: any[] = [];
+    const menus: any[] = [];
+    const discounts: any[] = [];
+    const blogCategories: any[] = [];
+    const blogPosts: any[] = [];
+    const productSets: any[] = [];
+    const stories: any[] = [];
+    const mediaList: any[] = [];
 
     // --- AI METHOD PREVIEW ---
     if (method === 'ai') {
@@ -681,8 +910,21 @@ export async function POST(req: NextRequest) {
         try {
           const parsed = JSON.parse(contentToProcess);
           
-          // Use smart schema auto-detection
-          const { rawProducts, rawCategories, rawSettings, rawBrands, rawSliders } = detectAndExtractJSON(parsed);
+          // Use smart schema auto-detection (supports both v3.0 and v2.0)
+          const {
+            rawProducts,
+            rawCategories,
+            rawSettings,
+            rawBrands,
+            rawSliders,
+            rawMenus,
+            rawDiscounts,
+            rawBlogCategories,
+            rawBlogPosts,
+            rawProductSets,
+            rawStories,
+            rawMedia
+          } = detectAndExtractJSON(parsed);
 
           if (type === 'products') {
             for (const prod of rawProducts) {
@@ -720,6 +962,34 @@ export async function POST(req: NextRequest) {
               const sanitized = sanitizeSlider(slider);
               if (sanitized) sliders.push(sanitized);
             }
+            for (const menu of rawMenus) {
+              const sanitized = sanitizeMenu(menu);
+              if (sanitized) menus.push(sanitized);
+            }
+            for (const discount of rawDiscounts) {
+              const sanitized = sanitizeDiscount(discount);
+              if (sanitized) discounts.push(sanitized);
+            }
+            for (const bcat of rawBlogCategories) {
+              const sanitized = sanitizeBlogCategory(bcat);
+              if (sanitized) blogCategories.push(sanitized);
+            }
+            for (const post of rawBlogPosts) {
+              const sanitized = sanitizeBlogPost(post);
+              if (sanitized) blogPosts.push(sanitized);
+            }
+            for (const pset of rawProductSets) {
+              const sanitized = sanitizeProductSet(pset);
+              if (sanitized) productSets.push(sanitized);
+            }
+            for (const story of rawStories) {
+              const sanitized = sanitizeStory(story);
+              if (sanitized) stories.push(sanitized);
+            }
+            for (const med of rawMedia) {
+              const sanitized = sanitizeMedia(med);
+              if (sanitized) mediaList.push(sanitized);
+            }
           }
 
           // Special return formatting for settings only preview if selected
@@ -751,9 +1021,22 @@ export async function POST(req: NextRequest) {
     }
 
     // Honest reporting: Fail if no valid entries were parsed/extracted
-    if (products.length === 0 && categories.length === 0 && !settings && brands.length === 0 && sliders.length === 0) {
+    if (
+      products.length === 0 &&
+      categories.length === 0 &&
+      !settings &&
+      brands.length === 0 &&
+      sliders.length === 0 &&
+      menus.length === 0 &&
+      discounts.length === 0 &&
+      blogCategories.length === 0 &&
+      blogPosts.length === 0 &&
+      productSets.length === 0 &&
+      stories.length === 0 &&
+      mediaList.length === 0
+    ) {
       return NextResponse.json({
-        error: 'هیچ داده معتبری (محصول، دسته‌بندی یا تنظیمات) هماهنگ با فیلتر انتخاب شده در فایل یافت نشد. لطفاً ساختار فایل و نوع انتخاب شده را بررسی کنید.'
+        error: 'هیچ داده معتبری (محصول، دسته‌بندی، تنظیمات یا سایر بخش‌ها) هماهنگ با فیلتر انتخاب شده در فایل یافت نشد. لطفاً ساختار فایل و نوع انتخاب شده را بررسی کنید.'
       }, { status: 400 });
     }
 
@@ -763,7 +1046,14 @@ export async function POST(req: NextRequest) {
       categories,
       settings,
       brands,
-      sliders
+      sliders,
+      menus,
+      discounts,
+      blogCategories,
+      blogPosts,
+      productSets,
+      stories,
+      media: mediaList
     });
 
   } catch (error: any) {

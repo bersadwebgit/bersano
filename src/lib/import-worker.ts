@@ -96,11 +96,20 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
     categories, 
     settings, 
     brands, 
-    sliders, 
+    sliders,
+    menus,
+    discounts,
+    blogCategories,
+    blogPosts,
+    productSets,
+    stories,
+    media,
     conflictResolution, 
     downloadImages, 
     isSettingsOnly 
   } = data
+
+  const oldProductIdToNewIdMap: Record<string, string> = {}
 
   // 1. Handle Settings (Updated for both isSettingsOnly and full backup import)
   if (settings) {
@@ -171,10 +180,45 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
   let updatedSlidersCount = 0
   let skippedSlidersCount = 0
 
+  let importedMenusCount = 0
+  let updatedMenusCount = 0
+  let skippedMenusCount = 0
+
+  let importedDiscountsCount = 0
+  let updatedDiscountsCount = 0
+  let skippedDiscountsCount = 0
+
+  let importedBlogCategoriesCount = 0
+  let updatedBlogCategoriesCount = 0
+  let skippedBlogCategoriesCount = 0
+
+  let importedBlogPostsCount = 0
+  let updatedBlogPostsCount = 0
+  let skippedBlogPostsCount = 0
+
+  let importedProductSetsCount = 0
+  let updatedProductSetsCount = 0
+  let skippedProductSetsCount = 0
+
+  let importedStoriesCount = 0
+  let updatedStoriesCount = 0
+  let skippedStoriesCount = 0
+
+  let importedMediaCount = 0
+  let updatedMediaCount = 0
+  let skippedMediaCount = 0
+
   // Total items for progress calculation
   const totalCategories = (categories && Array.isArray(categories)) ? categories.length : 0
   const totalBrands = (brands && Array.isArray(brands)) ? brands.length : 0
   const totalSliders = (sliders && Array.isArray(sliders)) ? sliders.length : 0
+  const totalMenus = (menus && Array.isArray(menus)) ? menus.length : 0
+  const totalDiscounts = (discounts && Array.isArray(discounts)) ? discounts.length : 0
+  const totalBlogCategories = (blogCategories && Array.isArray(blogCategories)) ? blogCategories.length : 0
+  const totalBlogPosts = (blogPosts && Array.isArray(blogPosts)) ? blogPosts.length : 0
+  const totalProductSets = (productSets && Array.isArray(productSets)) ? productSets.length : 0
+  const totalStories = (stories && Array.isArray(stories)) ? stories.length : 0
+  const totalMedia = (media && Array.isArray(media)) ? media.length : 0
   
   // Create categories referenced in products if they don't exist
   const referencedCategories: string[] = []
@@ -190,7 +234,8 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
   }
 
   const totalProducts = (products && Array.isArray(products)) ? products.length : 0
-  const totalItems = totalCategories + totalBrands + totalSliders + referencedCategories.length + totalProducts
+  const totalItems = totalCategories + totalBrands + totalSliders + referencedCategories.length + totalProducts +
+                     totalMenus + totalDiscounts + totalBlogCategories + totalBlogPosts + totalProductSets + totalStories + totalMedia
   let processedItems = 0
 
   const updateJobProgress = async () => {
@@ -287,7 +332,247 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
     }
   }
 
-  // 5. Process Categories first
+  // 5. Process Menus (MenuItem)
+  if (menus && Array.isArray(menus)) {
+    for (const menu of menus) {
+      if (!menu.title || !menu.url) {
+        await updateJobProgress()
+        continue
+      }
+      const title = menu.title.trim()
+      const url = menu.url.trim()
+
+      const existingMenu = await prisma.menuItem.findFirst({
+        where: { title, url, shopId }
+      })
+
+      const menuData = {
+        title,
+        url,
+        order: parseInt(menu.order) || 0,
+        color: menu.color || null,
+        icon: menu.icon || null,
+        isActive: menu.isActive !== undefined ? !!menu.isActive : true
+      }
+
+      if (existingMenu) {
+        if (conflictResolution === 'overwrite') {
+          await prisma.menuItem.update({
+            where: { id: existingMenu.id },
+            data: menuData
+          })
+          updatedMenusCount++
+        } else {
+          skippedMenusCount++
+        }
+      } else {
+        await prisma.menuItem.create({
+          data: {
+            ...menuData,
+            shopId
+          }
+        })
+        importedMenusCount++
+      }
+      await updateJobProgress()
+    }
+  }
+
+  // 6. Process Discounts (DiscountCode)
+  if (discounts && Array.isArray(discounts)) {
+    for (const d of discounts) {
+      if (!d.code) {
+        await updateJobProgress()
+        continue
+      }
+      const code = d.code.trim().toUpperCase()
+
+      const existingDiscount = await prisma.discountCode.findFirst({
+        where: { code, shopId }
+      })
+
+      const discountData = {
+        code,
+        discount: parseFloat(d.discount) || 0,
+        type: d.type || 'percentage',
+        maxUses: d.maxUses !== undefined && d.maxUses !== null ? parseInt(d.maxUses) : null,
+        usedCount: parseInt(d.usedCount) || 0,
+        isActive: d.isActive !== undefined ? !!d.isActive : true,
+        expiresAt: d.expiresAt ? new Date(d.expiresAt) : null,
+        startDate: d.startDate ? new Date(d.startDate) : null,
+        minOrderAmount: d.minOrderAmount !== undefined && d.minOrderAmount !== null ? parseFloat(d.minOrderAmount) : null,
+        minQuantity: parseInt(d.minQuantity) || 0,
+        maxDiscountAmount: d.maxDiscountAmount !== undefined && d.maxDiscountAmount !== null ? parseFloat(d.maxDiscountAmount) : null,
+        maxUsesPerUser: d.maxUsesPerUser !== undefined && d.maxUsesPerUser !== null ? parseInt(d.maxUsesPerUser) : 1,
+        firstOrderOnly: d.firstOrderOnly !== undefined ? !!d.firstOrderOnly : false,
+        targetCategoryIds: typeof d.targetCategoryIds === 'string' ? d.targetCategoryIds : JSON.stringify(d.targetCategoryIds || []),
+        targetProductIds: typeof d.targetProductIds === 'string' ? d.targetProductIds : JSON.stringify(d.targetProductIds || []),
+        allowedGender: d.allowedGender || 'all',
+        allowedCategories: typeof d.allowedCategories === 'string' ? d.allowedCategories : JSON.stringify(d.allowedCategories || []),
+        targetUserId: d.targetUserId || ""
+      }
+
+      if (existingDiscount) {
+        if (conflictResolution === 'overwrite') {
+          await prisma.discountCode.update({
+            where: { id: existingDiscount.id },
+            data: discountData
+          })
+          updatedDiscountsCount++
+        } else {
+          skippedDiscountsCount++
+        }
+      } else {
+        await prisma.discountCode.create({
+          data: {
+            ...discountData,
+            shopId
+          }
+        })
+        importedDiscountsCount++
+      }
+      await updateJobProgress()
+    }
+  }
+
+  // 7. Process Blog Categories (BlogCategory)
+  const oldBlogCategoryIdToNewIdMap: Record<string, string> = {}
+  if (blogCategories && Array.isArray(blogCategories)) {
+    for (const bcat of blogCategories) {
+      if (!bcat.name) {
+        await updateJobProgress()
+        continue
+      }
+      const name = bcat.name.trim()
+      const slug = (bcat.slug || toSlug(name)).trim()
+
+      const existingBCat = await prisma.blogCategory.findFirst({
+        where: {
+          OR: [
+            { slug, shopId },
+            { name, shopId }
+          ]
+        }
+      })
+
+      const bcatData = {
+        name,
+        slug,
+        description: bcat.description || null,
+        isDemo: bcat.isDemo !== undefined ? !!bcat.isDemo : false
+      }
+
+      let newBCatId = ''
+      if (existingBCat) {
+        if (conflictResolution === 'overwrite') {
+          const updated = await prisma.blogCategory.update({
+            where: { id: existingBCat.id },
+            data: bcatData
+          })
+          newBCatId = updated.id
+          updatedBlogCategoriesCount++
+        } else {
+          newBCatId = existingBCat.id
+          skippedBlogCategoriesCount++
+        }
+      } else {
+        const created = await prisma.blogCategory.create({
+          data: {
+            ...bcatData,
+            shopId
+          }
+        })
+        newBCatId = created.id
+        importedBlogCategoriesCount++
+      }
+
+      if (bcat.id) {
+        oldBlogCategoryIdToNewIdMap[bcat.id] = newBCatId
+      }
+      await updateJobProgress()
+    }
+  }
+
+  // 8. Process Blog Posts (BlogPost)
+  if (blogPosts && Array.isArray(blogPosts)) {
+    for (const post of blogPosts) {
+      if (!post.title || !post.content) {
+        await updateJobProgress()
+        continue
+      }
+      const title = post.title.trim()
+      const slug = (post.slug || toSlug(title)).trim()
+
+      const existingPost = await prisma.blogPost.findFirst({
+        where: {
+          OR: [
+            { slug, shopId },
+            { title, shopId }
+          ]
+        }
+      })
+
+      if (existingPost && conflictResolution === 'skip') {
+        skippedBlogPostsCount++
+        await updateJobProgress()
+        continue
+      }
+
+      let categoryId = null
+      if (post.categoryId && oldBlogCategoryIdToNewIdMap[post.categoryId]) {
+        categoryId = oldBlogCategoryIdToNewIdMap[post.categoryId]
+      }
+
+      let featuredImage = post.featuredImage || null
+      if (downloadImages && featuredImage && isExternalUrl(featuredImage)) {
+        const localPath = await downloadAndOptimizeImage(featuredImage, shopId, `${title}-featured`)
+        if (localPath) featuredImage = localPath
+      }
+
+      const postData = {
+        title,
+        slug,
+        content: post.content,
+        summary: post.summary || null,
+        featuredImage,
+        status: post.status || 'draft',
+        publishedAt: post.publishedAt ? new Date(post.publishedAt) : new Date(),
+        authorName: post.authorName || null,
+        categoryId,
+        tags: typeof post.tags === 'string' ? post.tags : JSON.stringify(post.tags || []),
+        seoTitle: post.seoTitle || null,
+        seoDescription: post.seoDescription || null,
+        seoSlug: post.seoSlug || null,
+        ogImage: post.ogImage || null,
+        allowComments: post.allowComments !== undefined ? !!post.allowComments : true,
+        viewCount: parseInt(post.viewCount) || 0,
+        faqs: typeof post.faqs === 'string' ? post.faqs : JSON.stringify(post.faqs || []),
+        isDemo: post.isDemo !== undefined ? !!post.isDemo : false,
+        isSampleData: post.isSampleData !== undefined ? !!post.isSampleData : false,
+        generatedByAi: post.generatedByAi !== undefined ? !!post.generatedByAi : false,
+        seedJobId: post.seedJobId || null
+      }
+
+      if (existingPost) {
+        await prisma.blogPost.update({
+          where: { id: existingPost.id },
+          data: postData
+        })
+        updatedBlogPostsCount++
+      } else {
+        await prisma.blogPost.create({
+          data: {
+            ...postData,
+            shopId
+          }
+        })
+        importedBlogPostsCount++
+      }
+      await updateJobProgress()
+    }
+  }
+
+  // 9. Process Categories first
   const oldCategoryIdToNewIdMap: Record<string, string> = {}
   const categoryNameToIdMap: Record<string, string> = {}
   const categorySlugToIdMap: Record<string, string> = {}
@@ -367,7 +652,7 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
     }
   }
 
-  // 6. Create categories referenced in products if they don't exist
+  // 10. Create categories referenced in products if they don't exist
   for (const name of referencedCategories) {
     if (!categoryNameToIdMap[name]) {
       let existingCategory = await prisma.category.findFirst({
@@ -392,7 +677,7 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
     await updateJobProgress()
   }
 
-  // 7. Verify Product Limits using precise "truly new" calculation
+  // 11. Verify Product Limits using precise "truly new" calculation
   if (products && Array.isArray(products) && maxProducts > 0) {
     const currentProductCount = await prisma.product.count({ where: { shopId } })
     
@@ -431,7 +716,7 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
     }
   }
 
-  // 8. Process Products
+  // 12. Process Products
   if (products && Array.isArray(products)) {
     for (const item of products) {
       if (!item.title) {
@@ -561,6 +846,10 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
         importedProductsCount++
       }
 
+      if (item.id) {
+        oldProductIdToNewIdMap[item.id] = productId
+      }
+
       // Process Variants
       if (item.variants && Array.isArray(item.variants) && productId) {
         await prisma.productVariant.deleteMany({
@@ -594,6 +883,230 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
     }
   }
 
+  // 13. Process Product Sets (ProductSet & ProductSetItem)
+  if (productSets && Array.isArray(productSets)) {
+    for (const pset of productSets) {
+      if (!pset.name || !pset.imageUrl) {
+        await updateJobProgress()
+        continue
+      }
+      const name = pset.name.trim()
+      const slug = (pset.slug || toSlug(name)).trim()
+
+      const existingSet = await prisma.productSet.findFirst({
+        where: {
+          OR: [
+            { slug, shopId },
+            { name, shopId }
+          ]
+        }
+      })
+
+      if (existingSet && conflictResolution === 'skip') {
+        skippedProductSetsCount++
+        await updateJobProgress()
+        continue
+      }
+
+      let imageUrl = pset.imageUrl
+      if (downloadImages && imageUrl && isExternalUrl(imageUrl)) {
+        const localPath = await downloadAndOptimizeImage(imageUrl, shopId, `${name}-set-main`)
+        if (localPath) imageUrl = localPath
+      }
+
+      const setData = {
+        name,
+        slug,
+        imageUrl,
+        isActive: pset.isActive !== undefined ? !!pset.isActive : true,
+        order: parseInt(pset.order) || 0,
+        views: parseInt(pset.views) || 0,
+        tagClicks: parseInt(pset.tagClicks || pset.tag_clicks) || 0,
+        addToCarts: parseInt(pset.addToCarts || pset.add_to_carts) || 0,
+        discount: parseFloat(pset.discount) || 0
+      }
+
+      let setId = ''
+      if (existingSet) {
+        await prisma.productSet.update({
+          where: { id: existingSet.id },
+          data: setData
+        })
+        setId = existingSet.id
+        updatedProductSetsCount++
+      } else {
+        const created = await prisma.productSet.create({
+          data: {
+            ...setData,
+            shopId
+          }
+        })
+        setId = created.id
+        importedProductSetsCount++
+      }
+
+      // Process ProductSetItems
+      if (pset.items && Array.isArray(pset.items) && setId) {
+        // Delete existing items
+        await prisma.productSetItem.deleteMany({
+          where: { setId, shopId }
+        })
+
+        for (const item of pset.items) {
+          let targetProductId = null
+          if (item.productId && oldProductIdToNewIdMap[item.productId]) {
+            targetProductId = oldProductIdToNewIdMap[item.productId]
+          } else if (item.productId) {
+            // Try to find by ID directly in case it already existed
+            const dbProd = await prisma.product.findFirst({
+              where: { id: item.productId, shopId },
+              select: { id: true }
+            })
+            if (dbProd) {
+              targetProductId = dbProd.id
+            }
+          }
+
+          if (targetProductId) {
+            await prisma.productSetItem.create({
+              data: {
+                shopId,
+                setId,
+                productId: targetProductId,
+                x: parseFloat(item.x) || 0,
+                y: parseFloat(item.y) || 0
+              }
+            })
+          }
+        }
+      }
+      await updateJobProgress()
+    }
+  }
+
+  // 14. Process Stories (Story)
+  if (stories && Array.isArray(stories)) {
+    for (const story of stories) {
+      if (!story.title || !story.mediaUrl) {
+        await updateJobProgress()
+        continue
+      }
+      const title = story.title.trim()
+      const mediaUrlRaw = story.mediaUrl.trim()
+
+      const existingStory = await prisma.story.findFirst({
+        where: { title, mediaUrl: mediaUrlRaw, shopId }
+      })
+
+      if (existingStory && conflictResolution === 'skip') {
+        skippedStoriesCount++
+        await updateJobProgress()
+        continue
+      }
+
+      let thumbnailUrl = story.thumbnailUrl
+      let mediaUrl = mediaUrlRaw
+
+      if (downloadImages) {
+        if (thumbnailUrl && isExternalUrl(thumbnailUrl)) {
+          const localPath = await downloadAndOptimizeImage(thumbnailUrl, shopId, `${title}-story-thumb`)
+          if (localPath) thumbnailUrl = localPath
+        }
+        if (mediaUrl && isExternalUrl(mediaUrl)) {
+          const localPath = await downloadAndOptimizeImage(mediaUrl, shopId, `${title}-story-media`)
+          if (localPath) mediaUrl = localPath
+        }
+      }
+
+      const storyData = {
+        title,
+        thumbnailUrl,
+        mediaUrl,
+        mediaType: story.mediaType || 'image',
+        text: story.text || null,
+        linkUrl: story.linkUrl || null,
+        linkText: story.linkText || null,
+        duration: parseInt(story.duration) || 5,
+        category: story.category || null,
+        isActive: story.isActive !== undefined ? !!story.isActive : true,
+        displayLocation: story.displayLocation || 'both',
+        isDemo: story.isDemo !== undefined ? !!story.isDemo : false,
+        expiresAt: story.expiresAt ? new Date(story.expiresAt) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // Default 7 days
+      }
+
+      if (existingStory) {
+        await prisma.story.update({
+          where: { id: existingStory.id },
+          data: storyData
+        })
+        updatedStoriesCount++
+      } else {
+        await prisma.story.create({
+          data: {
+            ...storyData,
+            shopId
+          }
+        })
+        importedStoriesCount++
+      }
+      await updateJobProgress()
+    }
+  }
+
+  // 15. Process Media (Media)
+  if (media && Array.isArray(media)) {
+    for (const med of media) {
+      if (!med.url) {
+        await updateJobProgress()
+        continue
+      }
+      const urlRaw = med.url.trim()
+
+      const existingMedia = await prisma.media.findFirst({
+        where: { url: urlRaw, shopId }
+      })
+
+      if (existingMedia && conflictResolution === 'skip') {
+        skippedMediaCount++
+        await updateJobProgress()
+        continue
+      }
+
+      let url = urlRaw
+      if (downloadImages && isExternalUrl(url)) {
+        const localPath = await downloadAndOptimizeImage(url, shopId, med.name || 'imported-media')
+        if (localPath) url = localPath
+      }
+
+      const mediaData = {
+        url,
+        type: med.type || 'image',
+        name: med.name || 'imported-media',
+        alt: med.alt || null,
+        size: med.size !== undefined && med.size !== null ? parseInt(med.size) : null,
+        originalId: med.originalId || null,
+        originalUrl: med.originalUrl || null
+      }
+
+      if (existingMedia) {
+        await prisma.media.update({
+          where: { id: existingMedia.id },
+          data: mediaData
+        })
+        updatedMediaCount++
+      } else {
+        await prisma.media.create({
+          data: {
+            ...mediaData,
+            shopId
+          }
+        })
+        importedMediaCount++
+      }
+      await updateJobProgress()
+    }
+  }
+
   // Re-write final summary message to include all parsed fields
   let summaryMessage = `درون‌ریزی با موفقیت انجام شد.\n` +
     `محصولات: ${importedProductsCount} جدید، ${updatedProductsCount} بروزرسانی، ${skippedProductsCount} نادیده.\n` +
@@ -604,6 +1117,27 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
   }
   if (sliders && sliders.length > 0) {
     summaryMessage += `\nاسلایدرها: ${importedSlidersCount} جدید، ${updatedSlidersCount} بروزرسانی، ${skippedSlidersCount} نادیده.`
+  }
+  if (menus && menus.length > 0) {
+    summaryMessage += `\nمنوها: ${importedMenusCount} جدید، ${updatedMenusCount} بروزرسانی، ${skippedMenusCount} نادیده.`
+  }
+  if (discounts && discounts.length > 0) {
+    summaryMessage += `\nکدهای تخفیف: ${importedDiscountsCount} جدید، ${updatedDiscountsCount} بروزرسانی، ${skippedDiscountsCount} نادیده.`
+  }
+  if (blogCategories && blogCategories.length > 0) {
+    summaryMessage += `\nدسته‌بندی‌های وبلاگ: ${importedBlogCategoriesCount} جدید، ${updatedBlogCategoriesCount} بروزرسانی، ${skippedBlogCategoriesCount} نادیده.`
+  }
+  if (blogPosts && blogPosts.length > 0) {
+    summaryMessage += `\nمقالات وبلاگ: ${importedBlogPostsCount} جدید، ${updatedBlogPostsCount} بروزرسانی، ${skippedBlogPostsCount} نادیده.`
+  }
+  if (productSets && productSets.length > 0) {
+    summaryMessage += `\nست‌های محصول: ${importedProductSetsCount} جدید، ${updatedProductSetsCount} بروزرسانی، ${skippedProductSetsCount} نادیده.`
+  }
+  if (stories && stories.length > 0) {
+    summaryMessage += `\nاستوری‌ها: ${importedStoriesCount} جدید، ${updatedStoriesCount} بروزرسانی، ${skippedStoriesCount} نادیده.`
+  }
+  if (media && media.length > 0) {
+    summaryMessage += `\nرسانه‌ها: ${importedMediaCount} جدید، ${updatedMediaCount} بروزرسانی، ${skippedMediaCount} نادیده.`
   }
   if (settings) {
     summaryMessage += `\nتنظیمات فروشگاه با موفقیت بروزرسانی شد.`

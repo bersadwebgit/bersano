@@ -32,6 +32,67 @@ function convertToCSV(data: any[], headers: string[], keys: (string | ((item: an
   return '\uFEFF' + csvRows.join('\r\n');
 }
 
+// Helper to sanitize ShopSettings for export
+function sanitizeSettingsForExport(settings: any): any {
+  if (!settings) return null;
+  const {
+    id,
+    shopId,
+    subdomain,
+    customDomain,
+    isApproved,
+    isActive,
+    packageId,
+    packageExpiresAt,
+    bgRemovalCount,
+    aiMemory,
+    createdAt,
+    updatedAt,
+    // Sensitive gateway/integration credentials
+    zarinpalMerchantId,
+    zibalMerchantId,
+    digipayClientId,
+    digipayClientSecret,
+    digipayUsername,
+    digipayPassword,
+    tipaxUsername,
+    tipaxPassword,
+    tipaxApiKey,
+    mahakApiKey,
+    mahakServerUrl,
+    mahakUsername,
+    mahakPassword,
+    baleIntegrationToken,
+    baleChatId,
+    telegramIntegrationToken,
+    telegramChatId,
+    smsConfig,
+    ...safeSettings
+  } = settings;
+
+  return {
+    ...safeSettings,
+    zarinpalMerchantId: "",
+    zibalMerchantId: "",
+    digipayClientId: "",
+    digipayClientSecret: "",
+    digipayUsername: "",
+    digipayPassword: "",
+    tipaxUsername: "",
+    tipaxPassword: "",
+    tipaxApiKey: "",
+    mahakApiKey: "",
+    mahakServerUrl: "",
+    mahakUsername: "",
+    mahakPassword: "",
+    baleIntegrationToken: "",
+    baleChatId: "",
+    telegramIntegrationToken: "",
+    telegramChatId: "",
+    smsConfig: JSON.stringify({ enabled: false, provider: "", credentials: {}, patterns: {}, adminPhone: "" })
+  };
+}
+
 export async function GET(req: NextRequest) {
   try {
     const payload = await verifyAuth(req, 'admin');
@@ -44,6 +105,12 @@ export async function GET(req: NextRequest) {
     const format = searchParams.get('format') || 'json'; // json, csv
 
     const shopId = payload.shopId;
+
+    // Fetch shop settings for metadata
+    const shopSettings = await prisma.shopSettings.findUnique({
+      where: { shopId },
+    });
+    const siteName = shopSettings?.shopName || 'My Shop';
 
     if (type === 'products') {
       const products = await prisma.product.findMany({
@@ -134,13 +201,22 @@ export async function GET(req: NextRequest) {
           },
         });
       } else {
-        // JSON format
+        // JSON format (v3.0 canonical)
         const exportData = {
-          version: '2.0',
+          version: '3.0',
+          app: 'shop_final',
           type: 'products',
-          shopId,
           exportedAt: new Date().toISOString(),
-          products,
+          source: {
+            shopId,
+            siteName,
+          },
+          sections: {
+            products: products.length,
+          },
+          data: {
+            products,
+          },
         };
         return new NextResponse(JSON.stringify(exportData, null, 2), {
           headers: {
@@ -186,12 +262,22 @@ export async function GET(req: NextRequest) {
           },
         });
       } else {
+        // JSON format (v3.0 canonical)
         const exportData = {
-          version: '2.0',
+          version: '3.0',
+          app: 'shop_final',
           type: 'categories',
-          shopId,
           exportedAt: new Date().toISOString(),
-          categories,
+          source: {
+            shopId,
+            siteName,
+          },
+          sections: {
+            categories: categories.length,
+          },
+          data: {
+            categories,
+          },
         };
         return new NextResponse(JSON.stringify(exportData, null, 2), {
           headers: {
@@ -203,16 +289,24 @@ export async function GET(req: NextRequest) {
     }
 
     if (type === 'settings') {
-      const settings = await prisma.shopSettings.findUnique({
-        where: { shopId },
-      });
+      const sanitizedSettings = sanitizeSettingsForExport(shopSettings);
 
+      // JSON format (v3.0 canonical)
       const exportData = {
-        version: '2.0',
+        version: '3.0',
+        app: 'shop_final',
         type: 'settings',
-        shopId,
         exportedAt: new Date().toISOString(),
-        settings,
+        source: {
+          shopId,
+          siteName,
+        },
+        sections: {
+          settings: true,
+        },
+        data: {
+          settings: sanitizedSettings,
+        },
       };
 
       return new NextResponse(JSON.stringify(exportData, null, 2), {
@@ -224,37 +318,96 @@ export async function GET(req: NextRequest) {
     }
 
     if (type === 'full') {
-      const products = await prisma.product.findMany({
-        where: { shopId },
-        include: { variants: true },
-      });
-
-      const categories = await prisma.category.findMany({
-        where: { shopId },
-      });
-
-      const settings = await prisma.shopSettings.findUnique({
-        where: { shopId },
-      });
-
-      const brands = await prisma.brand.findMany({
-        where: { shopId },
-      });
-
-      const sliders = await prisma.heroSlide.findMany({
-        where: { shopId },
-      });
-
-      const fullBackup = {
-        version: '2.0',
-        type: 'full',
-        shopId,
-        exportedAt: new Date().toISOString(),
-        settings,
-        categories,
+      const [
         products,
+        categories,
         brands,
         sliders,
+        menus,
+        discounts,
+        blogCategories,
+        blogPosts,
+        productSets,
+        stories,
+        media,
+      ] = await Promise.all([
+        prisma.product.findMany({
+          where: { shopId },
+          include: { variants: true },
+        }),
+        prisma.category.findMany({
+          where: { shopId },
+        }),
+        prisma.brand.findMany({
+          where: { shopId },
+        }),
+        prisma.heroSlide.findMany({
+          where: { shopId },
+        }),
+        prisma.menuItem.findMany({
+          where: { shopId },
+          orderBy: { order: 'asc' },
+        }),
+        prisma.discountCode.findMany({
+          where: { shopId },
+        }),
+        prisma.blogCategory.findMany({
+          where: { shopId },
+        }),
+        prisma.blogPost.findMany({
+          where: { shopId },
+        }),
+        prisma.productSet.findMany({
+          where: { shopId },
+          include: { items: true },
+        }),
+        prisma.story.findMany({
+          where: { shopId },
+        }),
+        prisma.media.findMany({
+          where: { shopId },
+        }),
+      ]);
+
+      const sanitizedSettings = sanitizeSettingsForExport(shopSettings);
+
+      const fullBackup = {
+        version: '3.0',
+        app: 'shop_final',
+        type: 'full',
+        exportedAt: new Date().toISOString(),
+        source: {
+          shopId,
+          siteName,
+        },
+        sections: {
+          settings: !!sanitizedSettings,
+          categories: categories.length,
+          brands: brands.length,
+          products: products.length,
+          sliders: sliders.length,
+          menus: menus.length,
+          discounts: discounts.length,
+          blogCategories: blogCategories.length,
+          blogPosts: blogPosts.length,
+          productSets: productSets.length,
+          stories: stories.length,
+          media: media.length,
+        },
+        data: {
+          settings: sanitizedSettings,
+          categories,
+          brands,
+          products,
+          sliders,
+          menus,
+          discounts,
+          blogCategories,
+          blogPosts,
+          productSets,
+          stories,
+          media,
+        },
       };
 
       return new NextResponse(JSON.stringify(fullBackup, null, 2), {

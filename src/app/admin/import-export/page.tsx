@@ -95,6 +95,13 @@ export default function ImportExportPage() {
   const [previewSettings, setPreviewSettings] = useState<any>(null);
   const [previewBrands, setPreviewBrands] = useState<any[]>([]);
   const [previewSliders, setPreviewSliders] = useState<any[]>([]);
+  const [previewMenus, setPreviewMenus] = useState<any[]>([]);
+  const [previewDiscounts, setPreviewDiscounts] = useState<any[]>([]);
+  const [previewBlogCategories, setPreviewBlogCategories] = useState<any[]>([]);
+  const [previewBlogPosts, setPreviewBlogPosts] = useState<any[]>([]);
+  const [previewProductSets, setPreviewProductSets] = useState<any[]>([]);
+  const [previewStories, setPreviewStories] = useState<any[]>([]);
+  const [previewMedia, setPreviewMedia] = useState<any[]>([]);
 
   const [message, setMessage] = useState<{ type: 'success' | 'error' | ''; text: string }>({ type: '', text: '' });
   const [importResult, setImportResult] = useState('');
@@ -191,6 +198,13 @@ export default function ImportExportPage() {
         setPreviewCategories([]);
         setPreviewBrands([]);
         setPreviewSliders([]);
+        setPreviewMenus([]);
+        setPreviewDiscounts([]);
+        setPreviewBlogCategories([]);
+        setPreviewBlogPosts([]);
+        setPreviewProductSets([]);
+        setPreviewStories([]);
+        setPreviewMedia([]);
       } else {
         setIsSettingsOnly(false);
         setPreviewProducts(data.products || []);
@@ -198,6 +212,13 @@ export default function ImportExportPage() {
         setPreviewSettings(data.settings || null);
         setPreviewBrands(data.brands || []);
         setPreviewSliders(data.sliders || []);
+        setPreviewMenus(data.menus || []);
+        setPreviewDiscounts(data.discounts || []);
+        setPreviewBlogCategories(data.blogCategories || []);
+        setPreviewBlogPosts(data.blogPosts || []);
+        setPreviewProductSets(data.productSets || []);
+        setPreviewStories(data.stories || []);
+        setPreviewMedia(data.media || []);
       }
 
       setImportStep('preview');
@@ -228,6 +249,13 @@ export default function ImportExportPage() {
           settings: previewSettings,
           brands: previewBrands,
           sliders: previewSliders,
+          menus: previewMenus,
+          discounts: previewDiscounts,
+          blogCategories: previewBlogCategories,
+          blogPosts: previewBlogPosts,
+          productSets: previewProductSets,
+          stories: previewStories,
+          media: previewMedia,
           isSettingsOnly,
           conflictResolution,
           downloadImages
@@ -934,7 +962,7 @@ export default function ImportExportPage() {
               )}
 
               {/* Full Backup Settings, Brands, Sliders indicators */}
-              {!isSettingsOnly && (previewSettings || previewBrands.length > 0 || previewSliders.length > 0) && (
+              {!isSettingsOnly && (previewSettings || previewBrands.length > 0 || previewSliders.length > 0 || previewMenus.length > 0 || previewDiscounts.length > 0 || previewBlogCategories.length > 0 || previewBlogPosts.length > 0 || previewProductSets.length > 0 || previewStories.length > 0 || previewMedia.length > 0) && (
                 <div className="bg-slate-50 dark:bg-slate-950 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
                   <h4 className="text-xs font-black text-slate-800 dark:text-white flex items-center gap-2">
                     <Settings className="w-4 h-4 text-blue-500" />
@@ -964,6 +992,69 @@ export default function ImportExportPage() {
                         <div>
                           <span className="text-indigo-500 block mb-1">اسلایدرها ({previewSliders.length} مورد):</span>
                           <span className="text-slate-500 font-semibold">اسلایدهای هیرو جهت تطبیق و ایجاد اسلایدهای جدید بررسی خواهند شد.</span>
+                        </div>
+                        <div className="mt-2 text-[10px] text-emerald-600 font-black">آماده درون‌ریزی</div>
+                      </div>
+                    )}
+                    {previewMenus.length > 0 && (
+                      <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-150 dark:border-slate-850 flex flex-col justify-between">
+                        <div>
+                          <span className="text-indigo-500 block mb-1">منوهای هدر ({previewMenus.length} مورد):</span>
+                          <span className="text-slate-500 font-semibold">آیتم‌های منوی ناوبری هدر فروشگاه درون‌ریزی و تنظیم خواهند شد.</span>
+                        </div>
+                        <div className="mt-2 text-[10px] text-emerald-600 font-black">آماده درون‌ریزی</div>
+                      </div>
+                    )}
+                    {previewDiscounts.length > 0 && (
+                      <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-150 dark:border-slate-850 flex flex-col justify-between">
+                        <div>
+                          <span className="text-indigo-500 block mb-1">کدهای تخفیف ({previewDiscounts.length} مورد):</span>
+                          <span className="text-slate-500 font-semibold">کدهای تخفیف فعال و غیرفعال با شرایط استفاده به فروشگاه منتقل می‌شوند.</span>
+                        </div>
+                        <div className="mt-2 text-[10px] text-emerald-600 font-black">آماده درون‌ریزی</div>
+                      </div>
+                    )}
+                    {previewBlogCategories.length > 0 && (
+                      <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-150 dark:border-slate-850 flex flex-col justify-between">
+                        <div>
+                          <span className="text-indigo-500 block mb-1">دسته‌بندی‌های وبلاگ ({previewBlogCategories.length} مورد):</span>
+                          <span className="text-slate-500 font-semibold">دسته‌های موضوعی مقالات وبلاگ ایجاد و آماده انتساب به مقالات می‌شوند.</span>
+                        </div>
+                        <div className="mt-2 text-[10px] text-emerald-600 font-black">آماده درون‌ریزی</div>
+                      </div>
+                    )}
+                    {previewBlogPosts.length > 0 && (
+                      <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-150 dark:border-slate-850 flex flex-col justify-between">
+                        <div>
+                          <span className="text-indigo-500 block mb-1">مقالات وبلاگ ({previewBlogPosts.length} مورد):</span>
+                          <span className="text-slate-500 font-semibold">محتوای مقالات وبلاگ به همراه تصاویر شاخص و تگ‌ها درون‌ریزی خواهند شد.</span>
+                        </div>
+                        <div className="mt-2 text-[10px] text-emerald-600 font-black">آماده درون‌ریزی</div>
+                      </div>
+                    )}
+                    {previewProductSets.length > 0 && (
+                      <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-150 dark:border-slate-850 flex flex-col justify-between">
+                        <div>
+                          <span className="text-indigo-500 block mb-1">ست‌های محصول ({previewProductSets.length} مورد):</span>
+                          <span className="text-slate-500 font-semibold">ست‌های محصول (Shoppable Images) به همراه تگ‌های دقیق روی تصاویر منتقل می‌شوند.</span>
+                        </div>
+                        <div className="mt-2 text-[10px] text-emerald-600 font-black">آماده درون‌ریزی</div>
+                      </div>
+                    )}
+                    {previewStories.length > 0 && (
+                      <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-150 dark:border-slate-850 flex flex-col justify-between">
+                        <div>
+                          <span className="text-indigo-500 block mb-1">استوری‌ها ({previewStories.length} مورد):</span>
+                          <span className="text-slate-500 font-semibold">استوری‌های فعال فروشگاه به همراه ویدیوها و تصاویر و لینک‌ها منتقل می‌شوند.</span>
+                        </div>
+                        <div className="mt-2 text-[10px] text-emerald-600 font-black">آماده درون‌ریزی</div>
+                      </div>
+                    )}
+                    {previewMedia.length > 0 && (
+                      <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-150 dark:border-slate-850 flex flex-col justify-between">
+                        <div>
+                          <span className="text-indigo-500 block mb-1">فایل‌های رسانه ({previewMedia.length} مورد):</span>
+                          <span className="text-slate-500 font-semibold">تصاویر و ویدیوهای آپلود شده در کتابخانه رسانه فروشگاه کپی خواهند شد.</span>
                         </div>
                         <div className="mt-2 text-[10px] text-emerald-600 font-black">آماده درون‌ریزی</div>
                       </div>
@@ -1156,7 +1247,20 @@ export default function ImportExportPage() {
                   </button>
                   <button
                     onClick={handleConfirmAndSave}
-                    disabled={saving || (previewProducts.length === 0 && previewCategories.length === 0 && !previewSettings)}
+                    disabled={saving || (
+                      previewProducts.length === 0 &&
+                      previewCategories.length === 0 &&
+                      !previewSettings &&
+                      previewBrands.length === 0 &&
+                      previewSliders.length === 0 &&
+                      previewMenus.length === 0 &&
+                      previewDiscounts.length === 0 &&
+                      previewBlogCategories.length === 0 &&
+                      previewBlogPosts.length === 0 &&
+                      previewProductSets.length === 0 &&
+                      previewStories.length === 0 &&
+                      previewMedia.length === 0
+                    )}
                     className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs shadow-md hover:shadow-lg hover:-translate-y-0.5 active:scale-98 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
                   >
                     {saving ? (
@@ -1195,6 +1299,15 @@ export default function ImportExportPage() {
                     setPreviewProducts([]);
                     setPreviewCategories([]);
                     setPreviewSettings(null);
+                    setPreviewBrands([]);
+                    setPreviewSliders([]);
+                    setPreviewMenus([]);
+                    setPreviewDiscounts([]);
+                    setPreviewBlogCategories([]);
+                    setPreviewBlogPosts([]);
+                    setPreviewProductSets([]);
+                    setPreviewStories([]);
+                    setPreviewMedia([]);
                   }}
                   className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-xs shadow-md hover:shadow-lg hover:-translate-y-0.5 active:scale-98 transition-all"
                 >
