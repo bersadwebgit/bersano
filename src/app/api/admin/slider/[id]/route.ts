@@ -20,16 +20,16 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const { imageUrl, mobileImageUrl, title, subtitle, linkUrl, linkText, order, isActive, displayLocation } = body;
 
     // Verify ownership
-    const existingSlide = await prisma.heroSlide.findUnique({
-      where: { id: resolvedParams.id },
+    const existingSlide = await prisma.heroSlide.findFirst({
+      where: { id: resolvedParams.id, shopId },
     });
 
-    if (!existingSlide || existingSlide.shopId !== shopId) {
+    if (!existingSlide) {
       return NextResponse.json({ error: "Slide not found" }, { status: 404 });
     }
 
-    const slide = await prisma.heroSlide.update({
-      where: { id: resolvedParams.id },
+    await prisma.heroSlide.updateMany({
+      where: { id: resolvedParams.id, shopId },
       data: {
         imageUrl,
         mobileImageUrl,
@@ -41,6 +41,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         isActive,
         displayLocation,
       },
+    });
+
+    const slide = await prisma.heroSlide.findFirst({
+      where: { id: resolvedParams.id, shopId },
     });
 
     await Invalidate.heroSlides(shopId);
@@ -66,16 +70,16 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     }
 
     // Verify ownership
-    const existingSlide = await prisma.heroSlide.findUnique({
-      where: { id: resolvedParams.id },
+    const existingSlide = await prisma.heroSlide.findFirst({
+      where: { id: resolvedParams.id, shopId },
     });
 
-    if (!existingSlide || existingSlide.shopId !== shopId) {
+    if (!existingSlide) {
       return NextResponse.json({ error: "Slide not found" }, { status: 404 });
     }
 
-    await prisma.heroSlide.delete({
-      where: { id: resolvedParams.id },
+    await prisma.heroSlide.deleteMany({
+      where: { id: resolvedParams.id, shopId },
     });
 
     await Invalidate.heroSlides(shopId);
