@@ -62,7 +62,6 @@ export async function saveSeedData(
         data: {
           shopId,
           title: prod.title,
-          slug: prod.slug,
           type: prod.type || 'physical',
           categoryId,
           description: prod.description,
@@ -178,9 +177,6 @@ export async function saveSeedData(
           linkUrl: '/shop',
           linkText: 'مشاهده محصولات',
           isDemo: true,
-          isSampleData: true,
-          generatedByAi: true,
-          seedJobId: jobId
         }
       });
     }
@@ -271,6 +267,9 @@ export async function saveSeedData(
     });
   });
 
+  console.log(`[SHOP SEED] categories created count: ${categories.length}`);
+  console.log(`[SHOP SEED] products created count: ${createdProductIds.length}`);
+
   // 2. Trigger product embedding asynchronously (non-blocking)
   if (createdProductIds.length > 0) {
     Promise.allSettled(
@@ -343,7 +342,7 @@ async function deleteSampleDataWithTx(shopId: string, tx: any) {
 
   // D. Delete sample hero slides
   await tx.heroSlide.deleteMany({
-    where: { shopId, isSampleData: true, generatedByAi: true }
+    where: { shopId, isDemo: true }
   });
 
   // E. Delete sample customer user

@@ -14,11 +14,17 @@ const key = new TextEncoder().encode(JWT_SECRET);
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-pathname', pathname);
 
   // Protect /super-admin routes
   if (pathname.startsWith('/super-admin')) {
     if (pathname === '/super-admin/login') {
-      return NextResponse.next();
+      return NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      });
     }
 
     const token = request.cookies.get('super_admin_token')?.value;
@@ -32,7 +38,11 @@ export async function middleware(request: NextRequest) {
       if (payload.role !== 'superadmin') {
         return NextResponse.redirect(new URL('/super-admin/login', request.url));
       }
-      return NextResponse.next();
+      return NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      });
     } catch (error) {
       const response = NextResponse.redirect(new URL('/super-admin/login', request.url));
       response.cookies.delete('super_admin_token');
@@ -44,7 +54,11 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/admin')) {
     // Skip protection for login page
     if (pathname === '/admin/login') {
-      return NextResponse.next();
+      return NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      });
     }
 
     const token = request.cookies.get('admin_token')?.value;
@@ -71,7 +85,11 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL(getDefaultAdminPath(role), request.url));
       }
 
-      return NextResponse.next();
+      return NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      });
     } catch (error) {
       const response = NextResponse.redirect(new URL('/admin/login', request.url));
       response.cookies.delete('admin_token');
@@ -100,7 +118,11 @@ export async function middleware(request: NextRequest) {
         return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 403 });
       }
 
-      return NextResponse.next();
+      return NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      });
     } catch {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -130,7 +152,11 @@ export async function middleware(request: NextRequest) {
 
     try {
       await jwtVerify(customerToken, key);
-      return NextResponse.next();
+      return NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      });
     } catch (error) {
       const response = NextResponse.redirect(new URL('/login', request.url));
       response.cookies.delete('customer_token');
@@ -138,9 +164,21 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  return NextResponse.next();
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/admin/:path*', '/super-admin/:path*', '/profile/:path*', '/checkout/:path*', '/login', '/register'],
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
 };

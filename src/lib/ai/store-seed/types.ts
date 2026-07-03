@@ -38,6 +38,9 @@ export interface SeedProduct {
   imageAltFa: string;
   imageStyle: string;
   tags: string[];
+  type?: 'physical' | 'digital';
+  imageUrl?: string;
+  galleryUrls?: string[];
 }
 
 export interface SeedArticle {
@@ -49,6 +52,7 @@ export interface SeedArticle {
   seoDescription: string;
   keywords: string[];
   relatedProductCategories: string[];
+  featuredImage?: string;
 }
 
 export interface SeedHomepage {
@@ -62,6 +66,7 @@ export interface SeedHomepage {
     subtitle: string;
     imageSearchQueryEn: string;
     imageAltFa: string;
+    imageUrl?: string;
   }[];
   aboutShort: string;
   faqs: { question: string; answer: string }[];

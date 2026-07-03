@@ -5,15 +5,29 @@ import { CacheKeys, TTL } from './cache-keys';
 
 export async function getTenantShop(requestHost?: string, includeUnapproved = false) {
   let host = requestHost;
+  let pathname = '';
   
   try {
+    const headersList = await headers();
     if (!host) {
-      const headersList = await headers();
       host = headersList.get('host') || ''; // e.g. shop1.localhost:3000
     }
+    pathname = headersList.get('x-pathname') || '';
   } catch (err) {
     // Fallback if headers() cannot be read (e.g., in some static generation contexts)
-    host = 'localhost';
+    if (!host) {
+      host = 'localhost';
+    }
+  }
+
+  // Bypass tenant resolution for uploads
+  if (pathname && (pathname.startsWith('/uploads/') || pathname === '/uploads')) {
+    return null;
+  }
+
+  // Guard against empty/missing host immediately
+  if (!host || host.trim() === '') {
+    return null;
   }
 
   // Extract subdomain robustly

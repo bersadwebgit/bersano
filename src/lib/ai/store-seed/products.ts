@@ -74,10 +74,11 @@ Make sure to generate exactly ${productType === 'both' ? '2 physical and 1 digit
     temperature: 0.3,
     maxTokens: 3000,
     requiredFields: [],
-    fallbackValue: []
+    fallbackValue: [],
+    skipQuotaCheck: true
   });
 
-  const products = result.data || result.fallbackValue || [];
+  const products = result.data || [];
 
   // Resolve high-quality images for each product
   const enrichedProducts = await Promise.all(

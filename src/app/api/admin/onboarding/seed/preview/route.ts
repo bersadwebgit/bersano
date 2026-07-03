@@ -17,6 +17,8 @@ export async function POST(request: Request) {
     const shopId = decoded.shopId;
     const body = await request.json();
 
+    console.log(`[SHOP SEED] preview started for shop: ${shopId}`);
+
     // 1. Get or create seed profile and job
     const profile = await getOrCreateSeedProfile(shopId, body);
     const job = await getOrCreateSeedJob(shopId);
@@ -38,6 +40,9 @@ export async function POST(request: Request) {
       brandTone: body.brandTone || '',
       activityLocation: body.activityLocation || ''
     });
+
+    console.log(`[SHOP SEED] blueprint generated for shop: ${shopId}`);
+    console.log(`[SHOP SEED] confidence: ${blueprint.confidence}`);
 
     // 3. Check confidence rule
     if (blueprint.confidence < 0.65) {
@@ -93,15 +98,20 @@ export async function POST(request: Request) {
 
     const homepage = await generateSeedHomepage(shopId, blueprint);
 
+    console.log(`[SHOP SEED] products generated count: ${products.length}`);
+
     // 5. Validate generated products and articles
     const warnings: string[] = [];
     const validProducts = products.filter(p => {
       const { valid, issues } = validateProduct(p, blueprint, body.businessField || 'general');
       if (!valid) {
+        console.warn(`[SHOP SEED] Product validation failed for "${p.title}":`, JSON.stringify(issues));
         issues.forEach(issue => warnings.push(`محصول "${p.title}": ${issue.message}`));
       }
       return valid;
     });
+
+    console.log(`[SHOP SEED] products valid count: ${validProducts.length}`);
 
     const validArticles = articles.filter(a => {
       const { valid, issues } = validateArticle(a);

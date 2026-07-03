@@ -96,6 +96,39 @@ Rule-Based Defaults to guide you:
 
 Please analyze the inputs carefully. If the shop name or description is too generic (e.g., "My Shop" or "فروشگاه من"), set "confidence" to less than 0.65 and provide 5 specific onboarding questions in "questionsIfUnclear" to ask the merchant.`;
 
+  const fallbackBlueprint: BusinessBlueprint = {
+    businessType: businessField,
+    niche: 'عمومی',
+    confidence: 0.5,
+    targetAudience: targetAudience ? [targetAudience] : [],
+    brandTone: brandTone || 'trust',
+    priceLevel: 'medium',
+    mainCategories: rule.defaultCategories,
+    productAttributes: rule.requiredAttributes,
+    productRules: {
+      priceRange: rule.priceRange,
+      stockRange: rule.stockRange,
+      variantTypes: rule.variantTypes,
+      mustHaveFields: ['title', 'price', 'description']
+    },
+    seoKeywords: rule.seoKeywordHints,
+    blogTopics: rule.blogTopicHints.map(title => ({
+      title,
+      slug: 'blog-post-' + Math.random().toString(36).substring(2, 7),
+      excerpt: title,
+      keywords: []
+    })),
+    homePageSections: ['hero', 'categories', 'specialDeals', 'blog'],
+    imageSearchKeywords: rule.imageSearchHints,
+    questionsIfUnclear: [
+      'فروشگاه شما بیشتر چه محصولاتی می‌فروشد؟',
+      'مشتری اصلی شما کیست؟',
+      'سطح قیمت محصولات شما اقتصادی، متوسط یا لوکس است؟',
+      'سه دسته اصلی فروشگاه را بنویسید.',
+      'لحن برند شما رسمی، دوستانه، لوکس یا فانتزی است؟'
+    ]
+  };
+
   const result = await callAiGateway<BusinessBlueprint>({
     shopId,
     endpoint: '/api/admin/onboarding/seed/blueprint',
@@ -108,41 +141,11 @@ Please analyze the inputs carefully. If the shop name or description is too gene
     temperature: 0.2,
     maxTokens: 2500,
     requiredFields: ['businessType', 'niche', 'confidence', 'mainCategories', 'productRules'],
-    fallbackValue: {
-      businessType: businessField,
-      niche: 'عمومی',
-      confidence: 0.5,
-      targetAudience: targetAudience ? [targetAudience] : [],
-      brandTone: brandTone || 'trust',
-      priceLevel: 'medium',
-      mainCategories: rule.defaultCategories,
-      productAttributes: rule.requiredAttributes,
-      productRules: {
-        priceRange: rule.priceRange,
-        stockRange: rule.stockRange,
-        variantTypes: rule.variantTypes,
-        mustHaveFields: ['title', 'price', 'description']
-      },
-      seoKeywords: rule.seoKeywordHints,
-      blogTopics: rule.blogTopicHints.map(title => ({
-        title,
-        slug: 'blog-post-' + Math.random().toString(36).substring(2, 7),
-        excerpt: title,
-        keywords: []
-      })),
-      homePageSections: ['hero', 'categories', 'specialDeals', 'blog'],
-      imageSearchKeywords: rule.imageSearchHints,
-      questionsIfUnclear: [
-        'فروشگاه شما بیشتر چه محصولاتی می‌فروشد؟',
-        'مشتری اصلی شما کیست؟',
-        'سطح قیمت محصولات شما اقتصادی، متوسط یا لوکس است؟',
-        'سه دسته اصلی فروشگاه را بنویسید.',
-        'لحن برند شما رسمی، دوستانه، لوکس یا فانتزی است؟'
-      ]
-    }
+    fallbackValue: fallbackBlueprint,
+    skipQuotaCheck: true
   });
 
-  const blueprint = result.data || result.fallbackValue;
+  const blueprint = result.data || fallbackBlueprint;
 
   // Save the blueprint data to the ShopSeedProfile
   await updateSeedProfile(shopId, {

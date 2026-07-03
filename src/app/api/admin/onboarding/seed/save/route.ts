@@ -4,15 +4,18 @@ import { getSeedJobStatus } from '@/lib/ai/store-seed/profile';
 import { saveSeedData } from '@/lib/ai/store-seed/save-seed';
 
 export async function POST(request: Request) {
+  let shopId = 'unknown';
   try {
     const decoded = await verifyAuth(request, 'admin');
     if (!decoded || !decoded.shopId) {
       return NextResponse.json({ error: 'دسترسی غیرمجاز' }, { status: 401 });
     }
 
-    const shopId = decoded.shopId;
+    shopId = decoded.shopId;
     const body = await request.json();
     const { jobId, shopName, themeColor, contactPhone, contactEmail, address } = body;
+
+    console.log(`[SHOP SEED] save started for shop: ${shopId}, job: ${jobId}`);
 
     if (!jobId) {
       return NextResponse.json({ error: 'شناسه کار نامعتبر است.' }, { status: 400 });
@@ -53,9 +56,12 @@ export async function POST(request: Request) {
       }
     );
 
+    console.log(`[SHOP SEED] save success for shop: ${shopId}, job: ${jobId}`);
+
     return NextResponse.json({ success: true, result });
   } catch (error: any) {
     console.error('[API Save] Error:', error);
+    console.error(`[SHOP SEED] save failed for shop: ${shopId}, error: ${error?.message || error}`);
     return NextResponse.json({ error: error?.message || 'خطایی در ذخیره‌سازی داده‌های اولیه رخ داد.' }, { status: 500 });
   }
 }

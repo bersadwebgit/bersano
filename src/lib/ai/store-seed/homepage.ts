@@ -49,6 +49,28 @@ export async function generateSeedHomepage(
 
 Ensure the FAQs and trust badges are highly relevant to the industry. For example, if the industry is cosmetics, trust badges should focus on authenticity, skin compatibility, and purchase consultation.`;
 
+  const fallbackHomepage: SeedHomepage = {
+    hero: {
+      title: `به فروشگاه تخصصی ما خوش آمدید`,
+      subtitle: `ارائه‌دهنده باکیفیت‌ترین محصولات متناسب با سلیقه شما.`,
+      ctaText: 'مشاهده محصولات'
+    },
+    banners: [
+      {
+        title: 'تخفیف ویژه اولین خرید',
+        subtitle: 'با کد تخفیف WELCOME صاحب ۱۰٪ تخفیف روی سبد خرید خود شوید.',
+        imageSearchQueryEn: 'shopping sale banner minimal',
+        imageAltFa: 'بنر تخفیف ویژه اولین خرید'
+      }
+    ],
+    aboutShort: `ما در این فروشگاه همواره تلاش می‌کنیم تا بهترین و باکیفیت‌ترین محصولات را با مناسب‌ترین قیمت به دست شما برسانیم. رضایت شما بزرگترین سرمایه ماست.`,
+    faqs: [
+      { question: 'رویه ارسال سفارشات چگونه است؟', answer: 'سفارشات شما از طریق پست پیشتاز و تیپاکس در سریع‌ترین زمان ممکن ارسال می‌شوند.' },
+      { question: 'آیا امکان مرجوعی کالا وجود دارد؟', answer: 'بله، در صورت بروز هرگونه مشکل یا عدم رضایت، امکان مرجوعی کالا تا ۷ روز وجود دارد.' }
+    ],
+    trustBadges: ['ضمانت اصالت کالا', 'ارسال سریع به سراسر کشور', '۷ روز ضمانت بازگشت']
+  };
+
   const result = await callAiGateway<SeedHomepage>({
     shopId,
     endpoint: '/api/admin/onboarding/seed/homepage',
@@ -61,30 +83,11 @@ Ensure the FAQs and trust badges are highly relevant to the industry. For exampl
     temperature: 0.3,
     maxTokens: 2000,
     requiredFields: ['hero', 'banners', 'aboutShort', 'faqs', 'trustBadges'],
-    fallbackValue: {
-      hero: {
-        title: `به فروشگاه تخصصی ما خوش آمدید`,
-        subtitle: `ارائه‌دهنده باکیفیت‌ترین محصولات متناسب با سلیقه شما.`,
-        ctaText: 'مشاهده محصولات'
-      },
-      banners: [
-        {
-          title: 'تخفیف ویژه اولین خرید',
-          subtitle: 'با کد تخفیف WELCOME صاحب ۱۰٪ تخفیف روی سبد خرید خود شوید.',
-          imageSearchQueryEn: 'shopping sale banner minimal',
-          imageAltFa: 'بنر تخفیف ویژه اولین خرید'
-        }
-      ],
-      aboutShort: `ما در این فروشگاه همواره تلاش می‌کنیم تا بهترین و باکیفیت‌ترین محصولات را با مناسب‌ترین قیمت به دست شما برسانیم. رضایت شما بزرگترین سرمایه ماست.`,
-      faqs: [
-        { question: 'رویه ارسال سفارشات چگونه است؟', answer: 'سفارشات شما از طریق پست پیشتاز و تیپاکس در سریع‌ترین زمان ممکن ارسال می‌شوند.' },
-        { question: 'آیا امکان مرجوعی کالا وجود دارد؟', answer: 'بله، در صورت بروز هرگونه مشکل یا عدم رضایت، امکان مرجوعی کالا تا ۷ روز وجود دارد.' }
-      ],
-      trustBadges: ['ضمانت اصالت کالا', 'ارسال سریع به سراسر کشور', '۷ روز ضمانت بازگشت']
-    }
+    fallbackValue: fallbackHomepage,
+    skipQuotaCheck: true
   });
 
-  const homepage = result.data || result.fallbackValue;
+  const homepage = result.data || fallbackHomepage;
 
   // Resolve high-quality images for banners
   const enrichedBanners = await Promise.all(

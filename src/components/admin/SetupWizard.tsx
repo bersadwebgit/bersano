@@ -171,6 +171,62 @@ export default function SetupWizard({
     }
   }, [loading, step]);
 
+  const safeFetchJson = async (url: string, options: RequestInit) => {
+    try {
+      console.log(`[SetupWizard] Calling API endpoint: ${url}`);
+      const response = await fetch(url, options);
+      
+      const statusCode = response.status;
+      const contentType = response.headers.get('content-type') || '';
+      console.log(`[SetupWizard] Endpoint response metadata:`, {
+        url,
+        statusCode,
+        contentType
+      });
+
+      const responseText = await response.text();
+      const isJson = contentType.includes('application/json');
+
+      if (!isJson) {
+        console.error(`[SetupWizard] Non-JSON response received from ${url}:`);
+        console.error(`- Endpoint: ${url}`);
+        console.error(`- Status Code: ${statusCode}`);
+        console.error(`- Content-Type: ${contentType}`);
+        console.error(`- Response Preview: ${responseText.substring(0, 1000)}`);
+        
+        throw new Error(
+          statusCode === 401 || statusCode === 403
+            ? 'خطای احراز هویت: نشست شما منقضی شده است. لطفا مجددا وارد حساب خود شوید.'
+            : statusCode === 404
+            ? 'خطای ۴۰۴: سرویس مورد نظر روی سرور یافت نشد. لطفا مسیرهای وب‌سایت را بررسی کنید.'
+            : 'خطای سرور: پاسخ نامعتبر از سرور دریافت شد (فرمت غیر JSON). این موضوع احتمالا به دلیل خطای سیستمی رخ داده است.'
+        );
+      }
+
+      let parsedData: any;
+      try {
+        parsedData = JSON.parse(responseText);
+      } catch (jsonErr) {
+        console.error(`[SetupWizard] JSON parse error for ${url}:`, jsonErr);
+        console.error(`- Endpoint: ${url}`);
+        console.error(`- Status Code: ${statusCode}`);
+        console.error(`- Content-Type: ${contentType}`);
+        console.error(`- Response Preview: ${responseText.substring(0, 1000)}`);
+        
+        throw new Error('خطای سیستمی در تحلیل اطلاعات از سمت سرور رخ داده است.');
+      }
+
+      if (!response.ok) {
+        throw new Error(parsedData?.error || `خطای سرور با کد وضعیت ${statusCode}`);
+      }
+
+      return parsedData;
+    } catch (error: any) {
+      console.error(`[SetupWizard] Fetch logic failed:`, error);
+      throw error;
+    }
+  };
+
   const fetchPreviewData = async (customAnswers?: Record<string, string>) => {
     try {
       // Append onboarding answers if provided
@@ -178,7 +234,7 @@ export default function SetupWizard({
         ? `${shortDescription}. پاسخ به سوالات: ${Object.entries(customAnswers).map(([q, a]) => `${q}: ${a}`).join(' | ')}`
         : shortDescription;
 
-      const response = await fetch('/api/admin/onboarding/seed/preview', {
+      const data = await safeFetchJson('/api/admin/onboarding/seed/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -196,20 +252,12 @@ export default function SetupWizard({
         })
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setPreviewData(data);
-        setStep(5);
-        setLoading(false);
-      } else {
-        const err = await response.json();
-        alert(err.error || 'خطایی در دریافت پیش‌نمایش رخ داد.');
-        setLoading(false);
-        setAiStatusStep(0);
-      }
-    } catch (error) {
+      setPreviewData(data);
+      setStep(5);
+      setLoading(false);
+    } catch (error: any) {
       console.error(error);
-      alert('خطای شبکه در ارتباط با سرور.');
+      alert(error.message || 'خطای شبکه در ارتباط با سرور.');
       setLoading(false);
       setAiStatusStep(0);
     }
@@ -219,7 +267,7 @@ export default function SetupWizard({
     if (!previewData || !previewData.jobId) return;
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/onboarding/seed/save', {
+      await safeFetchJson('/api/admin/onboarding/seed/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -232,16 +280,10 @@ export default function SetupWizard({
         })
       });
 
-      if (response.ok) {
-        onComplete();
-      } else {
-        const err = await response.json();
-        alert(err.error || 'خطایی در ذخیره‌سازی رخ داد.');
-        setLoading(false);
-      }
-    } catch (error) {
+      onComplete();
+    } catch (error: any) {
       console.error(error);
-      alert('خطای شبکه.');
+      alert(error.message || 'خطای شبکه.');
       setLoading(false);
     }
   };
@@ -257,20 +299,14 @@ export default function SetupWizard({
     if (!confirm('آیا از حذف تمام داده‌های نمونه هوش مصنوعی اطمینان دارید؟ این عمل غیرقابل بازگشت است.')) return;
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/onboarding/seed/sample-data', {
+      await safeFetchJson('/api/admin/onboarding/seed/sample-data', {
         method: 'DELETE'
       });
-      if (response.ok) {
-        alert('تمام داده‌های نمونه با موفقیت حذف شدند.');
-        onComplete();
-      } else {
-        const err = await response.json();
-        alert(err.error || 'خطایی رخ داد.');
-        setLoading(false);
-      }
-    } catch (error) {
+      alert('تمام داده‌های نمونه با موفقیت حذف شدند.');
+      onComplete();
+    } catch (error: any) {
       console.error(error);
-      alert('خطای شبکه.');
+      alert(error.message || 'خطای شبکه.');
       setLoading(false);
     }
   };

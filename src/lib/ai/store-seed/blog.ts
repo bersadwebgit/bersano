@@ -54,10 +54,11 @@ The articles must naturally weave the shop name into the text, answer real custo
     temperature: 0.4,
     maxTokens: 3500,
     requiredFields: [],
-    fallbackValue: []
+    fallbackValue: [],
+    skipQuotaCheck: true
   });
 
-  const articles = result.data || result.fallbackValue || [];
+  const articles = result.data || [];
 
   // Resolve high-quality images for each article
   const enrichedArticles = await Promise.all(
