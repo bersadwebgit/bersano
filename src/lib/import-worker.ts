@@ -260,7 +260,7 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
       if (existingBrand) {
         if (conflictResolution === 'overwrite') {
           await prisma.brand.update({
-            where: { id: existingBrand.id },
+            where: { id: existingBrand.id, shopId },
             data: {
               logoUrl: brand.logoUrl || null
             }
@@ -311,7 +311,7 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
       if (existingSlide) {
         if (conflictResolution === 'overwrite') {
           await prisma.heroSlide.update({
-            where: { id: existingSlide.id },
+            where: { id: existingSlide.id, shopId },
             data: slideData
           })
           updatedSlidersCount++
@@ -358,7 +358,7 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
       if (existingMenu) {
         if (conflictResolution === 'overwrite') {
           await prisma.menuItem.update({
-            where: { id: existingMenu.id },
+            where: { id: existingMenu.id, shopId },
             data: menuData
           })
           updatedMenusCount++
@@ -415,7 +415,7 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
       if (existingDiscount) {
         if (conflictResolution === 'overwrite') {
           await prisma.discountCode.update({
-            where: { id: existingDiscount.id },
+            where: { id: existingDiscount.id, shopId },
             data: discountData
           })
           updatedDiscountsCount++
@@ -466,7 +466,7 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
       if (existingBCat) {
         if (conflictResolution === 'overwrite') {
           const updated = await prisma.blogCategory.update({
-            where: { id: existingBCat.id },
+            where: { id: existingBCat.id, shopId },
             data: bcatData
           })
           newBCatId = updated.id
@@ -555,7 +555,7 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
 
       if (existingPost) {
         await prisma.blogPost.update({
-          where: { id: existingPost.id },
+          where: { id: existingPost.id, shopId },
           data: postData
         })
         updatedBlogPostsCount++
@@ -608,7 +608,7 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
       if (existingCategory) {
         if (conflictResolution === 'overwrite') {
           const updated = await prisma.category.update({
-            where: { id: existingCategory.id },
+            where: { id: existingCategory.id, shopId },
             data: categoryData
           })
           catId = updated.id
@@ -644,7 +644,7 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
 
         if (newCategoryId && newParentId && newCategoryId !== newParentId) {
           await prisma.category.update({
-            where: { id: newCategoryId },
+            where: { id: newCategoryId, shopId },
             data: { parentId: newParentId }
           })
         }
@@ -830,7 +830,7 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
 
       if (existingProduct) {
         const updated = await prisma.product.update({
-          where: { id: existingProduct.id },
+          where: { id: existingProduct.id, shopId },
           data: productData
         })
         productId = updated.id
@@ -929,7 +929,7 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
       let setId = ''
       if (existingSet) {
         await prisma.productSet.update({
-          where: { id: existingSet.id },
+          where: { id: existingSet.id, shopId },
           data: setData
         })
         setId = existingSet.id
@@ -1036,7 +1036,7 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
 
       if (existingStory) {
         await prisma.story.update({
-          where: { id: existingStory.id },
+          where: { id: existingStory.id, shopId },
           data: storyData
         })
         updatedStoriesCount++
@@ -1090,7 +1090,7 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
 
       if (existingMedia) {
         await prisma.media.update({
-          where: { id: existingMedia.id },
+          where: { id: existingMedia.id, shopId },
           data: mediaData
         })
         updatedMediaCount++
