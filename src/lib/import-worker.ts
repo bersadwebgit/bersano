@@ -76,12 +76,34 @@ async function downloadAndOptimizeImage(url: string, shopId: string, originalNam
   }
 }
 
+// Helper to slugify category names
+function toSlug(text: string): string {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w\u0600-\u06FF-]+/g, '')
+    .replace(/--+/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
+}
+
 export async function executeImport(job: Job, updateProgress: (progress: number) => Promise<void>): Promise<any> {
   const { shopId, data } = job
-  const { products, categories, settings, conflictResolution, downloadImages, isSettingsOnly } = data
+  const { 
+    products, 
+    categories, 
+    settings, 
+    brands, 
+    sliders, 
+    conflictResolution, 
+    downloadImages, 
+    isSettingsOnly 
+  } = data
 
-  // 1. Handle Settings Only
-  if (isSettingsOnly && settings) {
+  // 1. Handle Settings (Updated for both isSettingsOnly and full backup import)
+  if (settings) {
     const {
       id,
       shopId: sId,
@@ -91,6 +113,10 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
       isActive: isAct,
       packageId,
       packageExpiresAt,
+      bgRemovalCount,
+      setupWizardCompleted,
+      createdAt,
+      updatedAt,
       ...safeSettings
     } = settings
 
@@ -99,10 +125,12 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
       data: safeSettings
     })
 
-    await updateProgress(100)
-    return {
-      success: true,
-      message: 'تنظیمات فروشگاه با موفقیت درون‌ریزی و بروزرسانی شد.'
+    if (isSettingsOnly) {
+      await updateProgress(100)
+      return {
+        success: true,
+        message: 'تنظیمات فروشگاه با موفقیت درون‌ریزی و بروزرسانی شد.'
+      }
     }
   }
 
@@ -135,8 +163,18 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
   let updatedCategoriesCount = 0
   let skippedCategoriesCount = 0
 
+  let importedBrandsCount = 0
+  let updatedBrandsCount = 0
+  let skippedBrandsCount = 0
+
+  let importedSlidersCount = 0
+  let updatedSlidersCount = 0
+  let skippedSlidersCount = 0
+
   // Total items for progress calculation
   const totalCategories = (categories && Array.isArray(categories)) ? categories.length : 0
+  const totalBrands = (brands && Array.isArray(brands)) ? brands.length : 0
+  const totalSliders = (sliders && Array.isArray(sliders)) ? sliders.length : 0
   
   // Create categories referenced in products if they don't exist
   const referencedCategories: string[] = []
@@ -152,7 +190,7 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
   }
 
   const totalProducts = (products && Array.isArray(products)) ? products.length : 0
-  const totalItems = totalCategories + referencedCategories.length + totalProducts
+  const totalItems = totalCategories + totalBrands + totalSliders + referencedCategories.length + totalProducts
   let processedItems = 0
 
   const updateJobProgress = async () => {
@@ -161,8 +199,98 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
     await updateProgress(percent)
   }
 
-  // 3. Process Categories first
+  // 3. Process Brands
+  if (brands && Array.isArray(brands)) {
+    for (const brand of brands) {
+      if (!brand.name) {
+        await updateJobProgress()
+        continue
+      }
+      const name = brand.name.trim()
+
+      const existingBrand = await prisma.brand.findFirst({
+        where: { name, shopId }
+      })
+
+      if (existingBrand) {
+        if (conflictResolution === 'overwrite') {
+          await prisma.brand.update({
+            where: { id: existingBrand.id },
+            data: {
+              logoUrl: brand.logoUrl || null
+            }
+          })
+          updatedBrandsCount++
+        } else {
+          skippedBrandsCount++
+        }
+      } else {
+        await prisma.brand.create({
+          data: {
+            name,
+            logoUrl: brand.logoUrl || null,
+            shopId
+          }
+        })
+        importedBrandsCount++
+      }
+      await updateJobProgress()
+    }
+  }
+
+  // 4. Process Sliders (HeroSlide)
+  if (sliders && Array.isArray(sliders)) {
+    for (const slide of sliders) {
+      if (!slide.imageUrl) {
+        await updateJobProgress()
+        continue
+      }
+      const imageUrl = slide.imageUrl.trim()
+
+      const existingSlide = await prisma.heroSlide.findFirst({
+        where: { imageUrl, shopId }
+      })
+
+      const slideData = {
+        mobileImageUrl: slide.mobileImageUrl || null,
+        title: slide.title || null,
+        subtitle: slide.subtitle || null,
+        linkUrl: slide.linkUrl || null,
+        linkText: slide.linkText || null,
+        order: parseInt(slide.order) || 0,
+        isActive: slide.isActive !== undefined ? slide.isActive : true,
+        displayLocation: slide.displayLocation || 'both',
+        isDemo: slide.isDemo !== undefined ? slide.isDemo : false,
+      }
+
+      if (existingSlide) {
+        if (conflictResolution === 'overwrite') {
+          await prisma.heroSlide.update({
+            where: { id: existingSlide.id },
+            data: slideData
+          })
+          updatedSlidersCount++
+        } else {
+          skippedSlidersCount++
+        }
+      } else {
+        await prisma.heroSlide.create({
+          data: {
+            ...slideData,
+            imageUrl,
+            shopId
+          }
+        })
+        importedSlidersCount++
+      }
+      await updateJobProgress()
+    }
+  }
+
+  // 5. Process Categories first
+  const oldCategoryIdToNewIdMap: Record<string, string> = {}
   const categoryNameToIdMap: Record<string, string> = {}
+  const categorySlugToIdMap: Record<string, string> = {}
 
   if (categories && Array.isArray(categories)) {
     for (const cat of categories) {
@@ -171,28 +299,37 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
         continue
       }
       const name = cat.name.trim()
+      const slug = (cat.slug || toSlug(name)).trim()
 
       let existingCategory = await prisma.category.findFirst({
-        where: { name, shopId }
+        where: {
+          OR: [
+            { slug, shopId },
+            { name, shopId }
+          ]
+        }
       })
 
       const categoryData = {
         name,
-        slug: cat.slug || name,
+        slug,
         description: cat.description || null,
-        isActive: true
+        imageUrl: cat.imageUrl || null,
+        icon: cat.icon || null,
+        isActive: cat.isActive !== undefined ? cat.isActive : true
       }
 
+      let catId = ''
       if (existingCategory) {
         if (conflictResolution === 'overwrite') {
           const updated = await prisma.category.update({
             where: { id: existingCategory.id },
             data: categoryData
           })
-          categoryNameToIdMap[name] = updated.id
+          catId = updated.id
           updatedCategoriesCount++
         } else {
-          categoryNameToIdMap[name] = existingCategory.id
+          catId = existingCategory.id
           skippedCategoriesCount++
         }
       } else {
@@ -202,14 +339,35 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
             shopId
           }
         })
-        categoryNameToIdMap[name] = created.id
+        catId = created.id
         importedCategoriesCount++
+      }
+
+      categoryNameToIdMap[name] = catId
+      categorySlugToIdMap[slug] = catId
+      if (cat.id) {
+        oldCategoryIdToNewIdMap[cat.id] = catId
       }
       await updateJobProgress()
     }
+
+    // Pass 2: Reconstruct parent/child categories relationships
+    for (const cat of categories) {
+      if (cat.parentId && cat.id) {
+        const newCategoryId = oldCategoryIdToNewIdMap[cat.id]
+        const newParentId = oldCategoryIdToNewIdMap[cat.parentId]
+
+        if (newCategoryId && newParentId && newCategoryId !== newParentId) {
+          await prisma.category.update({
+            where: { id: newCategoryId },
+            data: { parentId: newParentId }
+          })
+        }
+      }
+    }
   }
 
-  // 4. Create categories referenced in products if they don't exist
+  // 6. Create categories referenced in products if they don't exist
   for (const name of referencedCategories) {
     if (!categoryNameToIdMap[name]) {
       let existingCategory = await prisma.category.findFirst({
@@ -222,7 +380,7 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
         const created = await prisma.category.create({
           data: {
             name,
-            slug: name,
+            slug: toSlug(name),
             isActive: true,
             shopId
           }
@@ -234,16 +392,46 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
     await updateJobProgress()
   }
 
-  // 5. Verify Product Limits
+  // 7. Verify Product Limits using precise "truly new" calculation
   if (products && Array.isArray(products) && maxProducts > 0) {
     const currentProductCount = await prisma.product.count({ where: { shopId } })
-    const newProductsCount = products.filter(p => !p.id).length
-    if (currentProductCount + newProductsCount > maxProducts) {
+    
+    // Check which imported products don't exist in the database (either by ID or title)
+    const existingProductTitles = new Set(
+      (await prisma.product.findMany({
+        where: { shopId },
+        select: { title: true }
+      })).map(p => p.title.trim())
+    )
+
+    let trulyNewProductsCount = 0
+    for (const p of products) {
+      if (!p.title) continue
+      const title = p.title.trim()
+      
+      let exists = false
+      if (p.id) {
+        const matchById = await prisma.product.findFirst({
+          where: { id: p.id, shopId },
+          select: { id: true }
+        })
+        if (matchById) exists = true
+      }
+      if (!exists && existingProductTitles.has(title)) {
+        exists = true
+      }
+      
+      if (!exists) {
+        trulyNewProductsCount++
+      }
+    }
+
+    if (currentProductCount + trulyNewProductsCount > maxProducts) {
       throw new Error(`تعداد محصولات شما از حد مجاز پکیج (${maxProducts} کالا) فراتر می‌رود. لطفاً پکیج خود را ارتقا دهید.`)
     }
   }
 
-  // 6. Process Products
+  // 8. Process Products
   if (products && Array.isArray(products)) {
     for (const item of products) {
       if (!item.title) {
@@ -256,9 +444,11 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
         existingProduct = await prisma.product.findFirst({
           where: { id: item.id, shopId }
         })
-      } else {
+      }
+      
+      if (!existingProduct) {
         existingProduct = await prisma.product.findFirst({
-          where: { title: item.title, shopId }
+          where: { title: item.title.trim(), shopId }
         })
       }
 
@@ -269,9 +459,11 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
       }
 
       // Category mapping
-      let categoryId = item.categoryId || null
-      if (item.categoryName && categoryNameToIdMap[item.categoryName]) {
-        categoryId = categoryNameToIdMap[item.categoryName]
+      let categoryId = null
+      if (item.categoryId && oldCategoryIdToNewIdMap[item.categoryId]) {
+        categoryId = oldCategoryIdToNewIdMap[item.categoryId]
+      } else if (item.categoryName && categoryNameToIdMap[item.categoryName.trim()]) {
+        categoryId = categoryNameToIdMap[item.categoryName.trim()]
       }
 
       // Image downloads
@@ -303,21 +495,50 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
       }
 
       const productData = {
-        title: item.title,
+        title: item.title.trim(),
         type: item.type || 'physical',
         categoryId,
         price: parseFloat(item.price) || 0,
         discount: parseFloat(item.discount) || 0,
+        discountMinQty: parseInt(item.discountMinQty) || 0,
         imageUrl,
         stock: item.type === 'digital' ? 999999 : (parseInt(item.stock) || 10),
         description: item.description || null,
         fullDescription: item.fullDescription || null,
         brand: item.brand || null,
         isActive: item.isActive !== undefined ? item.isActive : true,
+        isSpecial: item.isSpecial !== undefined ? item.isSpecial : false,
+        specialEndsAt: item.specialEndsAt ? new Date(item.specialEndsAt) : null,
+        seoTitle: item.seoTitle || null,
+        seoDescription: item.seoDescription || null,
+        schemaMarkup: item.schemaMarkup || null,
         faqs: typeof item.faqs === 'string' ? item.faqs : JSON.stringify(item.faqs || []),
         features: typeof item.features === 'string' ? item.features : JSON.stringify(item.features || []),
         specs: typeof item.specs === 'string' ? item.specs : JSON.stringify(item.specs || []),
         galleryUrls: JSON.stringify(galleryUrls),
+        fileUrl: item.fileUrl || null,
+        downloadLimit: item.downloadLimit !== undefined ? parseInt(item.downloadLimit) : null,
+        downloadExpiryDays: item.downloadExpiryDays !== undefined ? parseInt(item.downloadExpiryDays) : null,
+        downloadIpRestriction: item.downloadIpRestriction !== undefined ? !!item.downloadIpRestriction : false,
+        fileFormat: item.fileFormat || null,
+        fileSize: item.fileSize || null,
+        previewUrl: item.previewUrl || null,
+        techSpecs: item.techSpecs || null,
+        downloadFiles: typeof item.downloadFiles === 'string' ? item.downloadFiles : JSON.stringify(item.downloadFiles || []),
+        wholesalePrice: item.wholesalePrice !== undefined ? parseFloat(item.wholesalePrice) : null,
+        wholesaleTiers: typeof item.wholesaleTiers === 'string' ? item.wholesaleTiers : JSON.stringify(item.wholesaleTiers || []),
+        wholesaleExclusivePrices: typeof item.wholesaleExclusivePrices === 'string' ? item.wholesaleExclusivePrices : JSON.stringify(item.wholesaleExclusivePrices || []),
+        moq: parseInt(item.moq) || 1,
+        wholesaleUnit: item.wholesaleUnit || 'عدد',
+        wholesaleUnitSize: parseInt(item.wholesaleUnitSize) || 1,
+        weight: parseFloat(item.weight) || 0,
+        volume: parseFloat(item.volume) || 0,
+        isWholesaleOnly: item.isWholesaleOnly !== undefined ? !!item.isWholesaleOnly : false,
+        isDemo: item.isDemo !== undefined ? !!item.isDemo : false,
+        isSampleData: item.isSampleData !== undefined ? !!item.isSampleData : false,
+        generatedByAi: item.generatedByAi !== undefined ? !!item.generatedByAi : false,
+        seedJobId: item.seedJobId || null,
+        embeddingUpdatedAt: null // Always mark dirty for pgvector recalculation
       }
 
       let productId = ''
@@ -333,8 +554,7 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
         const created = await prisma.product.create({
           data: {
             ...productData,
-            shopId,
-            id: item.id || undefined
+            shopId
           }
         })
         productId = created.id
@@ -364,7 +584,8 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
               colorCode: v.colorCode || getColorHexFromName(v.name),
               imageUrl: vImageUrl,
               price: parseFloat(v.price) || parseFloat(item.price) || 0,
-              stock: parseInt(v.stock) || 10
+              stock: parseInt(v.stock) || 10,
+              isDefault: v.isDefault !== undefined ? !!v.isDefault : false,
             }
           })
         }
@@ -373,10 +594,23 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
     }
   }
 
+  // Re-write final summary message to include all parsed fields
+  let summaryMessage = `درون‌ریزی با موفقیت انجام شد.\n` +
+    `محصولات: ${importedProductsCount} جدید، ${updatedProductsCount} بروزرسانی، ${skippedProductsCount} نادیده.\n` +
+    `دسته‌بندی‌ها: ${importedCategoriesCount} جدید، ${updatedCategoriesCount} بروزرسانی، ${skippedCategoriesCount} نادیده.`
+
+  if (brands && brands.length > 0) {
+    summaryMessage += `\nبرندها: ${importedBrandsCount} جدید، ${updatedBrandsCount} بروزرسانی، ${skippedBrandsCount} نادیده.`
+  }
+  if (sliders && sliders.length > 0) {
+    summaryMessage += `\nاسلایدرها: ${importedSlidersCount} جدید، ${updatedSlidersCount} بروزرسانی، ${skippedSlidersCount} نادیده.`
+  }
+  if (settings) {
+    summaryMessage += `\nتنظیمات فروشگاه با موفقیت بروزرسانی شد.`
+  }
+
   return {
     success: true,
-    message: `درون‌ریزی با موفقیت انجام شد.\n` +
-      `محصولات: ${importedProductsCount} جدید، ${updatedProductsCount} بروزرسانی، ${skippedProductsCount} نادیده.\n` +
-      `دسته‌بندی‌ها: ${importedCategoriesCount} جدید، ${updatedCategoriesCount} بروزرسانی، ${skippedCategoriesCount} نادیده.`
+    message: summaryMessage
   }
 }

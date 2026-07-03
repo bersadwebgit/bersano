@@ -264,6 +264,9 @@ export async function POST(req: NextRequest) {
 
     const products: any[] = [];
     const categories: any[] = [];
+    let settings: any = null;
+    const brands: any[] = [];
+    const sliders: any[] = [];
 
     // --- AI METHOD PREVIEW ---
     if (method === 'ai') {
@@ -454,6 +457,9 @@ export async function POST(req: NextRequest) {
           } else if (type === 'full') {
             if (parsed.products) products.push(...parsed.products);
             if (parsed.categories) categories.push(...parsed.categories);
+            if (parsed.settings) settings = parsed.settings;
+            if (parsed.brands) brands.push(...parsed.brands);
+            if (parsed.sliders) sliders.push(...parsed.sliders);
           } else if (type === 'settings') {
             return NextResponse.json({
               success: true,
@@ -484,7 +490,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       products,
-      categories
+      categories,
+      settings,
+      brands,
+      sliders
     });
 
   } catch (error: any) {

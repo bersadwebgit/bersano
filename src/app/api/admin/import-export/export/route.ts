@@ -215,6 +215,14 @@ export async function GET(req: NextRequest) {
         where: { shopId },
       });
 
+      const brands = await prisma.brand.findMany({
+        where: { shopId },
+      });
+
+      const sliders = await prisma.heroSlide.findMany({
+        where: { shopId },
+      });
+
       const fullBackup = {
         version: '1.0',
         shopId,
@@ -222,6 +230,8 @@ export async function GET(req: NextRequest) {
         settings,
         categories,
         products,
+        brands,
+        sliders,
       };
 
       return new NextResponse(JSON.stringify(fullBackup, null, 2), {

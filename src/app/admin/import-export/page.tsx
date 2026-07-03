@@ -86,6 +86,8 @@ export default function ImportExportPage() {
   const [previewCategories, setPreviewCategories] = useState<ParsedCategory[]>([]);
   const [isSettingsOnly, setIsSettingsOnly] = useState(false);
   const [previewSettings, setPreviewSettings] = useState<any>(null);
+  const [previewBrands, setPreviewBrands] = useState<any[]>([]);
+  const [previewSliders, setPreviewSliders] = useState<any[]>([]);
 
   const [message, setMessage] = useState<{ type: 'success' | 'error' | ''; text: string }>({ type: '', text: '' });
   const [importResult, setImportResult] = useState('');
@@ -180,10 +182,15 @@ export default function ImportExportPage() {
         setPreviewSettings(data.settings);
         setPreviewProducts([]);
         setPreviewCategories([]);
+        setPreviewBrands([]);
+        setPreviewSliders([]);
       } else {
         setIsSettingsOnly(false);
         setPreviewProducts(data.products || []);
         setPreviewCategories(data.categories || []);
+        setPreviewSettings(data.settings || null);
+        setPreviewBrands(data.brands || []);
+        setPreviewSliders(data.sliders || []);
       }
 
       setImportStep('preview');
@@ -212,6 +219,8 @@ export default function ImportExportPage() {
           products: previewProducts,
           categories: previewCategories,
           settings: previewSettings,
+          brands: previewBrands,
+          sliders: previewSliders,
           isSettingsOnly,
           conflictResolution,
           downloadImages
@@ -887,6 +896,45 @@ export default function ImportExportPage() {
                       <span className="text-slate-400 block mb-1">زبان:</span>
                       <span>{previewSettings.language || '---'}</span>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Full Backup Settings, Brands, Sliders indicators */}
+              {!isSettingsOnly && (previewSettings || previewBrands.length > 0 || previewSliders.length > 0) && (
+                <div className="bg-slate-50 dark:bg-slate-950 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+                  <h4 className="text-xs font-black text-slate-800 dark:text-white flex items-center gap-2">
+                    <Settings className="w-4 h-4 text-blue-500" />
+                    <span>سایر اطلاعات موجود در فایل پشتیبان</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-bold">
+                    {previewSettings && (
+                      <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-150 dark:border-slate-850 flex flex-col justify-between">
+                        <div>
+                          <span className="text-indigo-500 block mb-1">تنظیمات فروشگاه:</span>
+                          <span className="text-slate-500 font-semibold">تنظیمات عمومی، درگاه‌های پرداخت، اطلاعات تماس و ویژگی‌ها بروزرسانی خواهند شد.</span>
+                        </div>
+                        <div className="mt-2 text-[10px] text-emerald-600 font-black">آماده درون‌ریزی</div>
+                      </div>
+                    )}
+                    {previewBrands.length > 0 && (
+                      <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-150 dark:border-slate-850 flex flex-col justify-between">
+                        <div>
+                          <span className="text-indigo-500 block mb-1">برندها ({previewBrands.length} مورد):</span>
+                          <span className="text-slate-500 font-semibold">لیست برندها جهت تطبیق و ایجاد برندهای جدید بدون تکرار بررسی خواهند شد.</span>
+                        </div>
+                        <div className="mt-2 text-[10px] text-emerald-600 font-black">آماده درون‌ریزی</div>
+                      </div>
+                    )}
+                    {previewSliders.length > 0 && (
+                      <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-150 dark:border-slate-850 flex flex-col justify-between">
+                        <div>
+                          <span className="text-indigo-500 block mb-1">اسلایدرها ({previewSliders.length} مورد):</span>
+                          <span className="text-slate-500 font-semibold">اسلایدهای هیرو جهت تطبیق و ایجاد اسلایدهای جدید بررسی خواهند شد.</span>
+                        </div>
+                        <div className="mt-2 text-[10px] text-emerald-600 font-black">آماده درون‌ریزی</div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
