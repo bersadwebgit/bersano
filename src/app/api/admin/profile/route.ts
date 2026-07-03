@@ -35,12 +35,13 @@ export async function GET(request: Request) {
 
     const shopSettings = await prisma.shopSettings.findUnique({
       where: { shopId: decoded.shopId },
-      select: { shopName: true, productType: true, isApproved: true, isActive: true, subdomain: true, customDomain: true, package: true, packageExpiresAt: true, hasDemoData: true, setupWizardCompleted: true, mahakEnabled: true }
+      select: { shopName: true, productType: true, isApproved: true, isActive: true, subdomain: true, customDomain: true, package: true, packageExpiresAt: true, hasDemoData: true, setupWizardCompleted: true, mahakEnabled: true, logoUrl: true }
     });
 
     return NextResponse.json({ 
       user,
       shopName: shopSettings?.shopName || '',
+      logoUrl: shopSettings?.logoUrl || '',
       productType: shopSettings?.productType || 'both',
       isApproved: shopSettings?.isApproved ?? false,
       isActive: shopSettings?.isActive ?? true,

@@ -24,6 +24,8 @@ import {
   Sun,
   Moon,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   FileDown,
   Bell,
   Search,
@@ -127,6 +129,7 @@ export default function AdminLayout({
 }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [sidebarCollapse, setSidebarCollapse] = useState<'expanded' | 'collapsed'>('expanded');
   const [sidebarMode, setSidebarMode] = useState<'simple' | 'advanced'>('simple');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -136,6 +139,7 @@ export default function AdminLayout({
     name?: string;
     avatarUrl?: string;
     shopName?: string;
+    logoUrl?: string;
     subdomain?: string;
     customDomain?: string;
     productType?: string;
@@ -222,18 +226,29 @@ export default function AdminLayout({
   });
 
   useEffect(() => {
-    const savedMode = localStorage.getItem('admin_sidebar_mode') as 'simple' | 'advanced';
+    const savedMode = localStorage.getItem('admin_sidebar_menu_mode') as 'simple' | 'advanced';
     if (savedMode) {
       setSidebarMode(savedMode);
     } else {
       setSidebarMode('simple');
     }
+
+    const savedCollapse = localStorage.getItem('admin_sidebar_mode') as 'expanded' | 'collapsed';
+    if (savedCollapse === 'collapsed' || savedCollapse === 'expanded') {
+      setSidebarCollapse(savedCollapse);
+    }
   }, []);
+
+  const toggleCollapse = () => {
+    const nextCollapse = sidebarCollapse === 'expanded' ? 'collapsed' : 'expanded';
+    setSidebarCollapse(nextCollapse);
+    localStorage.setItem('admin_sidebar_mode', nextCollapse);
+  };
 
   const toggleSidebarMode = () => {
     const nextMode = sidebarMode === 'simple' ? 'advanced' : 'simple';
     setSidebarMode(nextMode);
-    localStorage.setItem('admin_sidebar_mode', nextMode);
+    localStorage.setItem('admin_sidebar_menu_mode', nextMode);
   };
 
   useEffect(() => {
@@ -458,6 +473,7 @@ export default function AdminLayout({
               name: data.user.name,
               avatarUrl: data.user.avatarUrl,
               shopName: data.shopName,
+              logoUrl: data.logoUrl,
               subdomain: data.subdomain,
               customDomain: data.customDomain,
               productType: data.productType,
@@ -924,22 +940,31 @@ export default function AdminLayout({
       
       {/* Sidebar - Floating Card Style */}
       <aside className={`
-        fixed inset-y-0 right-0 z-50 w-64 bg-slate-900 text-slate-300 transition-transform duration-300 ease-in-out lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen flex flex-col h-screen shrink-0 border-l border-slate-800/50 print:hidden
+        fixed inset-y-0 right-0 z-50 w-64 bg-slate-900 text-slate-300 transition-all duration-300 ease-in-out lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen flex flex-col h-screen shrink-0 border-l border-slate-800/50 print:hidden
+        ${sidebarCollapse === 'collapsed' ? 'lg:w-20' : 'lg:w-64'}
         ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}
       `}>
         
         {/* Sidebar Header */}
-        <div className="flex items-center justify-between px-5 py-5 border-b border-slate-800/60 shrink-0">
+        <div className={`flex items-center justify-between px-5 py-5 border-b border-slate-800/60 shrink-0 ${sidebarCollapse === 'collapsed' ? 'lg:px-3 lg:justify-center' : ''}`}>
           <Link href="/admin/dashboard" className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center font-black text-xl shadow-md text-white">
-              B
+            <div className="w-9 h-9 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center font-black text-xl shadow-md text-white shrink-0 overflow-hidden">
+              {profile?.logoUrl ? (
+                <img 
+                  src={profile.logoUrl} 
+                  alt={profile?.shopName || 'Logo'} 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span>B</span>
+              )}
             </div>
-            <div className="flex flex-col">
+            <div className={`flex flex-col transition-all duration-300 ${sidebarCollapse === 'collapsed' ? 'lg:hidden' : ''}`}>
               <span className="text-base font-black tracking-wide text-white leading-tight">پنل مدیریت هسته</span>
               <span className="text-[9px] text-slate-400 font-bold">سازنده فروشگاه SaaS</span>
             </div>
           </Link>
-          <div className="flex items-center gap-2">
+          <div className={`flex items-center gap-2 ${sidebarCollapse === 'collapsed' ? 'lg:hidden' : ''}`}>
             {profile?.subdomain && (
               <a 
                 href={profile.customDomain ? `https://${profile.customDomain}` : (() => {
@@ -978,12 +1003,16 @@ export default function AdminLayout({
         </div>
 
         {/* Sidebar Menu - Scrollable */}
-        <nav className="flex-1 p-3 space-y-3 overflow-y-auto custom-scrollbar">
+        <nav className={`flex-1 p-3 space-y-3 custom-scrollbar ${
+          sidebarCollapse === 'collapsed' ? 'lg:overflow-visible overflow-y-auto' : 'overflow-y-auto'
+        }`}>
           <Link 
             href="/admin/agent"
             onClick={() => setIsMobileMenuOpen(false)}
             title="فعالسازی دستیار هوشمند فروشگاه"
-            className="group relative flex items-center gap-3 px-3.5 py-3 mb-5 rounded-2xl text-white shadow-lg shadow-cyan-900/30 hover:shadow-cyan-500/40 transition-[transform,box-shadow] duration-500 ease-out hover:-translate-y-0.5 active:scale-[0.98] overflow-hidden shrink-0 bg-gradient-to-r from-cyan-500 via-blue-600 via-violet-600 to-fuchsia-600 animate-agent-aurora"
+            className={`group relative flex items-center mb-5 rounded-2xl text-white shadow-lg shadow-cyan-900/30 hover:shadow-cyan-500/40 transition-[transform,box-shadow,padding] duration-500 ease-out hover:-translate-y-0.5 active:scale-[0.98] overflow-hidden shrink-0 bg-gradient-to-r from-cyan-500 via-blue-600 via-violet-600 to-fuchsia-600 animate-agent-aurora ${
+              sidebarCollapse === 'collapsed' ? 'lg:px-2 lg:py-2 lg:justify-center lg:gap-0' : 'px-3.5 py-3 gap-3'
+            }`}
           >
             <span className="pointer-events-none absolute -inset-y-8 -left-10 w-16 bg-white/30 blur-md rotate-12 -translate-x-full group-hover:translate-x-[22rem] transition-transform duration-[1000ms] ease-out" />
             <span className="pointer-events-none absolute inset-0 bg-white/0 group-hover:bg-white/[0.08] transition-colors duration-500" />
@@ -992,16 +1021,22 @@ export default function AdminLayout({
               <Sparkles size={17} className="animate-pulse text-cyan-50" />
             </span>
 
-            <span className="relative z-10 flex flex-col min-w-0 text-right leading-tight">
+            <span className={`relative z-10 flex flex-col min-w-0 text-right leading-tight transition-all duration-300 ${
+              sidebarCollapse === 'collapsed' ? 'lg:hidden' : ''
+            }`}>
               <span className="font-black text-[13px] truncate">فعال‌سازی حالت ایجنت</span>
               <span className="text-[10px] font-bold text-white/75 truncate">دستیار هوشمند فروشگاه</span>
             </span>
 
-            <ChevronDown size={16} className="relative z-10 mr-auto rotate-90 text-white/60 group-hover:text-white group-hover:-translate-x-1 transition-all duration-500 shrink-0" />
+            <ChevronDown size={16} className={`relative z-10 mr-auto rotate-90 text-white/60 group-hover:text-white group-hover:-translate-x-1 transition-all duration-500 shrink-0 ${
+              sidebarCollapse === 'collapsed' ? 'lg:hidden' : ''
+            }`} />
           </Link>
 
           {/* Sidebar Mode Switcher */}
-          <div className="flex items-center justify-between bg-slate-800/40 border border-slate-800/60 p-2 rounded-2xl mb-5 select-none">
+          <div className={`flex items-center justify-between bg-slate-800/40 border border-slate-800/60 p-2 rounded-2xl mb-5 select-none ${
+            sidebarCollapse === 'collapsed' ? 'lg:hidden' : ''
+          }`}>
             <span className="text-[10px] font-black text-slate-400 mr-2">حالت منو:</span>
             <div className="relative flex items-center bg-slate-950 rounded-xl p-1 w-32 h-8 border border-slate-800/50">
               {/* Sliding background indicator */}
@@ -1016,7 +1051,7 @@ export default function AdminLayout({
                 <button 
                   onClick={() => {
                     setSidebarMode('simple');
-                    localStorage.setItem('admin_sidebar_mode', 'simple');
+                    localStorage.setItem('admin_sidebar_menu_mode', 'simple');
                   }}
                   className={`relative z-10 w-full h-full text-center text-[10px] font-black transition-colors duration-200 border-none bg-transparent cursor-pointer ${
                     sidebarMode === 'simple' ? 'text-white' : 'text-slate-400 hover:text-slate-300'
@@ -1038,7 +1073,7 @@ export default function AdminLayout({
                 <button 
                   onClick={() => {
                     setSidebarMode('advanced');
-                    localStorage.setItem('admin_sidebar_mode', 'advanced');
+                    localStorage.setItem('admin_sidebar_menu_mode', 'advanced');
                   }}
                   className={`relative z-10 w-full h-full text-center text-[10px] font-black transition-colors duration-200 border-none bg-transparent cursor-pointer ${
                     sidebarMode === 'advanced' ? 'text-white' : 'text-slate-400 hover:text-slate-300'
@@ -1059,8 +1094,12 @@ export default function AdminLayout({
           
           {/* Pinned Items */}
           {pinnedItems.length > 0 && (
-            <div className="space-y-1.5 bg-slate-800/20 p-2 rounded-2xl border border-slate-800/30">
-              <div className="px-3 text-[10px] font-black text-slate-400 uppercase tracking-wider">دسترسی‌های سنجاق‌شده</div>
+            <div className={`space-y-1.5 bg-slate-800/20 rounded-2xl border border-slate-800/30 ${
+              sidebarCollapse === 'collapsed' ? 'p-1 lg:bg-transparent lg:border-transparent' : 'p-2'
+            }`}>
+              <div className={`px-3 text-[10px] font-black text-slate-400 uppercase tracking-wider ${
+                sidebarCollapse === 'collapsed' ? 'lg:hidden' : ''
+              }`}>دسترسی‌های سنجاق‌شده</div>
               <div className="space-y-1">
                 {menuItems.filter(item => pinnedItems.includes(item.href)).map((item) => {
                   const isActive = pathname === item.href;
@@ -1071,9 +1110,12 @@ export default function AdminLayout({
                       key={`pinned-${item.href}`} 
                       href={item.href}
                       onClick={() => setIsMobileMenuOpen(false)}
-                      title={item.tooltip}
+                      title={item.name}
                       className={`
-                        group flex items-center justify-between px-4 py-2.5 rounded-xl transition-all duration-250 text-xs font-bold min-w-0
+                        group flex items-center rounded-xl transition-all duration-250 text-xs font-bold min-w-0
+                        ${sidebarCollapse === 'collapsed' 
+                          ? 'lg:px-0 lg:py-2.5 lg:justify-center' 
+                          : 'justify-between px-4 py-2.5'}
                         ${item.isSystem
                           ? isActive
                             ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/20 font-black'
@@ -1083,11 +1125,17 @@ export default function AdminLayout({
                             : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'}
                       `}
                     >
-                      <div className="flex items-center gap-3 min-w-0">
+                      <div className={`flex items-center min-w-0 ${
+                        sidebarCollapse === 'collapsed' ? 'lg:gap-0' : 'gap-3'
+                      }`}>
                         <Icon size={17} className="shrink-0" />
-                        <span className="truncate">{item.name}</span>
+                        <span className={`truncate transition-all duration-300 ${
+                          sidebarCollapse === 'collapsed' ? 'lg:hidden' : ''
+                        }`}>{item.name}</span>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className={`flex items-center gap-2 ${
+                        sidebarCollapse === 'collapsed' ? 'lg:hidden' : ''
+                      }`}>
                         {item.badge !== undefined && (
                           <AnimatedBadge count={item.badge} />
                         )}
@@ -1129,7 +1177,9 @@ export default function AdminLayout({
                   {/* Category Header */}
                   <button
                     onClick={() => toggleCategory(group.key)}
-                    className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-black text-slate-500 hover:text-slate-300 bg-slate-800/10 hover:bg-slate-800/30 rounded-xl transition-all duration-200 uppercase tracking-wider min-w-0"
+                    className={`w-full flex items-center justify-between px-3 py-2 text-[10px] font-black text-slate-500 hover:text-slate-300 bg-slate-800/10 hover:bg-slate-800/30 rounded-xl transition-all duration-200 uppercase tracking-wider min-w-0 ${
+                      sidebarCollapse === 'collapsed' ? 'lg:hidden' : ''
+                    }`}
                   >
                     <span className="flex items-center gap-2 min-w-0">
                       <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${group.key === 'system-support' ? 'bg-indigo-500/70' : 'bg-blue-500/70'}`} />
@@ -1139,7 +1189,11 @@ export default function AdminLayout({
                   </button>
                   
                   {/* Category Items */}
-                  <div className={`space-y-1 transition-all duration-200 overflow-hidden ${isOpen ? 'max-h-[1000px] opacity-100 py-1' : 'max-h-0 opacity-0 pointer-events-none'}`}>
+                  <div className={`space-y-1 transition-all duration-200 overflow-hidden ${
+                    sidebarCollapse === 'collapsed'
+                      ? 'lg:max-h-[1000px] lg:opacity-100 lg:pointer-events-auto lg:py-1'
+                      : ''
+                  } ${isOpen ? 'max-h-[1000px] opacity-100 py-1' : 'max-h-0 opacity-0 pointer-events-none'}`}>
                     {visibleItems.map((item) => {
                       const isSubOpen = openSubMenus[item.name] ?? false;
                       const hasSubItems = !!item.subItems;
@@ -1149,22 +1203,32 @@ export default function AdminLayout({
                         const anySubActive = item.subItems!.some((sub: any) => pathname === sub.href);
                         
                         return (
-                          <div key={item.name} className="space-y-0.5">
+                          <div key={item.name} className="relative group/submenu space-y-0.5">
                             {/* Parent Button */}
                             <button
                               onClick={() => toggleSubMenu(item.name)}
+                              title={item.name}
                               className={`
-                                w-full group flex items-center justify-between px-4 py-2.5 rounded-xl transition-all duration-200 text-xs font-bold
+                                w-full group flex items-center rounded-xl transition-all duration-200 text-xs font-bold
+                                ${sidebarCollapse === 'collapsed'
+                                  ? 'lg:px-0 lg:py-2.5 lg:justify-center'
+                                  : 'justify-between px-4 py-2.5'}
                                 ${anySubActive 
                                   ? 'bg-slate-800/80 text-white font-black border-r-2 border-blue-500 rounded-r-none' 
                                   : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'}
                               `}
                             >
-                              <div className="flex items-center gap-3 min-w-0">
+                              <div className={`flex items-center min-w-0 ${
+                                sidebarCollapse === 'collapsed' ? 'lg:gap-0' : 'gap-3'
+                              }`}>
                                 <Icon size={17} className={`shrink-0 ${anySubActive ? 'text-blue-400' : 'text-slate-400 group-hover:text-white'}`} />
-                                <span className="truncate">{item.name}</span>
+                                <span className={`truncate transition-all duration-300 ${
+                                  sidebarCollapse === 'collapsed' ? 'lg:hidden' : ''
+                                }`}>{item.name}</span>
                               </div>
-                              <div className="flex items-center gap-2 shrink-0">
+                              <div className={`flex items-center gap-2 shrink-0 ${
+                                sidebarCollapse === 'collapsed' ? 'lg:hidden' : ''
+                              }`}>
                                 {item.badge !== undefined && item.badge > 0 && (
                                   <AnimatedBadge count={item.badge} />
                                 )}
@@ -1175,8 +1239,40 @@ export default function AdminLayout({
                               </div>
                             </button>
 
-                            {/* Sub Items */}
-                            <div className={`mr-4 pr-3 border-r border-slate-800/80 space-y-0.5 transition-all duration-200 overflow-hidden ${isSubOpen ? 'max-h-[500px] opacity-100 py-1' : 'max-h-0 opacity-0 pointer-events-none'}`}>
+                            {/* Floating Submenu on Hover (Visible only when collapsed on desktop) */}
+                            {sidebarCollapse === 'collapsed' && (
+                              <div className="absolute right-full top-0 mr-2 w-48 bg-slate-950/95 border border-slate-800 rounded-xl shadow-xl py-2 px-1.5 hidden group-hover/submenu:block z-50 text-right space-y-1 animate-fade-in">
+                                <div className="px-3 py-1.5 border-b border-slate-800/80 text-[10px] font-black text-slate-400 mb-1 select-none">
+                                  {item.name}
+                                </div>
+                                {item.subItems!.map((sub: any) => {
+                                  const isSubActive = pathname === sub.href;
+                                  return (
+                                    <Link
+                                      key={sub.href}
+                                      href={sub.href}
+                                      onClick={() => setIsMobileMenuOpen(false)}
+                                      className={`
+                                        flex items-center justify-between px-3 py-2 rounded-lg transition-all duration-150 text-xs font-semibold
+                                        ${isSubActive
+                                          ? 'bg-blue-600 text-white font-black'
+                                          : 'text-slate-400 hover:text-white hover:bg-slate-800/50'}
+                                      `}
+                                    >
+                                      <span className="truncate">{sub.name}</span>
+                                      {sub.badge !== undefined && sub.badge > 0 && (
+                                        <AnimatedBadge count={sub.badge} />
+                                      )}
+                                    </Link>
+                                  );
+                                })}
+                              </div>
+                            )}
+
+                            {/* Inline Sub Items (Visible only when expanded or on mobile) */}
+                            <div className={`mr-4 pr-3 border-r border-slate-800/80 space-y-0.5 transition-all duration-200 overflow-hidden ${
+                              sidebarCollapse === 'collapsed' ? 'lg:hidden' : ''
+                            } ${isSubOpen ? 'max-h-[500px] opacity-100 py-1' : 'max-h-0 opacity-0 pointer-events-none'}`}>
                               {item.subItems!.map((sub: any) => {
                                 const isSubActive = pathname === sub.href;
                                 return (
@@ -1223,9 +1319,12 @@ export default function AdminLayout({
                           key={item.href} 
                           href={item.href}
                           onClick={() => setIsMobileMenuOpen(false)}
-                          title={item.tooltip}
+                          title={item.name}
                           className={`
-                            group flex items-center justify-between px-4 py-2.5 rounded-xl transition-all duration-250 text-xs font-bold min-w-0
+                            group flex items-center rounded-xl transition-all duration-250 text-xs font-bold min-w-0
+                            ${sidebarCollapse === 'collapsed'
+                              ? 'lg:px-0 lg:py-2.5 lg:justify-center'
+                              : 'justify-between px-4 py-2.5'}
                             ${item.isSystem
                               ? isActive
                                 ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/20 font-black'
@@ -1235,11 +1334,17 @@ export default function AdminLayout({
                                 : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'}
                           `}
                         >
-                          <div className="flex items-center gap-3 min-w-0">
+                          <div className={`flex items-center min-w-0 ${
+                            sidebarCollapse === 'collapsed' ? 'lg:gap-0' : 'gap-3'
+                          }`}>
                             <Icon size={17} className="shrink-0" />
-                            <span className="truncate">{item.name}</span>
+                            <span className={`truncate transition-all duration-300 ${
+                              sidebarCollapse === 'collapsed' ? 'lg:hidden' : ''
+                            }`}>{item.name}</span>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className={`flex items-center gap-2 ${
+                            sidebarCollapse === 'collapsed' ? 'lg:hidden' : ''
+                          }`}>
                             {item.badge !== undefined && item.badge > 0 && (
                               <AnimatedBadge count={item.badge} />
                             )}
@@ -1261,14 +1366,39 @@ export default function AdminLayout({
           </div>
         </nav>
         
-        {/* Sidebar Footer - Logout button with User context */}
-        <div className="p-4 border-t border-slate-800/60 shrink-0 bg-slate-950/20">
+        {/* Sidebar Footer - Collapse Toggle & Logout button */}
+        <div className="p-4 border-t border-slate-800/60 shrink-0 bg-slate-950/20 space-y-2">
+          {/* Collapse Toggle Button (Desktop only) */}
+          <button
+            onClick={toggleCollapse}
+            className={`hidden lg:flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-400 hover:bg-slate-800/40 hover:text-white transition-all active:scale-98 ${
+              sidebarCollapse === 'collapsed' ? 'justify-center px-0' : ''
+            }`}
+            title={sidebarCollapse === 'collapsed' ? 'باز کردن منو' : 'کوچک کردن منو'}
+          >
+            {sidebarCollapse === 'collapsed' ? (
+              <>
+                <ChevronLeft size={16} />
+                <span className="lg:hidden">باز کردن منو</span>
+              </>
+            ) : (
+              <>
+                <ChevronRight size={16} />
+                <span>کوچک کردن منو</span>
+              </>
+            )}
+          </button>
+
+          {/* Logout Button */}
           <button 
             onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-400 hover:bg-slate-800/40 hover:text-red-400 transition-all active:scale-98"
+            className={`flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-400 hover:bg-slate-800/40 hover:text-red-400 transition-all active:scale-98 ${
+              sidebarCollapse === 'collapsed' ? 'lg:justify-center lg:px-0' : ''
+            }`}
+            title="خروج از حساب مدیریت"
           >
-            <LogOut size={16} />
-            <span>خروج از حساب مدیریت</span>
+            <LogOut size={16} className="shrink-0" />
+            <span className={sidebarCollapse === 'collapsed' ? 'lg:hidden' : ''}>خروج از حساب مدیریت</span>
           </button>
         </div>
       </aside>
