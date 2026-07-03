@@ -13,6 +13,26 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-change-in-pr
 const key = new TextEncoder().encode(JWT_SECRET);
 
 export async function middleware(request: NextRequest) {
+  const response = await handleMiddleware(request);
+  if (response) {
+    const { pathname } = request.nextUrl;
+    const isDynamicRoute = 
+      pathname.startsWith('/admin') ||
+      pathname.startsWith('/profile') ||
+      pathname.startsWith('/checkout') ||
+      pathname.startsWith('/api') ||
+      pathname.startsWith('/super-admin');
+
+    if (isDynamicRoute) {
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      response.headers.set('Pragma', 'no-cache');
+      response.headers.set('Expires', '0');
+    }
+  }
+  return response;
+}
+
+async function handleMiddleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-pathname', pathname);

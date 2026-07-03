@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Search, ShoppingBag, ArrowLeft, Home, Phone, FileText, Compass } from 'lucide-react';
 
 export const metadata = {
+  metadataBase: new URL('https://bersana.ir'),
   title: 'صفحه پیدا نشد | ۴۰۴',
   robots: {
     index: false,

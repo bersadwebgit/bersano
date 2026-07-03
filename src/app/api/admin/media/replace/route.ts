@@ -56,22 +56,24 @@ export async function POST(request: Request) {
     }
 
     // 4. Update the original media database record to point to the new URL and update its metadata
-    const updatedOriginal = await prisma.media.update({
-      where: { id: originalMedia.id },
+    await prisma.media.updateMany({
+      where: { id: originalMedia.id, shopId },
       data: {
         url: newUrl,
         size: processedMedia.size,
         originalId: null,
         originalUrl: null,
       },
-      allowCrossTenant: true,
-    } as any);
+    });
+
+    const updatedOriginal = await prisma.media.findFirst({
+      where: { id: originalMedia.id, shopId },
+    });
 
     // 5. Delete the processed media record from the database (since it is now merged into the original record)
-    await prisma.media.delete({
-      where: { id: processedMedia.id },
-      allowCrossTenant: true,
-    } as any);
+    await prisma.media.deleteMany({
+      where: { id: processedMedia.id, shopId },
+    });
 
     // 6. Bulk update all references to oldUrl with newUrl across the database
     // Update Products (imageUrl)
@@ -94,11 +96,10 @@ export async function POST(request: Request) {
           const gallery: string[] = JSON.parse(prod.galleryUrls);
           if (Array.isArray(gallery)) {
             const updatedGallery = gallery.map(img => img === oldUrl ? newUrl : img);
-            await prisma.product.update({
-              where: { id: prod.id },
+            await prisma.product.updateMany({
+              where: { id: prod.id, shopId },
               data: { galleryUrls: JSON.stringify(updatedGallery) },
-              allowCrossTenant: true,
-            } as any);
+            });
           }
         } catch (e) {
           console.error(`Error updating gallery images for product ${prod.id}:`, e);

@@ -28,7 +28,20 @@ export async function GET(
 
     if (!existsSync(filePath)) {
       console.log(`[WARN] [UploadsRoute] File not found | { filePath: "${filePath}" }`);
-      return NextResponse.json({ error: 'فایل یافت نشد' }, { status: 404 });
+      
+      // 1x1 transparent PNG buffer to prevent Next.js Image Optimizer from crashing
+      const transparentPng = Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+        'base64'
+      );
+
+      return new Response(transparentPng, {
+        headers: {
+          'Content-Type': 'image/png',
+          'Content-Length': transparentPng.length.toString(),
+          'Cache-Control': 'public, max-age=60, must-revalidate',
+        },
+      });
     }
 
     const stats = statSync(filePath);

@@ -292,39 +292,47 @@ export async function POST(req: NextRequest) {
       let successCount = 0;
       let lastChunkError = '';
 
-      for (let i = 0; i < chunks.length; i++) {
-        const chunk = chunks[i];
-        try {
-          const result = await callAiGateway<{ products: any[]; categories: any[] }>({
-            shopId,
-            endpoint: 'import-export:preview:ai',
-            slot: 'simple',
-            messages: [
-              { role: 'system', content: AI_IMPORT_SYSTEM_PROMPT },
-              { role: 'user', content: `داده‌های زیر را آنالیز و استخراج کن:\n\n${chunk}` }
-            ],
-            mode: 'json',
-            temperature: 0.2,
-            maxTokens: 2500,
-            requiredFields: [],
-            fallbackValue: { products: [], categories: [] },
-          });
+      const previewChunks = chunks.slice(0, 2);
 
-          if (result.success && result.data) {
-            const parsed = result.data;
-            if (parsed.products && Array.isArray(parsed.products)) {
-              products.push(...parsed.products);
-            }
-            if (parsed.categories && Array.isArray(parsed.categories)) {
-              categories.push(...parsed.categories);
-            }
-            successCount++;
-          } else {
-            throw new Error(result.error || 'خطا در پردازش سگمنت هوش مصنوعی.');
+      const results = await Promise.all(
+        previewChunks.map(async (chunk, index) => {
+          try {
+            const result = await callAiGateway<{ products: any[]; categories: any[] }>({
+              shopId,
+              endpoint: 'import-export:preview:ai',
+              slot: 'simple',
+              messages: [
+                { role: 'system', content: AI_IMPORT_SYSTEM_PROMPT },
+                { role: 'user', content: `داده‌های زیر را آنالیز و استخراج کن:\n\n${chunk}` }
+              ],
+              mode: 'json',
+              temperature: 0.2,
+              maxTokens: 2500,
+              requiredFields: [],
+              fallbackValue: { products: [], categories: [] },
+            });
+            return { index, result };
+          } catch (err: any) {
+            console.error(`AI Preview Chunk ${index + 1} Error:`, err);
+            return { index, error: err.message || String(err) };
           }
-        } catch (err: any) {
-          console.error(`AI Preview Chunk ${i + 1} Error:`, err);
-          lastChunkError = err.message || String(err);
+        })
+      );
+
+      for (const res of results) {
+        if ('error' in res) {
+          lastChunkError = res.error;
+        } else if (res.result.success && res.result.data) {
+          const parsed = res.result.data;
+          if (parsed.products && Array.isArray(parsed.products)) {
+            products.push(...parsed.products);
+          }
+          if (parsed.categories && Array.isArray(parsed.categories)) {
+            categories.push(...parsed.categories);
+          }
+          successCount++;
+        } else {
+          lastChunkError = res.result.error || 'خطا در پردازش سگمنت هوش مصنوعی.';
         }
       }
 

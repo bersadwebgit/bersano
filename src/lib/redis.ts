@@ -49,14 +49,29 @@ export async function cached<T>(
   ttl: number,
   fetcher: () => Promise<T>
 ): Promise<T> {
+  const showLogs = process.env.ENABLE_CACHE_LOGS === 'true' || process.env.NODE_ENV !== 'production';
+
   if (redis) {
     try {
       const hit = await redis.get<T>(key)
       if (hit !== null) {
-        console.log(`[Cache HIT] key: ${key}`)
-        return deserializeDates(hit)
+        try {
+          const deserialized = deserializeDates(hit)
+          if (showLogs) {
+            console.log(`[Cache HIT] key: ${key}`)
+          }
+          return deserialized
+        } catch (deserializationError) {
+          console.error(`[CRITICAL] Cache deserialization failed for key: ${key}. Deleting corrupt cache key.`, deserializationError)
+          // Delete the corrupt key to prevent future failures
+          await redis.del(key).catch(delErr => console.error('Failed to delete corrupt key:', delErr))
+          // Fallback to fetcher
+        }
+      } else {
+        if (showLogs) {
+          console.log(`[Cache MISS] key: ${key}`)
+        }
       }
-      console.log(`[Cache MISS] key: ${key}`)
     } catch (err) {
       console.warn('Redis read error:', err)
       // Redis unavailable — fallback to DB silently

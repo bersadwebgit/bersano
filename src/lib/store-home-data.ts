@@ -33,6 +33,15 @@ const specialProductSelect = {
   }
 }
 
+async function safeQuery<T>(promise: Promise<T>, fallback: T, queryName: string): Promise<T> {
+  try {
+    return await promise;
+  } catch (error) {
+    console.error(`[WARN] [getStoreHomeData] Query failed: ${queryName}. Falling back to default. Error:`, error);
+    return fallback;
+  }
+}
+
 export async function getStoreHomeData(shopId: string) {
   return cached(
     CacheKeys.homeData(shopId),
@@ -51,89 +60,117 @@ export async function getStoreHomeData(shopId: string) {
         blogPosts,
         dbBrands
       ] = await Promise.all([
-        prisma.product.findMany({
-          where: { shopId, isActive: true },
-          select: productListSelect,
-          orderBy: { createdAt: 'desc' },
-          take: 20
-        }),
-        getCachedHeroSlides(shopId),
-        getCachedCategories(shopId),
-        getCachedMenuItems(shopId),
-        prisma.shopSettings.findUnique({
-          where: { shopId },
-          select: {
-            headerConfig: true,
-            specialDealsEnabled: true,
-            specialDealsLimit: true,
-            homePageType: true,
-            customHomeConfig: true,
-            wholesaleEnabled: true
-          }
-        }),
-        prisma.product.findMany({
-          where: { shopId, isSpecial: true, isActive: true },
-          select: specialProductSelect,
-          orderBy: { createdAt: 'desc' },
-          take: 8
-        }),
-        prisma.product.findMany({
-          where: { shopId, isActive: true },
-          select: productListSelect,
-          orderBy: {
-            orderItems: {
-              _count: 'desc'
+        safeQuery(
+          prisma.product.findMany({
+            where: { shopId, isActive: true },
+            select: productListSelect,
+            orderBy: { createdAt: 'desc' },
+            take: 20
+          }),
+          [],
+          'products'
+        ),
+        safeQuery(getCachedHeroSlides(shopId), [], 'slides'),
+        safeQuery(getCachedCategories(shopId), [], 'categories'),
+        safeQuery(getCachedMenuItems(shopId), [], 'menuItems'),
+        safeQuery(
+          prisma.shopSettings.findUnique({
+            where: { shopId },
+            select: {
+              headerConfig: true,
+              specialDealsEnabled: true,
+              specialDealsLimit: true,
+              homePageType: true,
+              customHomeConfig: true,
+              wholesaleEnabled: true
             }
-          },
-          take: 8
-        }),
-        prisma.product.findMany({
-          where: {
-            shopId,
-            isActive: true,
-            OR: [
-              { discount: { gt: 0 } },
-              { isSpecial: true }
-            ]
-          },
-          select: productListSelect,
-          orderBy: [
-            { discount: 'desc' },
-            { createdAt: 'desc' }
-          ],
-          take: 8
-        }),
-        prisma.review.findMany({
-          where: { shopId, showOnHomepage: true, status: 'approved' },
-          include: {
-            user: { select: { name: true, avatarUrl: true } },
-            product: { select: { title: true } }
-          },
-          orderBy: { createdAt: 'desc' },
-          take: 12
-        }),
-        prisma.blogPost.findMany({
-          where: {
-            shopId,
-            status: 'published',
-            publishedAt: { lte: new Date() }
-          },
-          orderBy: { publishedAt: 'desc' },
-          take: 6,
-          include: {
-            category: true,
-            author: {
-              select: {
-                name: true,
-                avatarUrl: true,
+          }),
+          null,
+          'settings'
+        ),
+        safeQuery(
+          prisma.product.findMany({
+            where: { shopId, isSpecial: true, isActive: true },
+            select: specialProductSelect,
+            orderBy: { createdAt: 'desc' },
+            take: 8
+          }),
+          [],
+          'specialProducts'
+        ),
+        safeQuery(
+          prisma.product.findMany({
+            where: { shopId, isActive: true },
+            select: productListSelect,
+            orderBy: {
+              orderItems: {
+                _count: 'desc'
               }
             },
-            _count: {
-              select: { comments: { where: { status: 'approved' } } }
+            take: 8
+          }),
+          [],
+          'bestSellers'
+        ),
+        safeQuery(
+          prisma.product.findMany({
+            where: {
+              shopId,
+              isActive: true,
+              OR: [
+                { discount: { gt: 0 } },
+                { isSpecial: true }
+              ]
+            },
+            select: productListSelect,
+            orderBy: [
+              { discount: 'desc' },
+              { createdAt: 'desc' }
+            ],
+            take: 8
+          }),
+          [],
+          'discountedProducts'
+        ),
+        safeQuery(
+          prisma.review.findMany({
+            where: { shopId, showOnHomepage: true, status: 'approved' },
+            include: {
+              user: { select: { name: true, avatarUrl: true } },
+              product: { select: { title: true } }
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 12
+          }),
+          [],
+          'homepageReviews'
+        ),
+        safeQuery(
+          prisma.blogPost.findMany({
+            where: {
+              shopId,
+              status: 'published',
+              publishedAt: { lte: new Date() }
+            },
+            orderBy: { publishedAt: 'desc' },
+            take: 6,
+            include: {
+              category: true,
+              author: {
+                select: {
+                  name: true,
+                  avatarUrl: true,
+                }
+              },
+              _count: {
+                select: { comments: { where: { status: 'approved' } } }
+              }
             }
-          }
-        }),
-        getCachedBrands(shopId)
+          }),
+          [],
+          'blogPosts'
+        ),
+        safeQuery(getCachedBrands(shopId), [], 'dbBrands')
       ]);
 
       return {

@@ -50,7 +50,8 @@ import {
   ChevronRight,
   Loader2,
   AlertTriangle,
-  Wand2
+  Wand2,
+  Send
 } from 'lucide-react';
 import MediaPicker from '@/components/MediaPicker';
 
@@ -4178,6 +4179,7 @@ export default function SettingsPage() {
                               smsir: `کد تایید شما: {code}`
                             }
                           ].map((item) => {
+                            const patternId = item.id as 'order_placed_customer' | 'order_placed_admin' | 'order_shipped' | 'order_cancelled' | 'new_registration' | 'otp';
                             const templateText = formData.smsConfig?.provider === 'melipayamak' ? item.melipayamak : item.smsir;
                             return (
                               <div key={item.id} className="bg-slate-50/30 dark:bg-slate-950/10 p-4 rounded-2xl border border-slate-100 dark:border-slate-800/60 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -4200,14 +4202,14 @@ export default function SettingsPage() {
                                   </button>
                                   <input
                                     type="text"
-                                    value={formData.smsConfig?.patterns?.[item.id] || ''}
+                                    value={formData.smsConfig?.patterns?.[patternId] || ''}
                                     onChange={(e) => setFormData(prev => ({
                                       ...prev,
                                       smsConfig: {
                                         ...prev.smsConfig,
                                         patterns: {
                                           ...prev.smsConfig.patterns,
-                                          [item.id]: e.target.value
+                                          [patternId]: e.target.value
                                         }
                                       }
                                     }))}

@@ -15,14 +15,24 @@ const vazirmatn = Vazirmatn({
 
 export async function generateMetadata(): Promise<Metadata> {
   const shop = await getTenantShop(undefined, true);
+  const baseUrl = shop?.customDomain 
+    ? `https://${shop.customDomain}` 
+    : shop?.subdomain 
+      ? `https://${shop.subdomain}.bersana.ir` 
+      : 'https://bersana.ir';
+
+  const metadataBase = new URL(baseUrl);
+
   if (!shop) {
     return {
+      metadataBase,
       title: "شاپ بیلدر | پلتفرم فروشگاه‌ساز ابری و هوشمند",
       description: "فروشگاه اینترنتی خود را در کمتر از ۶۰ ثانیه به صورت کاملاً رایگان و آنی بسازید و از همین امروز فروش خود را آغاز کنید.",
     };
   }
 
   return {
+    metadataBase,
     title: shop.shopName || "فروشگاه من",
     description: shop.description || "پلتفرم فروشگاهی چند مستاجره",
     icons: shop.faviconUrl ? {
@@ -55,6 +65,24 @@ export default async function RootLayout({
       } as React.CSSProperties}
     >
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                window.addEventListener('error', function(e) {
+                  if (e.message && (e.message.indexOf('Loading chunk') !== -1 || e.message.indexOf('CSS chunk') !== -1)) {
+                    window.location.reload();
+                  }
+                }, true);
+                window.addEventListener('unhandledrejection', function(e) {
+                  if (e.reason && (e.reason.name === 'ChunkLoadError' || (e.reason.message && e.reason.message.indexOf('Loading chunk') !== -1))) {
+                    window.location.reload();
+                  }
+                });
+              })();
+            `
+          }}
+        />
         {shop?.customDomain && (
           <script
             dangerouslySetInnerHTML={{

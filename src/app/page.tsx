@@ -34,8 +34,17 @@ const key = new TextEncoder().encode(JWT_SECRET);
 
 export async function generateMetadata(): Promise<Metadata> {
   const shop = await getTenantShop(undefined, true);
+  const baseUrl = shop?.customDomain 
+    ? `https://${shop.customDomain}` 
+    : shop?.subdomain 
+      ? `https://${shop.subdomain}.bersana.ir` 
+      : 'https://bersana.ir';
+
+  const metadataBase = new URL(baseUrl);
+
   if (!shop) {
     return {
+      metadataBase,
       title: "شاپ بیلدر | پلتفرم فروشگاه‌ساز ابری و هوشمند",
       description: "فروشگاه اینترنتی خود را در کمتر از ۶۰ ثانیه به صورت کاملاً رایگان و آنی بسازید و از همین امروز فروش خود را آغاز کنید.",
     };
@@ -46,6 +55,7 @@ export async function generateMetadata(): Promise<Metadata> {
   });
 
   return {
+    metadataBase,
     title: settings?.shopName || "فروشگاه من",
     description: settings?.description || "پلتفرم فروشگاهی چند مستاجره",
     icons: settings?.faviconUrl ? {

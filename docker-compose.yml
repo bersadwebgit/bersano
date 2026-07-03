@@ -69,6 +69,8 @@ services:
         condition: service_healthy
       serverless-redis-http:
         condition: service_started
+    volumes:
+      - uploads_data:/app/public/uploads
     networks:
       - internal
 
@@ -105,6 +107,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  uploads_data:
 
 networks:
   internal:

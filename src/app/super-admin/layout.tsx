@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://bersana.ir'),
   title: 'مدیریت کل سیستم',
   description: 'پنل مدیریت کل سیستم فروشگاه ساز',
 };

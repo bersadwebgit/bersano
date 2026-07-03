@@ -101,9 +101,13 @@ export async function PUT(request: Request) {
       updateData.password = await bcrypt.hash(newPassword, 10);
     }
 
-    const updatedUser = await prisma.user.update({
-      where: { id: decoded.id as string },
+    await prisma.user.updateMany({
+      where: { id: decoded.id as string, shopId: decoded.shopId },
       data: updateData,
+    });
+
+    const updatedUser = await prisma.user.findFirst({
+      where: { id: decoded.id as string, shopId: decoded.shopId },
       select: {
         id: true,
         name: true,
@@ -111,8 +115,7 @@ export async function PUT(request: Request) {
         role: true,
         avatarUrl: true,
       },
-      allowCrossTenant: true,
-    } as any);
+    });
 
     if (shopName !== undefined) {
       await prisma.shopSettings.upsert({

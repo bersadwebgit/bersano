@@ -10,7 +10,7 @@ export async function getCachedCategories(shopId: string) {
       where: { shopId, isActive: true },
       include: {
         children: {
-          where: { isActive: true }
+          where: { shopId, isActive: true }
         }
       },
       orderBy: { createdAt: 'desc' }
