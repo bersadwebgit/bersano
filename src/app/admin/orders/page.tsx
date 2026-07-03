@@ -115,6 +115,7 @@ interface Reports {
 
 export default function AdminOrdersDashboard() {
   const [activeTab, setActiveTab] = useState<'orders' | 'reports' | 'alerts'>('orders');
+  const [showGuide, setShowGuide] = useState(true);
   
   // Data State
   const [orders, setOrders] = useState<Order[]>([]);
@@ -413,6 +414,11 @@ export default function AdminOrdersDashboard() {
   };
 
   useEffect(() => {
+    const dismissed = localStorage.getItem('hide_guide_orders') === 'true';
+    if (dismissed) setShowGuide(false);
+  }, []);
+
+  useEffect(() => {
     fetchDashboardData();
 
     const intervalId = setInterval(() => {
@@ -707,6 +713,31 @@ export default function AdminOrdersDashboard() {
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-20 print:hidden select-none" dir="rtl">
       
+      {showGuide && (
+        <div className="bg-blue-50/80 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-2xl p-4 flex items-start justify-between gap-4 select-none text-right">
+          <div className="flex gap-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl shrink-0">
+              <AlertCircle className="w-5 h-5" />
+            </div>
+            <div className="space-y-1">
+              <h4 className="text-xs font-black text-blue-900 dark:text-blue-200">راهنمای مدیریت سفارشات 💡</h4>
+              <p className="text-[10px] text-slate-600 dark:text-slate-400 font-bold leading-relaxed">
+                در این بخش می‌توانید سفارشات ثبت شده توسط مشتریان را بررسی، تایید و ارسال کنید. سفارشات جدید در وضعیت «پرداخت شده» قرار می‌گیرند که باید پس از آماده‌سازی کالا، وضعیت ارسال آن‌ها را به «ارسال شده» تغییر داده و کد رهگیری پستی را ثبت کنید.
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={() => {
+              setShowGuide(false);
+              localStorage.setItem('hide_guide_orders', 'true');
+            }}
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors cursor-pointer"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Toast feedback messages */}
       {successMessage && (
         <div className="fixed top-4 left-4 z-50 bg-emerald-500 text-white px-6 py-4 rounded-xl shadow-xl flex items-center gap-3 animate-bounce">

@@ -36,7 +36,11 @@ import {
   LineChart,
   UserCheck,
   HeartHandshake,
-  Download
+  Download,
+  Settings,
+  Globe,
+  Bot,
+  Image as ImageIcon
 } from 'lucide-react';
 import { exportToCSV, exportToExcel } from '@/lib/export';
 import SetupWizard from '@/components/admin/SetupWizard';
@@ -647,11 +651,38 @@ export default function AdminDashboardPage() {
     );
   }
 
-  const { financials, orders, inventory, customers, traffic, alerts } = data || {};
+  const { financials, orders, inventory, customers, traffic, alerts, readiness } = data || {};
 
   const maxChartVal = traffic?.chartData 
     ? Math.max(...traffic.chartData.map((d: any) => Math.max(d.visitors, d.pageViews || 1)), 1) 
     : 100;
+
+  const checklist = [
+    { id: 'logo', label: 'تنظیم لوگوی فروشگاه', status: readiness?.logoSet, link: '/admin/settings', desc: 'آپلود لوگو برای هویت بصری فروشگاه' },
+    { id: 'contact', label: 'ثبت اطلاعات تماس', status: readiness?.contactSet, link: '/admin/settings', desc: 'ثبت شماره تلفن و ایمیل جهت ارتباط خریداران' },
+    { id: 'product', label: 'تعریف حداقل یک محصول فعال', status: readiness?.hasActiveProduct, link: '/admin/products/new', desc: 'افزودن اولین کالا برای شروع فروش' },
+    { id: 'payment', label: 'فعال‌سازی روش پرداخت', status: readiness?.paymentSet, link: '/admin/settings', desc: 'اتصال درگاه پرداخت یا کارت به کارت' },
+    { id: 'shipping', label: 'فعال‌سازی روش ارسال', status: readiness?.shippingSet, link: '/admin/settings', desc: 'تنظیم روش‌های ارسال کالا مانند تیپاکس' },
+    { id: 'domain', label: 'اتصال دامنه اختصاصی', status: readiness?.domainSet, link: '/admin/settings/domains', desc: 'اتصال دامنه شخصی یا استفاده از ساب‌دامین' },
+  ];
+
+  const urgentTasks = [
+    ...(orders?.new > 0 ? [{ id: 'new_orders', label: `${formatNum(orders.new)} سفارش جدید پرداخت‌شده`, desc: 'در انتظار تدارک و ارسال کالا', link: '/admin/orders', type: 'warning' }] : []),
+    ...(alerts?.noImageProductsCount > 0 ? [{ id: 'no_image', label: `${formatNum(alerts.noImageProductsCount)} محصول بدون عکس`, desc: 'محصولات بدون تصویر جلب اعتماد نمی‌کنند', link: '/admin/products', type: 'info' }] : []),
+    ...(alerts?.outOfStockProductsCount > 0 ? [{ id: 'out_of_stock', label: `${formatNum(alerts.outOfStockProductsCount)} محصول ناموجود`, desc: 'موجودی این کالاها به اتمام رسیده است', link: '/admin/products', type: 'danger' }] : []),
+    ...(alerts?.failedPaymentsCount > 0 ? [{ id: 'failed_payments', label: `${formatNum(alerts.failedPaymentsCount)} پرداخت ناموفق (سبد رها شده)`, desc: 'مشتریانی که در پرداخت ناموفق بوده‌اند', link: '/admin/orders', type: 'danger' }] : []),
+    ...(alerts?.incompletePaymentSettings ? [{ id: 'incomplete_payment', label: 'تنظیمات درگاه پرداخت ناقص است', desc: 'درگاه فعال است اما اطلاعات اتصال وارد نشده', link: '/admin/settings', type: 'danger' }] : []),
+    ...(alerts?.notificationBotDisabled ? [{ id: 'bot_disabled', label: 'ربات‌های اعلان سفارش غیرفعال هستند', desc: 'برای دریافت اعلان سفارش روی بله یا تلگرام', link: '/admin/settings', type: 'info' }] : []),
+  ];
+
+  const shortcuts = [
+    { label: 'افزودن محصول جدید', desc: 'تعریف کالای فیزیکی یا دیجیتال', icon: Package, link: '/admin/products/new', color: 'text-blue-500 bg-blue-50 dark:bg-blue-950/30' },
+    { label: 'مدیریت سفارش‌ها', desc: 'بررسی و تغییر وضعیت سفارشات', icon: ShoppingCart, link: '/admin/orders', color: 'text-emerald-500 bg-emerald-50 dark:bg-emerald-950/30' },
+    { label: 'ویرایش صفحه اصلی', desc: 'تغییر چیدمان و بنرهای سایت', icon: Settings, link: '/admin/settings/custom-home', color: 'text-purple-500 bg-purple-50 dark:bg-purple-950/30' },
+    { label: 'اتصال دامنه اختصاصی', desc: 'تنظیم دامنه شخصی دات‌آی‌آر یا دات‌کام', icon: Globe, link: '/admin/settings/domains', color: 'text-cyan-500 bg-cyan-50 dark:bg-cyan-950/30' },
+    { label: 'کتابخانه تصاویر و رسانه', desc: 'مدیریت فایل‌ها و عکس‌های آپلود شده', icon: ImageIcon, link: '/admin/media', color: 'text-amber-500 bg-amber-50 dark:bg-amber-950/30' },
+    { label: 'دستیار هوشمند فروشگاه', desc: 'تولید محتوا و تحلیل هوشمند با هوش مصنوعی', icon: Sparkles, link: '/admin/agent', color: 'text-fuchsia-500 bg-fuchsia-50 dark:bg-fuchsia-950/30' },
+  ];
 
   // Widget Wrapper with enhanced glassmorphic and elegant styling
   const renderWidgetWrapper = (id: string, title: string, icon: any, children: React.ReactNode, isPinnedContainer = false) => {
@@ -1548,6 +1579,175 @@ export default function AdminDashboardPage() {
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-blue-500' : 'text-slate-400'}`} />
             به‌روزرسانی داده‌ها
           </button>
+        </div>
+      </div>
+
+      {/* مرکز کنترل و آماده‌سازی فروشگاه (Control Center & Store Readiness) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* ستون اول و دوم: چک‌لیست آماده‌سازی و میانبرهای سریع */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* بخش چک‌لیست آماده‌سازی */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800/80 shadow-sm space-y-5">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-50 dark:border-slate-800/50 pb-4 select-none">
+              <div className="space-y-1">
+                <h2 className="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-blue-500" />
+                  چک‌لیست راه‌اندازی و آماده‌سازی فروشگاه
+                </h2>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold">مراحل زیر را تکمیل کنید تا فروشگاه شما آماده پذیرش مشتری و ثبت سفارش شود.</p>
+              </div>
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className="flex-1 sm:w-32 bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                  <div 
+                    className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full rounded-full transition-all duration-500" 
+                    style={{ width: `${readiness?.percentage || 0}%` }}
+                  />
+                </div>
+                <span className="text-xs font-black text-blue-600 dark:text-blue-400 shrink-0">
+                  {formatNum(readiness?.percentage || 0)}٪ تکمیل شده
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {checklist.map((item) => (
+                <div 
+                  key={item.id} 
+                  className={`flex items-start gap-3 p-3.5 rounded-2xl border transition-all ${
+                    item.status 
+                      ? 'bg-emerald-500/[0.02] border-emerald-500/10 dark:border-emerald-500/5' 
+                      : 'bg-slate-500/[0.01] border-slate-100 dark:border-slate-800/50 hover:border-slate-200 dark:hover:border-slate-700'
+                  }`}
+                >
+                  <div className="mt-0.5 shrink-0">
+                    {item.status ? (
+                      <div className="p-1 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-500 rounded-lg">
+                        <CheckCircle2 className="w-4 h-4" />
+                      </div>
+                    ) : (
+                      <div className="p-1 bg-amber-50 dark:bg-amber-950/30 text-amber-500 rounded-lg animate-pulse">
+                        <AlertTriangle className="w-4 h-4" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-0.5">
+                    <h3 className={`text-xs font-black truncate ${item.status ? 'text-slate-700 dark:text-slate-300' : 'text-slate-800 dark:text-white'}`}>
+                      {item.label}
+                    </h3>
+                    <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold leading-relaxed truncate">
+                      {item.desc}
+                    </p>
+                    {!item.status && (
+                      <Link 
+                        href={item.link} 
+                        className="inline-flex items-center gap-1 text-[9px] font-black text-blue-600 dark:text-blue-400 hover:underline pt-1"
+                      >
+                        <span>تکمیل این مرحله</span>
+                        <ArrowLeft className="w-3 h-3" />
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* بخش میانبرهای سریع */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800/80 shadow-sm space-y-4">
+            <div className="border-b border-slate-50 dark:border-slate-800/50 pb-3 select-none">
+              <h2 className="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2">
+                <LayoutDashboard className="w-5 h-5 text-indigo-500" />
+                دسترسی‌های سریع و کارهای روزمره
+              </h2>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold">برای انجام کارهای پرتکرار روزانه از میانبرهای زیر استفاده کنید.</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {shortcuts.map((shortcut, index) => {
+                const Icon = shortcut.icon;
+                return (
+                  <Link 
+                    key={index} 
+                    href={shortcut.link}
+                    className="flex items-start gap-3.5 p-4 rounded-2xl border border-slate-100 dark:border-slate-800/50 hover:border-slate-200 dark:hover:border-slate-700 hover:bg-slate-50/50 dark:hover:bg-slate-850/30 transition-all group cursor-pointer"
+                  >
+                    <div className={`p-2.5 rounded-xl shrink-0 transition-transform group-hover:scale-110 ${shortcut.color}`}>
+                      <Icon className="w-4.5 h-4.5" />
+                    </div>
+                    <div className="flex-1 min-w-0 space-y-0.5">
+                      <h3 className="text-xs font-black text-slate-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
+                        {shortcut.label}
+                      </h3>
+                      <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold leading-relaxed">
+                        {shortcut.desc}
+                      </p>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* ستون سوم: کارهای فوری و ضروری */}
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800/80 shadow-sm flex flex-col h-full space-y-4">
+          <div className="border-b border-slate-50 dark:border-slate-800/50 pb-3 select-none">
+            <h2 className="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500 animate-pulse" />
+              کارهای فوری و ضروری
+            </h2>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold">مواردی که نیاز به بررسی و اقدام سریع دارند.</p>
+          </div>
+
+          <div className="flex-1 overflow-y-auto space-y-3.5 max-h-[460px] pr-1 custom-scrollbar">
+            {urgentTasks.length === 0 ? (
+              <div className="flex flex-col items-center justify-center text-center py-12 px-4 space-y-3 select-none">
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-500 rounded-full">
+                  <ThumbsUp className="w-8 h-8 animate-bounce" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-xs font-black text-slate-800 dark:text-white">همه چیز عالی است!</h3>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold leading-relaxed">هیچ کار فوری یا هشدار بحرانی در فروشگاه شما وجود ندارد.</p>
+                </div>
+              </div>
+            ) : (
+              urgentTasks.map((task) => (
+                <div 
+                  key={task.id}
+                  className={`p-3.5 rounded-2xl border flex gap-3 items-start justify-between transition-all hover:scale-[1.01] ${
+                    task.type === 'danger'
+                      ? 'bg-rose-500/[0.02] border-rose-500/10 dark:border-rose-500/5'
+                      : task.type === 'warning'
+                        ? 'bg-amber-500/[0.02] border-amber-500/10 dark:border-amber-500/5'
+                        : 'bg-blue-500/[0.02] border-blue-500/10 dark:border-blue-500/5'
+                  }`}
+                >
+                  <div className="flex gap-3 min-w-0">
+                    <div className={`p-1.5 rounded-xl shrink-0 ${
+                      task.type === 'danger'
+                        ? 'bg-rose-50 dark:bg-rose-950/30 text-rose-500'
+                        : task.type === 'warning'
+                          ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-500'
+                          : 'bg-blue-50 dark:bg-blue-950/30 text-blue-500'
+                    }`}>
+                      <AlertTriangle className="w-4 h-4" />
+                    </div>
+                    <div className="space-y-0.5 min-w-0">
+                      <h4 className="text-xs font-black text-slate-800 dark:text-white truncate">{task.label}</h4>
+                      <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold leading-relaxed">{task.desc}</p>
+                    </div>
+                  </div>
+                  <Link 
+                    href={task.link}
+                    className="p-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg transition-colors shrink-0"
+                    title="اقدام و بررسی"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
 

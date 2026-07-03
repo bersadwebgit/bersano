@@ -417,9 +417,42 @@ export async function GET(request: Request) {
     })).sort((a, b) => b.count - a.count); // sort by highest count descending
 
     // ----------------------------------------------------
-    // ۶. هشدارها و اقدامات فوری (Alerts & Urgent Actions)
+    // ۶. هشدارها و اقدامات فوری (Alerts & Urgent Actions) & Readiness Checklist
     // ----------------------------------------------------
     
+    // Fetch Shop Settings for readiness checklist and alerts
+    const shopSettings = await prisma.shopSettings.findUnique({
+      where: { shopId }
+    });
+
+    const logoSet = !!shopSettings?.logoUrl;
+    const contactSet = !!(shopSettings?.contactPhone || shopSettings?.contactEmail);
+    const hasActiveProduct = await prisma.product.count({ where: { shopId, isActive: true } }) > 0;
+    const paymentSet = !!(shopSettings?.zarinpalEnabled || shopSettings?.zibalEnabled || shopSettings?.digipayEnabled || shopSettings?.cardToCardEnabled);
+    const shippingSet = !!shopSettings?.tipaxEnabled;
+    const domainSet = !!(shopSettings?.customDomain || shopSettings?.subdomain);
+
+    const checklistItems = [logoSet, contactSet, hasActiveProduct, paymentSet, shippingSet, domainSet];
+    const completedCount = checklistItems.filter(Boolean).length;
+    const readinessPercentage = Math.round((completedCount / checklistItems.length) * 100);
+
+    const noImageProductsCount = await prisma.product.count({
+      where: { shopId, isActive: true, imageUrl: null }
+    });
+
+    const outOfStockProductsCount = await prisma.product.count({
+      where: { shopId, isActive: true, stock: 0 }
+    });
+
+    const incompletePaymentSettings = !!(
+      (shopSettings?.zarinpalEnabled && !shopSettings?.zarinpalMerchantId) ||
+      (shopSettings?.zibalEnabled && !shopSettings?.zibalMerchantId) ||
+      (shopSettings?.digipayEnabled && (!shopSettings?.digipayClientId || !shopSettings?.digipayClientSecret)) ||
+      (shopSettings?.cardToCardEnabled && !shopSettings?.cardNumber)
+    );
+
+    const notificationBotDisabled = !(shopSettings?.baleOrderNotificationsEnabled || shopSettings?.telegramOrderNotificationsEnabled);
+
     // Unanswered Tickets
     const unansweredTicketsCount = await prisma.ticket.count({
       where: {
@@ -642,7 +675,20 @@ export async function GET(request: Request) {
         failedPaymentsList,
         failedPaymentsRecoverableMin,
         failedPaymentsRecoverableMax,
-        criticalInventoryCount
+        criticalInventoryCount,
+        noImageProductsCount,
+        outOfStockProductsCount,
+        incompletePaymentSettings,
+        notificationBotDisabled
+      },
+      readiness: {
+        logoSet,
+        contactSet,
+        hasActiveProduct,
+        paymentSet,
+        shippingSet,
+        domainSet,
+        percentage: readinessPercentage
       }
     });
 

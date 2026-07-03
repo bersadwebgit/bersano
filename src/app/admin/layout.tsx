@@ -127,6 +127,9 @@ export default function AdminLayout({
 }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [sidebarMode, setSidebarMode] = useState<'simple' | 'advanced'>('simple');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
   const [profile, setProfile] = useState<{
@@ -217,6 +220,21 @@ export default function AdminLayout({
     'سفارشات و دانلودها': true,
     'باشگاه مشتریان (کاربران)': true,
   });
+
+  useEffect(() => {
+    const savedMode = localStorage.getItem('admin_sidebar_mode') as 'simple' | 'advanced';
+    if (savedMode) {
+      setSidebarMode(savedMode);
+    } else {
+      setSidebarMode('simple');
+    }
+  }, []);
+
+  const toggleSidebarMode = () => {
+    const nextMode = sidebarMode === 'simple' ? 'advanced' : 'simple';
+    setSidebarMode(nextMode);
+    localStorage.setItem('admin_sidebar_mode', nextMode);
+  };
 
   useEffect(() => {
     // Load pinned items from local storage
@@ -655,6 +673,125 @@ export default function AdminLayout({
     return [...acc, ...items];
   }, []);
 
+  const isEssentialItem = (href: string): boolean => {
+    return [
+      '/admin/dashboard',
+      '/admin/products',
+      '/admin/categories',
+      '/admin/media',
+      '/admin/orders',
+      '/admin/settings/custom-home',
+      '/admin/slider',
+      '/admin/settings',
+      '/admin/settings/domains'
+    ].includes(href);
+  };
+
+  let processedMenuGroups = menuGroups;
+
+  if (sidebarMode === 'simple') {
+    const essentialGroups: typeof menuGroups = [];
+    const advancedItems: any[] = [];
+
+    menuGroups.forEach(group => {
+      const essentialItemsInGroup: any[] = [];
+
+      group.items.forEach(item => {
+        if (item.subItems) {
+          const essentialSubs = item.subItems.filter((sub: any) => isEssentialItem(sub.href));
+          const advancedSubs = item.subItems.filter((sub: any) => !isEssentialItem(sub.href));
+
+          if (essentialSubs.length > 0) {
+            essentialItemsInGroup.push({
+              ...item,
+              subItems: essentialSubs
+            });
+          }
+
+          if (advancedSubs.length > 0) {
+            advancedSubs.forEach((sub: any) => {
+              advancedItems.push({
+                name: sub.name,
+                href: sub.href,
+                icon: item.icon,
+                tooltip: sub.tooltip,
+                badge: sub.badge,
+                isSystem: item.isSystem
+              });
+            });
+          }
+        } else {
+          if (isEssentialItem(item.href || '')) {
+            essentialItemsInGroup.push(item);
+          } else {
+            advancedItems.push({
+              name: item.name,
+              href: item.href,
+              icon: item.icon,
+              tooltip: item.tooltip,
+              badge: item.badge,
+              isSystem: item.isSystem
+            });
+          }
+        }
+      });
+
+      if (essentialItemsInGroup.length > 0) {
+        essentialGroups.push({
+          ...group,
+          items: essentialItemsInGroup
+        });
+      }
+    });
+
+    if (advancedItems.length > 0) {
+      essentialGroups.push({
+        key: 'advanced-features',
+        title: 'امکانات پیشرفته',
+        items: [
+          {
+            name: 'امکانات پیشرفته',
+            icon: Settings,
+            subItems: advancedItems
+          }
+        ]
+      });
+    }
+
+    processedMenuGroups = essentialGroups;
+  }
+
+  const searchableCommands = [
+    { name: 'داشبورد (خلاصه فروشگاه)', href: '/admin/dashboard', keywords: ['داشبورد', 'خانه', 'آمار', 'فروش', 'پیشخوان', 'dashboard', 'home', 'stats'] },
+    { name: 'لیست محصولات', href: '/admin/products', keywords: ['محصول', 'کالا', 'انبار', 'موجودی', 'قیمت', 'product', 'items', 'stock', 'price'] },
+    { name: 'افزودن محصول جدید', href: '/admin/products/new', keywords: ['افزودن محصول', 'محصول جدید', 'کالای جدید', 'ثبت کالا', 'add product', 'new product'] },
+    { name: 'دسته‌بندی‌های کاتالوگ', href: '/admin/categories', keywords: ['دسته', 'گروه', 'دسته بندی', 'شاخه', 'category', 'categories', 'group'] },
+    { name: 'سفارشات فروشگاه', href: '/admin/orders', keywords: ['سفارش', 'خرید', 'فاکتور', 'ارسال', 'پست', 'order', 'orders', 'invoice'] },
+    { name: 'نظرات مشتریان', href: '/admin/reviews', keywords: ['نظر', 'دیدگاه', 'امتیاز', 'کامنت', 'review', 'reviews', 'comment'] },
+    { name: 'تنظیمات صفحه اصلی', href: '/admin/settings/custom-home', keywords: ['صفحه اصلی', 'چیدمان', 'طراحی پوسته', 'لوگو', 'بنر', 'home settings', 'theme'] },
+    { name: 'اسلایدر اصلی هوم‌پیج', href: '/admin/slider', keywords: ['اسلایدر', 'عکس متحرک', 'بنر متحرک', 'slider', 'hero slide'] },
+    { name: 'مدیریت استوری‌ها', href: '/admin/stories', keywords: ['استوری', 'داستان', 'story', 'stories'] },
+    { name: 'نوشته‌های وبلاگ', href: '/admin/blog', keywords: ['وبلاگ', 'مقاله', 'خبر', 'نوشته', 'blog', 'article', 'post'] },
+    { name: 'تیکت‌های مشتریان', href: '/admin/tickets', keywords: ['پشتیبانی', 'تیکت', 'سوال', 'راهنمایی', 'ticket', 'support'] },
+    { name: 'کدهای تخفیف', href: '/admin/discounts', keywords: ['تخفیف', 'کوپن', 'جشنواره', 'کد تخفیف', 'discount', 'coupon'] },
+    { name: 'تنظیمات عمومی فروشگاه', href: '/admin/settings', keywords: ['تنظیمات', 'اطلاعات فروشگاه', 'تلفن', 'آدرس', 'پرداخت', 'درگاه', 'settings', 'general'] },
+    { name: 'اتصال دامنه اختصاصی', href: '/admin/settings/domains', keywords: ['دامنه', 'ساب دامن', 'آدرس سایت', 'domain', 'dns', 'ssl'] },
+    { name: 'درون‌ریزی و برون‌بری داده‌ها', href: '/admin/import-export', keywords: ['خروجی', 'اکسل', 'بکاپ', 'ورود اطلاعات', 'انتقال', 'import', 'export', 'excel'] },
+    { name: 'دستیار هوشمند فروشگاه (ایجنت)', href: '/admin/agent', keywords: ['ایجنت', 'هوش مصنوعی', 'چت', 'دستیار', 'ai', 'agent', 'bot'] },
+    { name: 'چت آنلاین (زنده)', href: '/admin/chat', keywords: ['چت', 'گفتگو', 'زنده', 'پیام', 'chat', 'live chat'] },
+    { name: 'مدیریت همکاران', href: '/admin/staff', keywords: ['همکار', 'کاربر', 'دسترسی', 'نقش', 'staff', 'users', 'roles'] },
+    { name: 'پروفایل مدیر', href: '/admin/profile', keywords: ['پروفایل', 'رمز عبور', 'عکس من', 'profile', 'password'] },
+  ];
+
+  const filteredCommands = searchableCommands.filter(cmd => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      cmd.name.toLowerCase().includes(query) ||
+      cmd.keywords.some(kw => kw.toLowerCase().includes(query))
+    );
+  }).slice(0, 6);
+
   // Auto-open active category and submenu
   useEffect(() => {
     if (pathname !== '/admin/login') {
@@ -862,6 +999,63 @@ export default function AdminLayout({
 
             <ChevronDown size={16} className="relative z-10 mr-auto rotate-90 text-white/60 group-hover:text-white group-hover:-translate-x-1 transition-all duration-500 shrink-0" />
           </Link>
+
+          {/* Sidebar Mode Switcher */}
+          <div className="flex items-center justify-between bg-slate-800/40 border border-slate-800/60 p-2 rounded-2xl mb-5 select-none">
+            <span className="text-[10px] font-black text-slate-400 mr-2">حالت منو:</span>
+            <div className="relative flex items-center bg-slate-950 rounded-xl p-1 w-32 h-8 border border-slate-800/50">
+              {/* Sliding background indicator */}
+              <div 
+                className={`absolute top-1 bottom-1 w-[58px] bg-blue-600 rounded-lg transition-all duration-300 ease-out ${
+                  sidebarMode === 'simple' ? 'right-1' : 'right-[64px]'
+                }`}
+              />
+              
+              {/* Simple Mode Button */}
+              <div className="relative flex-1 h-full group">
+                <button 
+                  onClick={() => {
+                    setSidebarMode('simple');
+                    localStorage.setItem('admin_sidebar_mode', 'simple');
+                  }}
+                  className={`relative z-10 w-full h-full text-center text-[10px] font-black transition-colors duration-200 border-none bg-transparent cursor-pointer ${
+                    sidebarMode === 'simple' ? 'text-white' : 'text-slate-400 hover:text-slate-300'
+                  }`}
+                >
+                  ساده
+                </button>
+                {/* Tooltip */}
+                <div className="absolute bottom-full mb-2.5 left-1/2 -translate-x-1/2 w-52 p-2.5 bg-slate-900/95 dark:bg-slate-950/95 border border-slate-800 text-white rounded-xl shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-50 text-right leading-relaxed">
+                  <div className="font-black text-[10px] text-blue-400 mb-1">منوی ساده و خلوت</div>
+                  <div className="text-[9px] font-bold text-slate-300">
+                    فقط بخش‌های اصلی و روزمره: داشبورد، محصولات، سفارشات، تنظیمات اصلی و دامنه.
+                  </div>
+                </div>
+              </div>
+
+              {/* Professional Mode Button */}
+              <div className="relative flex-1 h-full group">
+                <button 
+                  onClick={() => {
+                    setSidebarMode('advanced');
+                    localStorage.setItem('admin_sidebar_mode', 'advanced');
+                  }}
+                  className={`relative z-10 w-full h-full text-center text-[10px] font-black transition-colors duration-200 border-none bg-transparent cursor-pointer ${
+                    sidebarMode === 'advanced' ? 'text-white' : 'text-slate-400 hover:text-slate-300'
+                  }`}
+                >
+                  حرفه‌ای
+                </button>
+                {/* Tooltip */}
+                <div className="absolute bottom-full mb-2.5 left-1/2 -translate-x-1/2 w-52 p-2.5 bg-slate-900/95 dark:bg-slate-950/95 border border-slate-800 text-white rounded-xl shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-50 text-right leading-relaxed">
+                  <div className="font-black text-[10px] text-purple-400 mb-1">منوی کامل و پیشرفته</div>
+                  <div className="text-[9px] font-bold text-slate-300">
+                    نمایش تمام امکانات: وبلاگ، تیکت‌ها، تخفیف‌ها، استوری‌ها، چت آنلاین و ابزارها.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
           
           {/* Pinned Items */}
           {pinnedItems.length > 0 && (
@@ -914,7 +1108,7 @@ export default function AdminLayout({
 
           {/* Collapsible Categories */}
           <div className="space-y-3 pt-1">
-            {menuGroups.map((group) => {
+            {processedMenuGroups.map((group) => {
               // Map/filter group items to only include subItems that are not pinned
               const visibleItems = group.items.map(item => {
                 if (item.subItems) {
@@ -1106,17 +1300,46 @@ export default function AdminLayout({
             </div>
 
             {/* Desktop breadcrumb search placeholder */}
-            <div className="hidden sm:block">
+            <div className="hidden sm:block relative">
               <div className="relative">
                 <div className="absolute right-0 top-1/2 -translate-y-1/2 pl-3 pr-3 text-slate-400 pointer-events-none">
                   <Search size={16} />
                 </div>
                 <input
                   type="text"
-                  placeholder="جستجو در تنظیمات، محصولات و سفارشات ادمین..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setIsSearchFocused(true)}
+                  onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+                  placeholder="جستجوی سریع بخش‌ها و کارهای ادمین..."
                   className="w-full bg-slate-100/50 dark:bg-slate-950 rounded-xl py-2 pr-10 pl-4 text-xs font-bold text-slate-850 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white dark:focus:bg-slate-900 xl:w-96 transition-all border border-transparent focus:border-blue-500 dark:border-slate-800"
                 />
               </div>
+
+              {/* Command Search Dropdown */}
+              {isSearchFocused && (
+                <div className="absolute right-0 mt-2 w-full xl:w-96 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl border border-slate-150 dark:border-slate-800 shadow-2xl py-2.5 z-50 animate-fade-in text-[11px] font-black text-right">
+                  <div className="px-4 py-1.5 border-b border-slate-50 dark:border-slate-800/80 mb-1.5 text-slate-400 dark:text-slate-500 select-none">
+                    {searchQuery ? 'نتایج جستجوی سریع' : 'پیشنهادهای دسترسی سریع'}
+                  </div>
+                  {filteredCommands.length === 0 ? (
+                    <div className="px-4 py-4 text-center text-slate-400 dark:text-slate-500 select-none">
+                      نتیجه‌ای برای جستجوی شما پیدا نشد 🧐
+                    </div>
+                  ) : (
+                    filteredCommands.map((cmd) => (
+                      <Link
+                        key={cmd.href}
+                        href={cmd.href}
+                        className="w-full text-right px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-between transition-colors border-none cursor-pointer"
+                      >
+                        <span className="truncate">{cmd.name}</span>
+                        <ArrowLeft size={12} className="text-slate-400 dark:text-slate-500" />
+                      </Link>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Right Header Items (Toggles, notifications, user avatar dropdown) */}

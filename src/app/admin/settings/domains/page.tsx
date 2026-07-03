@@ -39,6 +39,7 @@ interface Domain {
 export default function DomainsSettingsPage() {
   const [domains, setDomains] = useState<Domain[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showGuide, setShowGuide] = useState(true);
   const [adding, setAdding] = useState(false);
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
   const [settingPrimaryId, setSettingPrimaryId] = useState<string | null>(null);
@@ -88,6 +89,8 @@ export default function DomainsSettingsPage() {
 
   useEffect(() => {
     fetchDomains();
+    const dismissed = localStorage.getItem('hide_guide_domains') === 'true';
+    if (dismissed) setShowGuide(false);
   }, []);
 
   const handleCopy = (text: string) => {
@@ -225,6 +228,32 @@ export default function DomainsSettingsPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-8 relative" dir="rtl">
+      
+      {showGuide && (
+        <div className="bg-blue-50/80 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-2xl p-4 flex items-start justify-between gap-4 select-none text-right">
+          <div className="flex gap-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl shrink-0">
+              <Info className="w-5 h-5" />
+            </div>
+            <div className="space-y-1">
+              <h4 className="text-xs font-black text-blue-900 dark:text-blue-200">راهنمای اتصال دامنه اختصاصی 💡</h4>
+              <p className="text-[10px] text-slate-600 dark:text-slate-400 font-bold leading-relaxed">
+                در این بخش می‌توانید دامنه شخصی خود را متصل کنید. برای این کار، ابتدا دامنه را ثبت کرده و سپس رکوردهای DNS مشخص شده (TXT یا CNAME) را در پنل دامنه خود تنظیم کنید. پس از تنظیم رکوردها، روی دکمه «بررسی و تایید» کلیک کنید تا دامنه شما فعال و گواهی SSL رایگان صادر شود.
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={() => {
+              setShowGuide(false);
+              localStorage.setItem('hide_guide_domains', 'true');
+            }}
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors cursor-pointer"
+          >
+            <XCircle size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Locked Overlay if Package is not active / allowed */}
       {!loading && !customDomainEnabled && (
         <div className="absolute inset-0 bg-slate-100/60 dark:bg-slate-950/80 backdrop-blur-[2px] z-50 rounded-3xl flex flex-col items-center justify-center p-6 text-center select-none animate-in fade-in duration-300">

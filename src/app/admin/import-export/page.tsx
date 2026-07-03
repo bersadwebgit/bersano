@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   FileDown, 
   FileUp, 
@@ -24,7 +24,8 @@ import {
   ArrowRight,
   ArrowLeft,
   DollarSign,
-  Layers
+  Layers,
+  X
 } from 'lucide-react';
 
 interface ParsedProduct {
@@ -63,6 +64,12 @@ interface ParsedCategory {
 
 export default function ImportExportPage() {
   const [activeTab, setActiveTab] = useState<'export' | 'import'>('export');
+  const [showGuide, setShowGuide] = useState(true);
+
+  useEffect(() => {
+    const dismissed = localStorage.getItem('hide_guide_import_export') === 'true';
+    if (dismissed) setShowGuide(false);
+  }, []);
   
   // Export states
   const [exportType, setExportType] = useState<'products' | 'categories' | 'settings' | 'full'>('products');
@@ -316,6 +323,32 @@ export default function ImportExportPage() {
 
   return (
     <div className="space-y-6 text-right" dir="rtl">
+      
+      {showGuide && (
+        <div className="bg-blue-50/80 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-2xl p-4 flex items-start justify-between gap-4 select-none text-right">
+          <div className="flex gap-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl shrink-0">
+              <Info className="w-5 h-5" />
+            </div>
+            <div className="space-y-1">
+              <h4 className="text-xs font-black text-blue-900 dark:text-blue-200">راهنمای درون‌ریزی و برون‌بری داده‌ها 💡</h4>
+              <p className="text-[10px] text-slate-600 dark:text-slate-400 font-bold leading-relaxed">
+                برای گرفتن نسخه خروجی از اطلاعات فروشگاه یا انتقال اطلاعات از فایل استفاده کنید. شما می‌توانید محصولات یا دسته‌بندی‌های خود را به صورت فایل Excel یا JSON خروجی بگیرید. همچنین می‌توانید فایل‌های محصولات خود را آپلود کرده و با کمک هوش مصنوعی یا به صورت استاندارد وارد سیستم کنید.
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={() => {
+              setShowGuide(false);
+              localStorage.setItem('hide_guide_import_export', 'true');
+            }}
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors cursor-pointer"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>

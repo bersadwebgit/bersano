@@ -40,6 +40,7 @@ export default function AdminMediaPage() {
   const [media, setMedia] = useState<Media[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showGuide, setShowGuide] = useState(true);
   const [selectedMedia, setSelectedMedia] = useState<Media | null>(null);
   const [editName, setEditName] = useState('');
   const [editAlt, setEditAlt] = useState('');
@@ -181,6 +182,8 @@ export default function AdminMediaPage() {
   useEffect(() => {
     fetchMedia();
     fetchShopDefaults();
+    const dismissed = localStorage.getItem('hide_guide_media') === 'true';
+    if (dismissed) setShowGuide(false);
   }, []);
 
   const fetchMedia = async () => {
@@ -539,6 +542,31 @@ export default function AdminMediaPage() {
   return (
     <div className="max-w-6xl mx-auto pb-12" dir="rtl">
       
+      {showGuide && (
+        <div className="bg-blue-50/80 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-2xl p-4 flex items-start justify-between gap-4 select-none text-right mb-6">
+          <div className="flex gap-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl shrink-0">
+              <HelpCircle className="w-5 h-5" />
+            </div>
+            <div className="space-y-1">
+              <h4 className="text-xs font-black text-blue-900 dark:text-blue-200">راهنمای کتابخانه رسانه 💡</h4>
+              <p className="text-[10px] text-slate-600 dark:text-slate-400 font-bold leading-relaxed">
+                تصاویر محصولات، اسلایدرها و فایل‌های فروشگاه را از این بخش مدیریت کنید. شما می‌توانید تصاویر جدید آپلود کنید، نام و متن جایگزین (Alt) آن‌ها را برای بهبود سئو ویرایش کنید، یا با استفاده از ابزار هوش مصنوعی پس‌زمینه تصاویر را با یک کلیک حذف کنید.
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={() => {
+              setShowGuide(false);
+              localStorage.setItem('hide_guide_media', 'true');
+            }}
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors cursor-pointer"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>

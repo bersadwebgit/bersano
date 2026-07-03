@@ -140,6 +140,7 @@ const DEFAULT_BOTTOM_NAV_CONFIG = {
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
+  const [showGuide, setShowGuide] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [testingBale, setTestingBale] = useState(false);
@@ -173,6 +174,8 @@ export default function SettingsPage() {
         }
       }
     }
+    const dismissed = localStorage.getItem('hide_guide_settings') === 'true';
+    if (dismissed) setShowGuide(false);
   }, []);
 
   // Helper function to generate dynamic minimal & professional color suggestions based on user input
@@ -955,6 +958,31 @@ export default function SettingsPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-12 select-none">
       
+      {showGuide && (
+        <div className="bg-blue-50/80 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-2xl p-4 flex items-start justify-between gap-4 select-none text-right">
+          <div className="flex gap-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl shrink-0">
+              <Info className="w-5 h-5" />
+            </div>
+            <div className="space-y-1">
+              <h4 className="text-xs font-black text-blue-900 dark:text-blue-200">راهنمای تنظیمات فروشگاه 💡</h4>
+              <p className="text-[10px] text-slate-600 dark:text-slate-400 font-bold leading-relaxed">
+                در این بخش می‌توانید اطلاعات پایه، هوم‌پیج، درگاه‌های پرداخت، روش‌های ارسال کالا و ابزارهای ارتباطی فروشگاه خود را پیکربندی کنید. پس از اعمال تغییرات در هر تب، حتماً روی دکمه «ذخیره تنظیمات» کلیک کنید تا تغییرات اعمال شوند.
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={() => {
+              setShowGuide(false);
+              localStorage.setItem('hide_guide_settings', 'true');
+            }}
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors cursor-pointer"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Header Banner - Floating Box Layout */}
       <div className="bg-gradient-to-r from-blue-600/[0.07] via-blue-600/[0.03] to-transparent dark:from-blue-500/10 dark:via-blue-500/5 dark:to-transparent rounded-3xl p-6 border border-blue-500/10 dark:border-blue-500/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm">
         <div>

@@ -18,6 +18,7 @@ type Product = {
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showGuide, setShowGuide] = useState(true);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -301,6 +302,8 @@ export default function ProductsPage() {
   useEffect(() => {
     fetchProducts();
     fetchLimit();
+    const dismissed = localStorage.getItem('hide_guide_products') === 'true';
+    if (dismissed) setShowGuide(false);
   }, []);
 
   useEffect(() => {
@@ -415,6 +418,31 @@ export default function ProductsPage() {
   return (
     <div className="max-w-7xl mx-auto space-y-6 select-none">
       
+      {showGuide && (
+        <div className="bg-blue-50/80 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-2xl p-4 flex items-start justify-between gap-4 select-none text-right">
+          <div className="flex gap-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl shrink-0">
+              <Info className="w-5 h-5" />
+            </div>
+            <div className="space-y-1">
+              <h4 className="text-xs font-black text-blue-900 dark:text-blue-200">راهنمای مدیریت محصولات 💡</h4>
+              <p className="text-[10px] text-slate-600 dark:text-slate-400 font-bold leading-relaxed">
+                اینجا می‌توانید محصولات فروشگاه خود را تعریف، ویرایش و مدیریت کنید. با کلیک روی دکمه «افزودن محصول جدید» می‌توانید کالای فیزیکی یا دیجیتال ثبت کنید. همچنین با استفاده از ابزار «درون‌ریزی و برون‌بری هوشمند»، می‌توانید اطلاعات محصولات را از فایل اکسل وارد پنل کنید.
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={() => {
+              setShowGuide(false);
+              localStorage.setItem('hide_guide_products', 'true');
+            }}
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors cursor-pointer"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Header Banner - Floating Box Layout */}
       <div className="bg-gradient-to-r from-blue-600/[0.07] via-indigo-600/[0.03] to-transparent dark:from-blue-500/10 dark:via-indigo-500/5 dark:to-transparent rounded-3xl p-6 border border-blue-500/10 dark:border-blue-500/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm">
         <div>
