@@ -44,6 +44,7 @@ interface ChatSettings {
 
 export default function ChatWidget() {
   const pathname = usePathname();
+  const isAdminPath = pathname?.startsWith('/admin') || pathname?.startsWith('/super-admin');
   const [isOpen, setIsOpen] = useState(false);
   const [settings, setSettings] = useState<ChatSettings | null>(null);
   const [themeColor, setThemeColor] = useState('#2563eb');
@@ -64,6 +65,45 @@ export default function ChatWidget() {
 
   const [isButtonVisible, setIsButtonVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [hasBottomNav, setHasBottomNav] = useState(true);
+
+  useEffect(() => {
+    if (isAdminPath) return;
+
+    fetch('/api/settings/public')
+      .then(res => res.json())
+      .then(data => {
+        if (data.settings?.bottomNavConfig) {
+          try {
+            const parsed = JSON.parse(data.settings.bottomNavConfig);
+            const enabled = parsed.enabled !== false;
+            const excludedPages = parsed.excludedPages || ['/checkout', '/payment', '/login', '/register'];
+            
+            const isExcluded = excludedPages.some((page: string) => {
+              if (page === '/') return pathname === '/';
+              return pathname?.startsWith(page);
+            }) || false;
+
+            setHasBottomNav(enabled && !isExcluded);
+          } catch (e) {
+            console.error('Error parsing bottomNavConfig in ChatWidget', e);
+            setHasBottomNav(true);
+          }
+        } else {
+          // Default config behavior
+          const excludedPages = ['/checkout', '/payment', '/login', '/register'];
+          const isExcluded = excludedPages.some((page: string) => {
+            if (page === '/') return pathname === '/';
+            return pathname?.startsWith(page);
+          }) || false;
+          setHasBottomNav(!isExcluded);
+        }
+      })
+      .catch(err => {
+        console.error('Error fetching public settings in ChatWidget', err);
+        setHasBottomNav(true);
+      });
+  }, [pathname, isAdminPath]);
 
   useEffect(() => {
     if (isOpen) {
@@ -256,7 +296,6 @@ export default function ChatWidget() {
   }
 
   // Hide on admin and super-admin paths
-  const isAdminPath = pathname?.startsWith('/admin') || pathname?.startsWith('/super-admin');
 
   useEffect(() => {
     if (isAdminPath) return;
@@ -570,7 +609,14 @@ export default function ChatWidget() {
   };
 
   return (
-    <div className="fixed bottom-24 md:bottom-6 right-6 z-50 select-none font-sans print:hidden" dir="rtl">
+    <div 
+      className={`fixed z-50 select-none font-sans print:hidden transition-all duration-300 ${
+        isOpen 
+          ? 'inset-0 md:inset-auto md:bottom-6 md:right-6' 
+          : `right-6 ${hasBottomNav ? 'bottom-24 md:bottom-6' : 'bottom-6'}`
+      }`} 
+      dir="rtl"
+    >
       {/* Floating Chat Button */}
       {!isOpen && (
         <button
@@ -596,11 +642,11 @@ export default function ChatWidget() {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="w-[calc(100vw-3rem)] max-w-[380px] h-[min(580px,calc(100vh-7rem))] bg-white dark:bg-slate-900 rounded-3xl shadow-2xl shadow-black/20 border border-slate-100 dark:border-slate-800/80 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-6 duration-300">
+        <div className="w-full h-[100dvh] md:w-[380px] md:h-[min(580px,calc(100vh-7rem))] bg-white dark:bg-slate-900 rounded-none md:rounded-3xl shadow-none md:shadow-2xl md:shadow-black/20 border-0 md:border md:border-slate-100 md:dark:border-slate-800/80 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-full md:slide-in-from-bottom-6 duration-300">
           {/* Header */}
           <div 
             style={{ backgroundColor: themeColor }}
-            className="relative p-5 text-white flex flex-col gap-4 shadow-md overflow-hidden"
+            className="relative p-5 text-white flex flex-col gap-4 shadow-md overflow-hidden flex-shrink-0"
           >
             {/* Subtle background pattern/gradient */}
             <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
@@ -636,9 +682,9 @@ export default function ChatWidget() {
               <button 
                 onClick={() => setIsOpen(false)}
                 aria-label="بستن گفتگو"
-                className="p-1.5 hover:bg-white/15 rounded-full transition-all active:scale-90"
+                className="p-2.5 md:p-1.5 hover:bg-white/15 rounded-full transition-all active:scale-90"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5 md:w-4 md:h-4" />
               </button>
             </div>
 
@@ -746,7 +792,7 @@ export default function ChatWidget() {
                         borderColor: nameFocused ? themeColor : undefined,
                         boxShadow: nameFocused ? `0 0 0 2px ${themeColor}15` : undefined
                       }}
-                      className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-white text-sm focus:outline-none transition-all duration-200"
+                      className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-white text-base md:text-sm focus:outline-none transition-all duration-200"
                     />
                   </div>
                 )}
@@ -767,7 +813,7 @@ export default function ChatWidget() {
                         borderColor: phoneFocused ? themeColor : undefined,
                         boxShadow: phoneFocused ? `0 0 0 2px ${themeColor}15` : undefined
                       }}
-                      className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-white text-sm focus:outline-none transition-all duration-200 text-left"
+                      className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-white text-base md:text-sm focus:outline-none transition-all duration-200 text-left"
                       dir="ltr"
                     />
                   </div>
@@ -789,7 +835,7 @@ export default function ChatWidget() {
                         borderColor: emailFocused ? themeColor : undefined,
                         boxShadow: emailFocused ? `0 0 0 2px ${themeColor}15` : undefined
                       }}
-                      className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-white text-sm focus:outline-none transition-all duration-200 text-left"
+                      className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-white text-base md:text-sm focus:outline-none transition-all duration-200 text-left"
                       dir="ltr"
                     />
                   </div>
@@ -1097,9 +1143,12 @@ export default function ChatWidget() {
 
           {/* Message Input Bar */}
           {sessionId && activeTab === 'chat' && (
-            <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800/80 flex flex-col gap-2 relative">
+            <div 
+              style={{ paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))' }}
+              className="p-3 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800/80 flex flex-col gap-2 relative flex-shrink-0"
+            >
               {showEmojiPicker && (
-                <div className="absolute bottom-16 right-4 left-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded-2xl shadow-xl p-2.5 grid grid-cols-6 gap-1.5 z-10 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <div className="absolute bottom-full mb-2 right-4 left-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded-2xl shadow-xl p-2.5 grid grid-cols-6 gap-1.5 z-10 animate-in fade-in slide-in-from-bottom-2 duration-200">
                   {['😊', '👍', '❤️', '😂', '😍', '🙏', '🤔', '🎉', '👏', '😭', '🚀', '🔥', '💯', '🌟', '💡', '💬', '📞', '📍'].map(emoji => (
                     <button
                       key={emoji}
@@ -1130,10 +1179,15 @@ export default function ChatWidget() {
                   type="text"
                   value={inputText}
                   onChange={e => setInputText(e.target.value)}
+                  onFocus={() => {
+                    setTimeout(() => {
+                      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                    }, 300);
+                  }}
                   placeholder="پیام خود را بنویسید..."
                   autoComplete="off"
                   enterKeyHint="send"
-                  className="flex-1 min-w-0 px-4 py-2.5 rounded-2xl border-0 bg-slate-50 dark:bg-slate-950/40 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-offset-0 focus:ring-slate-200 dark:focus:ring-slate-800 transition-all"
+                  className="flex-1 min-w-0 px-4 py-2.5 rounded-2xl border-0 bg-slate-50 dark:bg-slate-950/40 text-slate-800 dark:text-white text-base md:text-sm focus:outline-none focus:ring-1 focus:ring-offset-0 focus:ring-slate-200 dark:focus:ring-slate-800 transition-all"
                   disabled={sending}
                 />
                 <button
@@ -1141,12 +1195,12 @@ export default function ChatWidget() {
                   disabled={!inputText.trim() || sending}
                   aria-label="ارسال پیام"
                   style={{ backgroundColor: themeColor }}
-                  className="w-10 h-10 flex-shrink-0 rounded-2xl flex items-center justify-center text-white hover:scale-105 active:scale-95 transition-all disabled:opacity-40 disabled:scale-100 shadow-md shadow-black/5"
+                  className="w-11 h-11 md:w-10 md:h-10 flex-shrink-0 rounded-2xl flex items-center justify-center text-white hover:scale-105 active:scale-95 transition-all disabled:opacity-40 disabled:scale-100 shadow-md shadow-black/5"
                 >
                   {sending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-5 h-5 md:w-4 md:h-4 animate-spin" />
                   ) : (
-                    <Send className="w-4 h-4 rotate-180" />
+                    <Send className="w-5 h-5 md:w-4 md:h-4 rotate-180" />
                   )}
                 </button>
               </form>
@@ -1157,22 +1211,22 @@ export default function ChatWidget() {
                   <button 
                     type="button"
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className={`p-1 rounded-lg transition-colors active:scale-90 ${showEmojiPicker ? 'text-blue-500' : 'hover:text-slate-600 dark:hover:text-slate-300'}`}
+                    className={`p-2 md:p-1 rounded-lg transition-colors active:scale-90 ${showEmojiPicker ? 'text-blue-500' : 'hover:text-slate-600 dark:hover:text-slate-300'}`}
                     title="افزودن ایموجی"
                   >
-                    <Smile className="w-4 h-4" />
+                    <Smile className="w-5 h-5 md:w-4 md:h-4" />
                   </button>
                   <button 
                     type="button"
                     onClick={() => document.getElementById('chat-file-upload')?.click()}
                     disabled={uploadingFile}
-                    className="p-1 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg transition-colors active:scale-90 disabled:opacity-50"
+                    className="p-2 md:p-1 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg transition-colors active:scale-90 disabled:opacity-50"
                     title="پیوست فایل"
                   >
                     {uploadingFile ? (
-                      <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                      <Loader2 className="w-5 h-5 md:w-4 md:h-4 animate-spin text-blue-500" />
                     ) : (
-                      <Paperclip className="w-4 h-4" />
+                      <Paperclip className="w-5 h-5 md:w-4 md:h-4" />
                     )}
                   </button>
                 </div>

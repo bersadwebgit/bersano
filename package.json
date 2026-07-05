@@ -16,6 +16,7 @@
     "bcryptjs": "^3.0.3",
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
+    "isomorphic-dompurify": "^3.18.0",
     "jose": "^6.2.3",
     "lucide-react": "^1.16.0",
     "melipayamak": "^1.0.5",

@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from './prisma';
 import { getAiModel } from './ai-model-resolver';
 
@@ -183,12 +184,13 @@ export async function embedProduct(productId: string, shopId: string): Promise<v
     const embedding = await fetchEmbedding(text, config);
 
     // Store as pgvector using raw SQL
-    await prisma.$executeRawUnsafe(
-      `UPDATE "Product" SET embedding = $1::vector, "embeddingUpdatedAt" = NOW() WHERE id = $2 AND "shop_id" = $3`,
-      `[${embedding.join(',')}]`,
-      productId,
-      shopId
-    );
+    const vectorStr = `[${embedding.join(',')}]`;
+    await prisma.$executeRaw(Prisma.sql`
+      UPDATE "Product"
+      SET embedding = ${vectorStr}::vector,
+          "embeddingUpdatedAt" = NOW()
+      WHERE id = ${productId} AND "shop_id" = ${shopId}
+    `);
 
     console.log(`[embedProduct] Successfully embedded product: ${productId}`);
   } catch (error: any) {

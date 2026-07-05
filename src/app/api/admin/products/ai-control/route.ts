@@ -25,6 +25,8 @@ interface AiProductControlResponse {
 
 async function searchPexelsImage(query: string, apiKey?: string): Promise<string | null> {
   if (apiKey) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
     try {
       const cleanQuery = query.replace(/[_-]/g, ' ');
       const encodedQuery = encodeURIComponent(cleanQuery);
@@ -33,8 +35,10 @@ async function searchPexelsImage(query: string, apiKey?: string): Promise<string
         headers: {
           'Authorization': apiKey,
           'Accept': 'application/json'
-        }
+        },
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
       if (response.ok) {
         const data = await response.json();
         const photos = data.photos || [];
@@ -45,6 +49,7 @@ async function searchPexelsImage(query: string, apiKey?: string): Promise<string
         }
       }
     } catch (error) {
+      clearTimeout(timeoutId);
       console.error('Error searching Pexels API:', error);
     }
   }
@@ -52,12 +57,17 @@ async function searchPexelsImage(query: string, apiKey?: string): Promise<string
 }
 
 async function searchWikimediaImage(query: string): Promise<string | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
   try {
     const cleanQuery = query.replace(/[_-]/g, ' ');
     const encodedQuery = encodeURIComponent(cleanQuery);
     const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=${encodedQuery}&srnamespace=6&format=json&srlimit=3`;
-    const response = await fetch(searchUrl);
-    if (!response.ok) return null;
+    const response = await fetch(searchUrl, { signal: controller.signal });
+    if (!response.ok) {
+      clearTimeout(timeoutId);
+      return null;
+    }
     const searchData = await response.json();
     const results = searchData.query?.search || [];
     
@@ -65,7 +75,8 @@ async function searchWikimediaImage(query: string): Promise<string | null> {
       const item = results[Math.floor(Math.random() * results.length)];
       const title = item.title;
       const infoUrl = `https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=imageinfo&iiprop=url&format=json`;
-      const infoRes = await fetch(infoUrl);
+      const infoRes = await fetch(infoUrl, { signal: controller.signal });
+      clearTimeout(timeoutId);
       if (!infoRes.ok) return null;
       const infoData = await infoRes.json();
       const pages = infoData.query?.pages || {};
@@ -74,8 +85,11 @@ async function searchWikimediaImage(query: string): Promise<string | null> {
       if (imageInfo.length > 0) {
         return imageInfo[0].url;
       }
+    } else {
+      clearTimeout(timeoutId);
     }
   } catch (err) {
+    clearTimeout(timeoutId);
     console.error('Wikimedia search error:', err);
   }
   return null;

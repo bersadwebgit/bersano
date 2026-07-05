@@ -5,6 +5,8 @@ import { syncDemoDataFlag } from '@/lib/clear-demo-data';
 import { Invalidate } from '@/lib/invalidate';
 import { embedProduct } from '@/lib/product-embedding';
 import { checkIdempotency, saveIdempotency } from '@/lib/idempotency';
+import { sanitizeHtml } from '@/lib/sanitize-html';
+import { validateUrl } from '@/lib/validate-url';
 
 function parseNumber(val: any, defaultValue: any = 0): any {
   if (val === undefined || val === null) return defaultValue;
@@ -78,6 +80,23 @@ export async function PUT(
 
     const { id } = await params;
     const data = await req.json();
+
+    if (data.description) data.description = sanitizeHtml(data.description);
+    if (data.fullDescription) data.fullDescription = sanitizeHtml(data.fullDescription);
+
+    if (data.imageUrl && !(await validateUrl(data.imageUrl))) {
+      data.imageUrl = null;
+    }
+    if (data.galleryUrls && Array.isArray(data.galleryUrls)) {
+      const validations = await Promise.all(data.galleryUrls.map(url => validateUrl(url)));
+      data.galleryUrls = data.galleryUrls.filter((_, idx) => validations[idx]);
+    }
+    if (data.fileUrl && !(await validateUrl(data.fileUrl))) {
+      data.fileUrl = null;
+    }
+    if (data.previewUrl && !(await validateUrl(data.previewUrl))) {
+      data.previewUrl = null;
+    }
 
     // Verify ownership
     const existingProduct = await prisma.product.findFirst({

@@ -946,7 +946,7 @@ export default function AdminLayout({
       `}>
         
         {/* Sidebar Header */}
-        <div className={`flex items-center justify-between px-5 py-5 border-b border-slate-800/60 shrink-0 ${sidebarCollapse === 'collapsed' ? 'lg:px-3 lg:justify-center' : ''}`}>
+        <div className={`flex items-center justify-between px-4 py-3.5 border-b border-slate-800/60 shrink-0 ${sidebarCollapse === 'collapsed' ? 'lg:px-2 lg:justify-center' : ''}`}>
           <Link href="/admin/dashboard" className="flex items-center gap-3">
             <div className="w-9 h-9 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center font-black text-xl shadow-md text-white shrink-0 overflow-hidden">
               {profile?.logoUrl ? (
@@ -1003,14 +1003,14 @@ export default function AdminLayout({
         </div>
 
         {/* Sidebar Menu - Scrollable */}
-        <nav className={`flex-1 p-3 space-y-3 custom-scrollbar ${
+        <nav className={`flex-1 p-2.5 space-y-2 custom-scrollbar ${
           sidebarCollapse === 'collapsed' ? 'lg:overflow-visible overflow-y-auto' : 'overflow-y-auto'
         }`}>
           <Link 
             href="/admin/agent"
             onClick={() => setIsMobileMenuOpen(false)}
             title="فعالسازی دستیار هوشمند فروشگاه"
-            className={`group relative flex items-center mb-5 rounded-2xl text-white shadow-lg shadow-cyan-900/30 hover:shadow-cyan-500/40 transition-[transform,box-shadow,padding] duration-500 ease-out hover:-translate-y-0.5 active:scale-[0.98] overflow-hidden shrink-0 bg-gradient-to-r from-cyan-500 via-blue-600 via-violet-600 to-fuchsia-600 animate-agent-aurora ${
+            className={`group relative flex items-center mb-3 rounded-2xl text-white shadow-lg shadow-cyan-900/30 hover:shadow-cyan-500/40 transition-[transform,box-shadow,padding] duration-500 ease-out hover:-translate-y-0.5 active:scale-[0.98] overflow-hidden shrink-0 bg-gradient-to-r from-cyan-500 via-blue-600 via-violet-600 to-fuchsia-600 animate-agent-aurora ${
               sidebarCollapse === 'collapsed' ? 'lg:px-2 lg:py-2 lg:justify-center lg:gap-0' : 'px-3.5 py-3 gap-3'
             }`}
           >
@@ -1034,7 +1034,7 @@ export default function AdminLayout({
           </Link>
 
           {/* Sidebar Mode Switcher */}
-          <div className={`flex items-center justify-between bg-slate-800/40 border border-slate-800/60 p-2 rounded-2xl mb-5 select-none ${
+          <div className={`flex items-center justify-between bg-slate-800/40 border border-slate-800/60 p-2 rounded-2xl mb-3 select-none ${
             sidebarCollapse === 'collapsed' ? 'lg:hidden' : ''
           }`}>
             <span className="text-[10px] font-black text-slate-400 mr-2">حالت منو:</span>
@@ -1367,11 +1367,11 @@ export default function AdminLayout({
         </nav>
         
         {/* Sidebar Footer - Collapse Toggle & Logout button */}
-        <div className="p-4 border-t border-slate-800/60 shrink-0 bg-slate-950/20 space-y-2">
+        <div className="p-3 border-t border-slate-800/60 shrink-0 bg-slate-950/20 space-y-1.5">
           {/* Collapse Toggle Button (Desktop only) */}
           <button
             onClick={toggleCollapse}
-            className={`hidden lg:flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-400 hover:bg-slate-800/40 hover:text-white transition-all active:scale-98 ${
+            className={`hidden lg:flex w-full items-center gap-3 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-400 hover:bg-slate-800/40 hover:text-white transition-all active:scale-98 ${
               sidebarCollapse === 'collapsed' ? 'justify-center px-0' : ''
             }`}
             title={sidebarCollapse === 'collapsed' ? 'باز کردن منو' : 'کوچک کردن منو'}
@@ -1392,7 +1392,7 @@ export default function AdminLayout({
           {/* Logout Button */}
           <button 
             onClick={handleLogout}
-            className={`flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-400 hover:bg-slate-800/40 hover:text-red-400 transition-all active:scale-98 ${
+            className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-400 hover:bg-slate-800/40 hover:text-red-400 transition-all active:scale-98 ${
               sidebarCollapse === 'collapsed' ? 'lg:justify-center lg:px-0' : ''
             }`}
             title="خروج از حساب مدیریت"

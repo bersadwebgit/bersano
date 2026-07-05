@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { verifyAuth } from '@/lib/auth';
 import { Invalidate } from '@/lib/invalidate';
+import { sanitizeHtml } from '@/lib/sanitize-html';
+import { validateUrl } from '@/lib/validate-url';
 
 export async function GET(
   req: NextRequest,
@@ -56,6 +58,16 @@ export async function PUT(
 
     const { id } = await params;
     const data = await req.json();
+
+    if (data.content) data.content = sanitizeHtml(data.content);
+    if (data.summary) data.summary = sanitizeHtml(data.summary);
+
+    if (data.featuredImage && !(await validateUrl(data.featuredImage))) {
+      data.featuredImage = null;
+    }
+    if (data.ogImage && !(await validateUrl(data.ogImage))) {
+      data.ogImage = null;
+    }
 
     const {
       title,

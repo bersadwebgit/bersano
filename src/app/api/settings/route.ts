@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/auth';
 import { Invalidate } from '@/lib/invalidate';
+import { sanitizeHtml } from '@/lib/sanitize-html';
+import { validateUrl } from '@/lib/validate-url';
 
 export async function GET(request: Request) {
   try {
@@ -32,6 +34,17 @@ export async function PUT(request: Request) {
     }
 
     const data = await request.json();
+
+    if (data.aboutUsPage) data.aboutUsPage = sanitizeHtml(data.aboutUsPage);
+    if (data.termsPage) data.termsPage = sanitizeHtml(data.termsPage);
+    if (data.contactUsPage) data.contactUsPage = sanitizeHtml(data.contactUsPage);
+
+    if (data.logoUrl && !(await validateUrl(data.logoUrl))) {
+      data.logoUrl = null;
+    }
+    if (data.faviconUrl && !(await validateUrl(data.faviconUrl))) {
+      data.faviconUrl = null;
+    }
 
     // Query active package and enforce feature limitations
     const activeShop = await prisma.shopSettings.findUnique({
