@@ -249,6 +249,8 @@ export async function POST(req: NextRequest) {
         await prisma.$transaction(async (tx) => {
           await clearShopDemoDataWithTx(payload.shopId as string, tx);
         });
+        // Invalidate the entire shop cache to ensure all deleted demo items (stories, slides, products) disappear immediately
+        await Invalidate.shop(payload.shopId as string);
       } catch (clearErr) {
         console.error('Failed to clear demo data on product creation:', clearErr);
       }

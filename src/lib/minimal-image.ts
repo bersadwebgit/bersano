@@ -124,7 +124,7 @@ function splitTextIntoLines(text: string, maxChars: number = 25): string[] {
 
 export function generateMinimalImage(
   title: string,
-  type: 'product' | 'article' = 'product',
+  type: 'product' | 'article' | 'slider' | 'story' = 'product',
   categoryName?: string,
   themeColor?: string
 ): string {
@@ -133,7 +133,7 @@ export function generateMinimalImage(
   
   // Icon path based on type
   let iconPath = '';
-  if (type === 'product') {
+  if (type === 'product' || type === 'slider') {
     // Elegant shopping bag icon
     iconPath = `
       <path d="M-16 -10 L16 -10 L16 16 C16 22, 10 26, 0 26 C-10 26, -16 22, -16 16 Z" fill="none" stroke="url(#accent-grad)" stroke-width="4" stroke-linejoin="round" />
@@ -174,6 +174,11 @@ export function generateMinimalImage(
   }
   const textBlockStartY = 370 - (totalHeight / 2);
 
+  // If it's a slider or story, we don't render any text to keep it extremely clean and elegant as a background
+  const isSlider = type === 'slider';
+  const isStory = type === 'story';
+  const isCleanBackground = isSlider || isStory;
+
   const svg = `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="100%" height="100%">
   <defs>
@@ -194,7 +199,7 @@ export function generateMinimalImage(
       <stop offset="100%" stop-color="#94a3b8" />
     </linearGradient>
     <radialGradient id="glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="${gradient.stop1}" stop-opacity="0.12" />
+      <stop offset="0%" stop-color="${gradient.stop1}" stop-opacity="${isCleanBackground ? '0.22' : '0.12'}" />
       <stop offset="100%" stop-color="${gradient.bgStop1}" stop-opacity="0" />
     </radialGradient>
   </defs>
@@ -203,24 +208,27 @@ export function generateMinimalImage(
   <rect width="800" height="600" rx="24" fill="url(#bg-grad)" />
   
   <!-- Ambient Glow in center -->
-  <circle cx="400" cy="300" r="350" fill="url(#glow)" />
+  <circle cx="400" cy="300" r="${isCleanBackground ? '400' : '350'}" fill="url(#glow)" />
   
   <!-- Decorative Grid/Patterns -->
-  <g opacity="0.02">
+  <g opacity="${isCleanBackground ? '0.05' : '0.02'}">
     <circle cx="400" cy="300" r="280" stroke="#ffffff" stroke-width="1.5" fill="none" />
     <circle cx="400" cy="300" r="180" stroke="#ffffff" stroke-width="1" fill="none" />
     <line x1="100" y1="300" x2="700" y2="300" stroke="#ffffff" stroke-width="1" />
     <line x1="400" y1="100" x2="400" y2="500" stroke="#ffffff" stroke-width="1" />
   </g>
   
-  <!-- Minimal Icon/Logo Placeholder -->
-  <g transform="translate(400, 150)">
+  ${!isStory ? `
+  <!-- Minimal Icon/Logo Placeholder (Only if not a story) -->
+  <g transform="translate(400, ${isSlider ? '300' : '150'}) scale(${isSlider ? '1.4' : '1'})">
     <circle cx="0" cy="0" r="44" fill="#ffffff" fill-opacity="0.02" stroke="url(#accent-grad)" stroke-width="1" stroke-dasharray="4 4" />
     <g transform="translate(0, -4)">
       ${iconPath}
     </g>
   </g>
+  ` : ''}
   
+  ${!isCleanBackground ? `
   <!-- Text Content (RTL) -->
   <!-- Category/Subtitle -->
   ${categoryName ? `
@@ -245,12 +253,18 @@ export function generateMinimalImage(
   
   <!-- Bottom Accent Bar -->
   <rect x="350" y="495" width="100" height="3" rx="1.5" fill="url(#accent-grad)" opacity="0.6" />
+  ` : ''}
   
   <!-- Watermark -->
   <text x="400" y="540" fill="#ffffff" fill-opacity="0.15" font-family="Vazir, system-ui, -apple-system, sans-serif" font-size="12" font-weight="600" text-anchor="middle" letter-spacing="2">
-    MINIMAL PLACEHOLDER
+    ${isSlider ? 'PREMIUM SLIDER BACKGROUND' : isStory ? 'PREMIUM STORY GRADIENT' : 'MINIMAL PLACEHOLDER'}
   </text>
 </svg>
+`.trim();
+
+  const base64 = Buffer.from(svg).toString('base64');
+  return `data:image/svg+xml;base64,${base64}`;
+}
 `.trim();
 
   const base64 = Buffer.from(svg).toString('base64');

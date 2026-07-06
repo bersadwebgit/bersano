@@ -121,12 +121,17 @@ export default async function CategoryPage({ params }: Props) {
   });
   const categoryIds = [category.id, ...subCategories.map(c => c.id)];
 
+  const hasRealProducts = await prisma.product.count({
+    where: { shopId: shop.shopId, isDemo: false, isSampleData: false }
+  }) > 0;
+
   const startData = performance.now();
   const [products, categories, menuItems, settings, dbBrands] = await Promise.all([
     prisma.product.findMany({
       where: { 
         shopId: shop.shopId, 
         isActive: true,
+        ...(hasRealProducts ? { isDemo: false, isSampleData: false } : {}),
         OR: [
           { categoryId: { in: categoryIds } },
           { categories: { some: { id: { in: categoryIds } } } }

@@ -88,9 +88,26 @@ export default async function ShopPage() {
     moq: true,
   };
 
+  const hasRealProducts = await prisma.product.count({
+    where: { shopId: shop.shopId, isDemo: false, isSampleData: false }
+  }) > 0;
+
+  const productFilter = {
+    shopId: shop.shopId,
+    isActive: true,
+    ...(hasRealProducts ? { isDemo: false, isSampleData: false } : {})
+  };
+
+  const specialProductFilter = {
+    shopId: shop.shopId,
+    isSpecial: true,
+    isActive: true,
+    ...(hasRealProducts ? { isDemo: false, isSampleData: false } : {})
+  };
+
   const [products, slides, categories, menuItems, settings, specialProducts, dbBrands] = await Promise.all([
     prisma.product.findMany({
-      where: { shopId: shop.shopId, isActive: true },
+      where: productFilter,
       select: productListSelect,
       orderBy: { createdAt: 'desc' },
       take: 40
@@ -103,7 +120,7 @@ export default async function ShopPage() {
       select: { headerConfig: true, specialDealsEnabled: true, specialDealsLimit: true, customHomeConfig: true, wholesaleEnabled: true }
     }),
     prisma.product.findMany({
-      where: { shopId: shop.shopId, isSpecial: true, isActive: true },
+      where: specialProductFilter,
       select: productListSelect,
       orderBy: { createdAt: 'desc' },
       take: 8

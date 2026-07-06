@@ -2,14 +2,15 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { hashOtp } from '@/lib/sms';
+import { generateQuickSeedData, saveQuickSeedData } from '@/lib/ai/store-seed/quick-seed';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { shopName, subdomain, ownerName, ownerEmail, ownerPassword, contactPhone, otpCode, businessField = 'general' } = body;
+    const { shopName, subdomain, ownerName, ownerEmail, ownerPassword, contactPhone, otpCode, businessField = 'general', brandVibe = 'modern', ownerJob } = body;
 
     // Validation
-    if (!shopName || !subdomain || !ownerEmail || !ownerPassword || !ownerName || !contactPhone || !otpCode) {
+    if (!shopName || !subdomain || !ownerEmail || !ownerPassword || !ownerName || !contactPhone || !otpCode || !ownerJob) {
       return NextResponse.json(
         { error: 'لطفاً تمامی فیلدهای ستاره‌دار را پر کنید.' },
         { status: 400 }
@@ -338,6 +339,30 @@ export async function POST(request: Request) {
 
       return { user, shop };
     });
+
+    // Trigger automatic personalized quick seeding
+    try {
+      console.log(`[QUICK SEED] started for shopId: ${shopId}, shopName: ${shopName}, ownerName: ${ownerName}, ownerJob: ${ownerJob}, businessField: ${businessField}, brandVibe: ${brandVibe}`);
+      const seedData = await generateQuickSeedData({
+        shopId,
+        shopName,
+        ownerName,
+        ownerJob,
+        businessField,
+        brandVibe
+      });
+      await saveQuickSeedData(
+        shopId,
+        shopName,
+        ownerName,
+        ownerJob,
+        businessField,
+        brandVibe,
+        seedData
+      );
+    } catch (seedError: any) {
+      console.error(`[QUICK SEED] failed for shopId: ${shopId}:`, seedError?.message || seedError);
+    }
 
     return NextResponse.json({
       success: true,

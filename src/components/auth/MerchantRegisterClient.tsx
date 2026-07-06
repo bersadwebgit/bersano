@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { 
   Sparkles, Store, Check, ArrowLeft, ArrowRight, ShieldCheck, 
   Globe, Clock, MessageSquare, AlertCircle, RefreshCw, Key, 
-  Smartphone, User, Mail, Lock, LayoutGrid, CheckCircle2, ChevronRight 
+  Smartphone, User, Mail, Lock, LayoutGrid, CheckCircle2, ChevronRight,
+  QrCode
 } from 'lucide-react';
 
 function getBaseDomain(host: string): string {
@@ -60,6 +61,7 @@ export default function MerchantRegisterClient() {
   const [otpCode, setOtpCode] = useState('');
   const [businessField, setBusinessField] = useState('apparel');
   const [brandVibe, setBrandVibe] = useState('modern');
+  const [ownerJob, setOwnerJob] = useState('');
 
   // Statuses
   const [loading, setLoading] = useState(false);
@@ -190,7 +192,8 @@ export default function MerchantRegisterClient() {
           contactPhone,
           otpCode,
           businessField,
-          brandVibe
+          brandVibe,
+          ownerJob
         }),
       });
 
@@ -465,6 +468,18 @@ export default function MerchantRegisterClient() {
 
             <div className="space-y-4">
               <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">شغل، تخصص یا حوزه دقیق فعالیت شما *</label>
+                <input
+                  type="text"
+                  required
+                  value={ownerJob}
+                  onChange={(e) => setOwnerJob(e.target.value)}
+                  placeholder="مثال: طراح مد و لباس، باریستای قهوه، فروشنده لوازم جانبی موبایل"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none text-xs font-semibold text-slate-900 dark:text-white transition-all"
+                />
+              </div>
+
+              <div className="space-y-1.5">
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">حوزه فروش و فعالیت کاتالوگ کالاها *</label>
                 <select
                   value={businessField}
@@ -508,6 +523,10 @@ export default function MerchantRegisterClient() {
 
             <button
               onClick={() => {
+                if (!ownerJob.trim()) {
+                  setError('لطفاً شغل، تخصص یا حوزه دقیق فعالیت خود را وارد کنید.');
+                  return;
+                }
                 setStep(5);
                 handleCreateShop();
               }}
@@ -581,6 +600,26 @@ export default function MerchantRegisterClient() {
                 >
                   {subdomain}.{origin}/admin
                 </a>
+              </div>
+            </div>
+
+            {/* QR Code Section */}
+            <div className="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-900 rounded-2xl flex items-center gap-4">
+              <div className="flex-1 space-y-1">
+                <span className="text-xs font-black text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <QrCode className="w-4 h-4 text-blue-600" />
+                  <span>ورود سریع با موبایل (QR Code)</span>
+                </span>
+                <p className="text-[10px] text-slate-400 font-bold leading-relaxed">
+                  با اسکن این کد توسط دوربین گوشی، به سادگی فروشگاه خود را روی موبایل مشاهده کنید و ظاهر آن را بسنجید.
+                </p>
+              </div>
+              <div className="bg-white p-2 rounded-xl border border-slate-100 dark:border-slate-800 shadow-xs shrink-0 flex items-center justify-center">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`http://${subdomain}.${origin}`)}`}
+                  alt="QR Code"
+                  className="w-16 h-16 sm:w-20 sm:h-20"
+                />
               </div>
             </div>
 

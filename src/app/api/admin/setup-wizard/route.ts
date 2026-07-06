@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/auth';
 import { getDemoSeedingData } from '@/lib/demo-data';
 import { clearShopDemoDataWithTx } from '@/lib/clear-demo-data';
+import { Invalidate } from '@/lib/invalidate';
 
 const generateAiDescription = (shopName: string, businessField: string) => {
   switch (businessField) {
@@ -416,6 +417,11 @@ export async function POST(request: Request) {
       }
 
       return shop;
+    });
+
+    // Invalidate the entire shop cache to ensure the storefront immediately shows the newly configured data
+    await Invalidate.shop(shopId).catch((err) => {
+      console.error('Failed to invalidate shop cache in setup-wizard:', err);
     });
 
     return NextResponse.json({

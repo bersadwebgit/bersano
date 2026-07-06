@@ -14,8 +14,15 @@ export async function GET() {
       return NextResponse.json({ error: 'Shop not found' }, { status: 404 });
     }
 
+    const hasRealProducts = await prisma.product.count({
+      where: { shopId: shop.shopId, isDemo: false, isSampleData: false }
+    }) > 0;
+
     const stories = await prisma.story.findMany({
-      where: { shopId: shop.shopId },
+      where: { 
+        shopId: shop.shopId,
+        ...(hasRealProducts ? { isDemo: false } : {})
+      },
       orderBy: { createdAt: 'desc' }
     });
     

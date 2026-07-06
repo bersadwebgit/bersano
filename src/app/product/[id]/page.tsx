@@ -195,12 +195,17 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
         moq: true,
       };
 
+      const hasRealProducts = await prisma.product.count({
+        where: { shopId: shop.shopId, isDemo: false, isSampleData: false }
+      }) > 0;
+
       // Fetch related products (same category, different product)
       const fetchedRelated = await prisma.product.findMany({
         where: {
           shopId: shop.shopId,
           isActive: true,
           id: { not: product.id },
+          ...(hasRealProducts ? { isDemo: false, isSampleData: false } : {}),
           OR: [
             { categoryId: { in: relatedCategoryIds } },
             { categories: { some: { id: { in: relatedCategoryIds } } } }
@@ -220,7 +225,8 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           where: {
             shopId: shop.shopId,
             isActive: true,
-            id: { notIn: excludeIds }
+            id: { notIn: excludeIds },
+            ...(hasRealProducts ? { isDemo: false, isSampleData: false } : {})
           },
           select: productListSelect,
           take: 8 - relatedProducts.length,

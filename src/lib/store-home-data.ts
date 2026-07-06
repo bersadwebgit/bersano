@@ -47,6 +47,54 @@ export async function getStoreHomeData(shopId: string) {
     CacheKeys.homeData(shopId),
     TTL.HOME_DATA,
     async () => {
+      // Check if there are any real (non-demo) products in the shop
+      const hasRealProducts = await prisma.product.count({
+        where: { shopId, isDemo: false, isSampleData: false }
+      }) > 0;
+
+      const productFilter = {
+        shopId,
+        isActive: true,
+        ...(hasRealProducts ? { isDemo: false, isSampleData: false } : {})
+      };
+
+      const specialProductFilter = {
+        shopId,
+        isSpecial: true,
+        isActive: true,
+        ...(hasRealProducts ? { isDemo: false, isSampleData: false } : {})
+      };
+
+      const bestSellersFilter = {
+        shopId,
+        isActive: true,
+        ...(hasRealProducts ? { isDemo: false, isSampleData: false } : {})
+      };
+
+      const discountedProductFilter = {
+        shopId,
+        isActive: true,
+        OR: [
+          { discount: { gt: 0 } },
+          { isSpecial: true }
+        ],
+        ...(hasRealProducts ? { isDemo: false, isSampleData: false } : {})
+      };
+
+      const reviewFilter = {
+        shopId,
+        showOnHomepage: true,
+        status: 'approved' as const,
+        ...(hasRealProducts ? { isDemo: false } : {})
+      };
+
+      const blogPostFilter = {
+        shopId,
+        status: 'published' as const,
+        publishedAt: { lte: new Date() },
+        ...(hasRealProducts ? { isDemo: false } : {})
+      };
+
       const [
         products,
         slides,
@@ -62,7 +110,7 @@ export async function getStoreHomeData(shopId: string) {
       ] = await Promise.all([
         safeQuery(
           prisma.product.findMany({
-            where: { shopId, isActive: true },
+            where: productFilter,
             select: productListSelect,
             orderBy: { createdAt: 'desc' },
             take: 20
@@ -90,7 +138,7 @@ export async function getStoreHomeData(shopId: string) {
         ),
         safeQuery(
           prisma.product.findMany({
-            where: { shopId, isSpecial: true, isActive: true },
+            where: specialProductFilter,
             select: specialProductSelect,
             orderBy: { createdAt: 'desc' },
             take: 8
@@ -100,7 +148,7 @@ export async function getStoreHomeData(shopId: string) {
         ),
         safeQuery(
           prisma.product.findMany({
-            where: { shopId, isActive: true },
+            where: bestSellersFilter,
             select: productListSelect,
             orderBy: {
               orderItems: {
@@ -114,14 +162,7 @@ export async function getStoreHomeData(shopId: string) {
         ),
         safeQuery(
           prisma.product.findMany({
-            where: {
-              shopId,
-              isActive: true,
-              OR: [
-                { discount: { gt: 0 } },
-                { isSpecial: true }
-              ]
-            },
+            where: discountedProductFilter,
             select: productListSelect,
             orderBy: [
               { discount: 'desc' },
@@ -134,7 +175,7 @@ export async function getStoreHomeData(shopId: string) {
         ),
         safeQuery(
           prisma.review.findMany({
-            where: { shopId, showOnHomepage: true, status: 'approved' },
+            where: reviewFilter,
             include: {
               user: { select: { name: true, avatarUrl: true } },
               product: { select: { title: true } }
@@ -147,11 +188,7 @@ export async function getStoreHomeData(shopId: string) {
         ),
         safeQuery(
           prisma.blogPost.findMany({
-            where: {
-              shopId,
-              status: 'published',
-              publishedAt: { lte: new Date() }
-            },
+            where: blogPostFilter,
             orderBy: { publishedAt: 'desc' },
             take: 6,
             include: {
@@ -173,9 +210,12 @@ export async function getStoreHomeData(shopId: string) {
         safeQuery(getCachedBrands(shopId), [], 'dbBrands')
       ]);
 
+      // Filter out demo slides if real products exist
+      const finalSlides = hasRealProducts ? slides.filter(s => !s.isDemo) : slides;
+
       return {
         products,
-        slides,
+        slides: finalSlides,
         categories,
         menuItems,
         settings,
