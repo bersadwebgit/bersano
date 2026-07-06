@@ -18,7 +18,7 @@ async function getPlatformBlogModel(action: string): Promise<string> {
   } else if (action === 'generate_direct_answer' || action === 'generate_key_takeaways' || action === 'extract_entities' || action === 'cluster_topics' || action === 'generate_external_references') {
     key = 'platform_blog_geo_model';
     defaultModel = 'anthropic/claude-3.5-sonnet';
-  } else if (action === 'improve_readability' || action === 'paraphrase' || action === 'make_professional' || action === 'make_conversational' || action === 'add_persian_idioms' || action === 'shorten_text' || action === 'expand_text' || action === 'translate_or_adapt') {
+  } else if (action === 'improve_readability' || action === 'paraphrase' || action === 'make_professional' || action === 'make_conversational' || action === 'add_persian_idioms' || action === 'shorten_text' || action === 'expand_text' || action === 'translate_or_adapt' || action === 'generate_excerpt') {
     key = 'platform_blog_rewrite_model';
   } else if (action === 'generate_faq') {
     key = 'platform_blog_faq_model';
@@ -81,6 +81,11 @@ export async function POST(request: Request) {
     let userPrompt = '';
 
     switch (action) {
+      case 'generate_excerpt':
+        systemPrompt += '\nوظیفه شما نگارش خلاصه یا چکیده کوتاه (Excerpt) جذاب و خوانا برای مقاله است. این خلاصه باید دقیقا در حد ۱ الی ۲ جمله پرمحتوا و ترغیب‌کننده برای جلب توجه مخاطبان باشد (ترجیحا زیر ۱۵۰ کاراکتر).';
+        userPrompt = `لطفاً برای مقاله‌ای با عنوان «${topic}» و محتوای زیر، یک خلاصه کوتاه (Excerpt) به زبان فارسی شیوا و خلاقانه بنویسید:\n\n${content || context}`;
+        break;
+
       case 'generate_ideas':
         systemPrompt += '\nوظیفه شما تولید ایده‌های ناب مقاله برای وبلاگ پلتفرم است که باعث تشویق کاربران به راه‌اندازی فروشگاه اینترنتی شود.';
         userPrompt = `لطفاً ۳ الی ۵ ایده جذاب و هدفمند برای تولید مقاله در وبلاگ با موضوع/کلیدواژه اصلی «${topic || keyword}» به زبان فارسی تولید کنید. هر ایده دارای عنوان جذاب، توضیح مختصر در حد یک خط و توجیه سئو باشد.`;

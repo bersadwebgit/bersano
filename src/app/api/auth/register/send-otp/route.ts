@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { sendOtpSms, hashOtp } from '@/lib/sms';
+import { sendOtpSms, hashOtp, maskPhone } from '@/lib/sms';
 import { isRateLimited } from '@/lib/rate-limiter';
 
 export async function POST(request: Request) {
@@ -155,10 +155,13 @@ export async function POST(request: Request) {
       },
     });
 
-    // In development mode, always print the code to the console for easier testing
-    console.log(`\n==============================================`);
-    console.log(`[REGISTRATION OTP SENT] Phone: ${normalizedPhone} | Code: ${code}`);
-    console.log(`==============================================\n`);
+    if (process.env.NODE_ENV === 'production') {
+      console.log(`[REGISTRATION OTP SENT] Phone: ${maskPhone(normalizedPhone)}`);
+    } else {
+      console.log(`\n==============================================`);
+      console.log(`[REGISTRATION OTP SENT] Phone: ${normalizedPhone} | Code: ${code}`);
+      console.log(`==============================================\n`);
+    }
 
     // Send SMS via Melipayamak
     const smsResult = await sendOtpSms(normalizedPhone, code);

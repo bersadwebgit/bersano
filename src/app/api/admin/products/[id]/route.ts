@@ -7,6 +7,7 @@ import { embedProduct } from '@/lib/product-embedding';
 import { checkIdempotency, saveIdempotency } from '@/lib/idempotency';
 import { sanitizeHtml } from '@/lib/sanitize-html';
 import { validateUrl } from '@/lib/validate-url';
+import { maskPhone } from '@/lib/sms';
 
 function parseNumber(val: any, defaultValue: any = 0): any {
   if (val === undefined || val === null) return defaultValue;
@@ -516,12 +517,15 @@ async function triggerBackInStockNotifications(
               where: { id: req.id },
               data: { isNotified: true }
             });
-            console.log(`[INFO] [BackInStock]: Notified phone ${req.phone} for product ${productId}`);
+            const loggedPhone = process.env.NODE_ENV === 'production' ? maskPhone(req.phone) : req.phone;
+            console.log(`[INFO] [BackInStock]: Notified phone ${loggedPhone} for product ${productId}`);
           } else {
-            console.error(`[ERROR] [BackInStock]: Failed to send SMS to ${req.phone} |`, smsRes.error);
+            const loggedPhone = process.env.NODE_ENV === 'production' ? maskPhone(req.phone) : req.phone;
+            console.error(`[ERROR] [BackInStock]: Failed to send SMS to ${loggedPhone} |`, smsRes.error);
           }
         } catch (smsErr) {
-          console.error(`[ERROR] [BackInStock]: Error sending notification SMS to ${req.phone} |`, smsErr);
+          const loggedPhone = process.env.NODE_ENV === 'production' ? maskPhone(req.phone) : req.phone;
+          console.error(`[ERROR] [BackInStock]: Error sending notification SMS to ${loggedPhone} |`, smsErr);
         }
       })
     );

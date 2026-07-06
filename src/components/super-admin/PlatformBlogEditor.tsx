@@ -24,7 +24,11 @@ import {
   FileJson,
   CornerDownLeft,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Upload,
+  Image as ImageIcon,
+  Loader2,
+  X
 } from 'lucide-react';
 
 interface PlatformBlogEditorProps {
@@ -92,6 +96,19 @@ export default function PlatformBlogEditor({ mode, initialPostId }: PlatformBlog
 
   // Active section in the editor form (accordion or tabs)
   const [activeTab, setActiveTab] = useState<'content' | 'seo' | 'geo' | 'social'>('content');
+
+  // Simple vs Advanced writing mode
+  const [isAdvancedMode, setIsAdvancedMode] = useState(false);
+
+  // Collapsible AI Sidebar
+  const [showAiSidebar, setShowAiSidebar] = useState(false);
+
+  // Cover image upload state
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+
+  // Inline AI generation loading states
+  const [generatingFields, setGeneratingFields] = useState<Record<string, boolean>>({});
 
   // AI Sidebar state
   const [aiAction, setAiAction] = useState('generate_ideas');
@@ -328,6 +345,52 @@ export default function PlatformBlogEditor({ mode, initialPostId }: PlatformBlog
     }
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await uploadFile(file);
+  };
+
+  const uploadFile = async (file: File) => {
+    setUploading(true);
+    setUploadError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/super-admin/blog/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'خطا در آپلود تصویر');
+      }
+
+      setPostData((prev) => ({ ...prev, coverImage: data.url }));
+      setSuccess('تصویر با موفقیت آپلود شد.');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err: any) {
+      console.error(err);
+      setUploadError(err.message || 'خطا در ارتباط با سرور.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      await uploadFile(file);
+    }
+  };
+
   // Handle Main Save Submit
   const handleSavePost = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -366,6 +429,79 @@ export default function PlatformBlogEditor({ mode, initialPostId }: PlatformBlog
     } finally {
       setSaving(false);
     }
+  };
+
+  // Context-aware Inline AI generation for specific fields
+  const handleInlineGenerate = async (fieldKey: string, actionName: string) => {
+    if (!postData.title && !postData.content) {
+      alert('لطفاً ابتدا عنوان یا محتوای اصلی مقاله را وارد کنید تا هوش مصنوعی بر اساس آن بنویسد.');
+      return;
+    }
+
+    setGeneratingFields((prev) => ({ ...prev, [fieldKey]: true }));
+    try {
+      const res = await fetch('/api/super-admin/blog/ai-control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: actionName,
+          topic: postData.title,
+          keyword: postData.focusKeyword,
+          content: postData.content,
+          context: postData.excerpt,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'خطا در تولید محتوا');
+      }
+
+      const resultText = data.result;
+
+      if (actionName === 'generate_seo_metadata') {
+        try {
+          const parsed = JSON.parse(resultText);
+          setPostData((prev) => ({
+            ...prev,
+            metaTitle: parsed.metaTitle || prev.metaTitle,
+            metaDescription: parsed.metaDescription || prev.metaDescription,
+          }));
+          setSuccess('عنوان سئو و توضیحات متا با موفقیت تولید شدند.');
+          setTimeout(() => setSuccess(''), 3000);
+        } catch {
+          setPostData((prev) => ({ ...prev, [fieldKey]: resultText }));
+        }
+      } else {
+        setPostData((prev) => ({ ...prev, [fieldKey]: resultText }));
+        setSuccess('محتوای فیلد با موفقیت تولید و درج گردید.');
+        setTimeout(() => setSuccess(''), 3000);
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || 'خطا در ارتباط با سرور هوش مصنوعی.');
+    } finally {
+      setGeneratingFields((prev) => ({ ...prev, [fieldKey]: false }));
+    }
+  };
+
+  const InlineGenerateButton = ({ fieldKey, actionName, tooltip = 'تولید هوشمند با هوش مصنوعی' }: { fieldKey: string, actionName: string, tooltip?: string }) => {
+    const isGenerating = generatingFields[fieldKey];
+    return (
+      <button
+        type="button"
+        disabled={isGenerating}
+        onClick={() => handleInlineGenerate(fieldKey, actionName)}
+        title={tooltip}
+        className="inline-flex items-center justify-center p-1 rounded-md text-violet-600 hover:text-violet-800 hover:bg-violet-50 focus:outline-hidden disabled:opacity-50 transition-all select-none mr-1.5"
+      >
+        {isGenerating ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <Sparkles className="h-3.5 w-3.5" />
+        )}
+      </button>
+    );
   };
 
   // AI Generation Tool Trigger Action
@@ -480,25 +616,77 @@ export default function PlatformBlogEditor({ mode, initialPostId }: PlatformBlog
   return (
     <div className="grid grid-cols-1 xl:grid-cols-12 gap-6" dir="rtl">
       
-      {/* LEFT COLUMN: Main Editor (7 cols or 8 cols depending on sidebar) */}
-      <div className="xl:col-span-8 space-y-6">
+      {/* LEFT COLUMN: Main Editor */}
+      <div className={`${showAiSidebar ? 'xl:col-span-8' : 'xl:col-span-12'} space-y-6 transition-all duration-300`}>
         
         {/* Editor Breadcrumb and Info */}
-        <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-100 shadow-3xs">
-          <button 
-            onClick={() => router.push('/super-admin')}
-            className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 transition-colors font-bold"
-          >
-            <ArrowRight className="h-4 w-4" />
-            بازگشت به پیشخوان
-          </button>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400">وضعیت سئو مقاله:</span>
-            <div className={`flex items-center gap-1 font-bold text-xs px-2.5 py-1 rounded-full ${
-              seoScore >= 80 ? 'bg-emerald-50 text-emerald-700' : seoScore >= 50 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'
-            }`}>
-              {seoScore}٪ ({seoScore >= 80 ? 'عالی' : seoScore >= 50 ? 'نیاز به بهبود' : 'ضعیف'})
+        <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center bg-white p-4 rounded-2xl border border-slate-100 shadow-3xs gap-3">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => router.push('/super-admin/blog')}
+              className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 transition-colors font-bold"
+            >
+              <ArrowRight className="h-4 w-4" />
+              وبلاگ
+            </button>
+            <span className="text-slate-300 text-xs">/</span>
+            <span className="text-xs font-bold text-slate-800">
+              {mode === 'create' ? 'نگارش مقاله جدید' : 'ویرایش مقاله'}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Simple / Advanced Toggle */}
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAdvancedMode(false);
+                  setActiveTab('content');
+                  setShowAiSidebar(false);
+                }}
+                className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${
+                  !isAdvancedMode ? 'bg-slate-900 text-white shadow-3xs' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                نگارش ساده
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAdvancedMode(true);
+                  setShowAiSidebar(true);
+                }}
+                className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all ${
+                  isAdvancedMode ? 'bg-slate-900 text-white shadow-3xs' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                امکانات پیشرفته
+              </button>
             </div>
+
+            {/* AI Assistant toggle button */}
+            <button
+              type="button"
+              onClick={() => setShowAiSidebar(!showAiSidebar)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${
+                showAiSidebar 
+                  ? 'bg-violet-100 text-violet-700 shadow-3xs' 
+                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-800 border border-slate-200'
+              }`}
+            >
+              <Sparkles className="h-3.5 w-3.5 animate-pulse text-violet-500" />
+              دستیار هوش مصنوعی
+            </button>
+
+            {/* SEO score badge - only in advanced mode */}
+            {isAdvancedMode && (
+              <div className={`flex items-center gap-1 font-bold text-[10px] px-2.5 py-1.5 rounded-lg ${
+                seoScore >= 80 ? 'bg-emerald-50 text-emerald-700 border border-emerald-150' : seoScore >= 50 ? 'bg-amber-50 text-amber-700 border border-amber-150' : 'bg-red-50 text-red-700 border border-red-150'
+              }`}>
+                سئو: {seoScore}٪
+              </div>
+            )}
           </div>
         </div>
 
@@ -517,45 +705,47 @@ export default function PlatformBlogEditor({ mode, initialPostId }: PlatformBlog
         <form onSubmit={handleSavePost} className="bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden">
           
           {/* Section Tabs inside Form */}
-          <div className="bg-slate-50/50 border-b border-slate-100 px-6 py-2 flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={isSeoOnlyRole}
-              onClick={() => setActiveTab('content')}
-              className={`px-4 py-2.5 text-xs font-bold transition-all rounded-lg ${
-                activeTab === 'content' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/50 disabled:opacity-50'
-              }`}
-            >
-              محتوای اصلی مقاله
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('seo')}
-              className={`px-4 py-2.5 text-xs font-bold transition-all rounded-lg ${
-                activeTab === 'seo' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/50'
-              }`}
-            >
-              بهینه‌سازی سئو (SEO)
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('geo')}
-              className={`px-4 py-2.5 text-xs font-bold transition-all rounded-lg ${
-                activeTab === 'geo' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/50'
-              }`}
-            >
-              بهینه‌سازی GEO (پاسخ هوش مصنوعی)
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('social')}
-              className={`px-4 py-2.5 text-xs font-bold transition-all rounded-lg ${
-                activeTab === 'social' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/50'
-              }`}
-            >
-              شبکه‌های اجتماعی (OG)
-            </button>
-          </div>
+          {isAdvancedMode && (
+            <div className="bg-slate-50/50 border-b border-slate-100 px-6 py-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={isSeoOnlyRole}
+                onClick={() => setActiveTab('content')}
+                className={`px-4 py-2.5 text-xs font-bold transition-all rounded-lg ${
+                  activeTab === 'content' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/50 disabled:opacity-50'
+                }`}
+              >
+                محتوای اصلی مقاله
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('seo')}
+                className={`px-4 py-2.5 text-xs font-bold transition-all rounded-lg ${
+                  activeTab === 'seo' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/50'
+                }`}
+              >
+                بهینه‌سازی سئو (SEO)
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('geo')}
+                className={`px-4 py-2.5 text-xs font-bold transition-all rounded-lg ${
+                  activeTab === 'geo' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/50'
+                }`}
+              >
+                بهینه‌سازی GEO (پاسخ هوش مصنوعی)
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('social')}
+                className={`px-4 py-2.5 text-xs font-bold transition-all rounded-lg ${
+                  activeTab === 'social' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/50'
+                }`}
+              >
+                شبکه‌های اجتماعی (OG)
+              </button>
+            </div>
+          )}
 
           <div className="p-6 space-y-6">
             {error && (
@@ -656,7 +846,10 @@ export default function PlatformBlogEditor({ mode, initialPostId }: PlatformBlog
 
                 {/* Excerpt */}
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">چکیده یا خلاصه کوتاه (Excerpt)</label>
+                  <label className="text-xs font-bold text-slate-700 block flex items-center justify-between">
+                    <span>چکیده یا خلاصه کوتاه (Excerpt)</span>
+                    <InlineGenerateButton fieldKey="excerpt" actionName="generate_excerpt" tooltip="تولید خلاصه با هوش مصنوعی" />
+                  </label>
                   <textarea
                     rows={2}
                     value={postData.excerpt}
@@ -666,17 +859,82 @@ export default function PlatformBlogEditor({ mode, initialPostId }: PlatformBlog
                   />
                 </div>
 
-                {/* Cover Image URL */}
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">آدرس تصویر شاخص (Cover Image URL)</label>
-                  <input
-                    type="text"
-                    value={postData.coverImage}
-                    onChange={(e) => setPostData({ ...postData, coverImage: e.target.value })}
-                    placeholder="https://images.pexels.com/..."
-                    dir="ltr"
-                    className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-slate-800 rounded-xl px-4 py-2.5 text-xs outline-hidden transition-all font-mono text-left"
-                  />
+                {/* Cover Image Upload & URL */}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-700 block">تصویر شاخص مقاله</label>
+                  
+                  {postData.coverImage ? (
+                    <div className="relative group rounded-2xl border border-slate-200 overflow-hidden bg-slate-100 max-h-64 flex items-center justify-center">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img 
+                        src={postData.coverImage} 
+                        alt="پیش‌نمایش تصویر شاخص" 
+                        className="w-full h-full max-h-64 object-cover"
+                      />
+                      <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setPostData({ ...postData, coverImage: '' })}
+                          className="bg-red-600 hover:bg-red-700 text-white p-2.5 rounded-full shadow-lg transition-all"
+                          title="حذف تصویر"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
+                      onClick={() => document.getElementById('cover-image-file-input')?.click()}
+                      className="border-2 border-dashed border-slate-200 hover:border-slate-400 bg-slate-50/50 hover:bg-slate-50 rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 group"
+                    >
+                      <input
+                        type="file"
+                        id="cover-image-file-input"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleImageUpload}
+                        disabled={uploading}
+                      />
+                      
+                      {uploading ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <Loader2 className="h-8 w-8 text-slate-900 animate-spin" />
+                          <span className="text-xs font-bold text-slate-500">در حال آپلود و بهینه‌سازی تصویر...</span>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-white group-hover:text-slate-600 transition-all shadow-3xs">
+                            <Upload className="h-6 w-6" />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs font-bold text-slate-700">برای بارگذاری تصویر کلیک کنید یا آن را به اینجا بکشید</p>
+                            <p className="text-[10px] text-slate-400">فرمت‌های مجاز: WebP، JPG، PNG، GIF (حداکثر حجم ۱۰ مگابایت)</p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {uploadError && (
+                    <p className="text-[11px] text-red-600 font-bold">{uploadError}</p>
+                  )}
+
+                  {/* Fallback URL input option (always toggleable or shown in Advanced mode) */}
+                  {(isAdvancedMode || postData.coverImage) && (
+                    <div className="pt-2">
+                      <label className="text-[10px] font-bold text-slate-500 block mb-1">آدرس مستقیم تصویر (URL)</label>
+                      <input
+                        type="text"
+                        value={postData.coverImage || ''}
+                        onChange={(e) => setPostData({ ...postData, coverImage: e.target.value })}
+                        placeholder="https://images.pexels.com/..."
+                        dir="ltr"
+                        className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-slate-800 rounded-xl px-3 py-2 text-[11px] outline-hidden transition-all font-mono text-left"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Content Rich Text editor */}
@@ -743,7 +1001,10 @@ export default function PlatformBlogEditor({ mode, initialPostId }: PlatformBlog
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">عنوان بهینه‌شده سئو (Meta Title)</label>
+                    <label className="text-xs font-bold text-slate-700 block flex items-center justify-between">
+                      <span>عنوان بهینه‌شده سئو (Meta Title)</span>
+                      <InlineGenerateButton fieldKey="metaTitle" actionName="generate_seo_metadata" tooltip="تولید عنوان و توضیحات متا با هوش مصنوعی" />
+                    </label>
                     <input
                       type="text"
                       value={postData.metaTitle}
@@ -777,7 +1038,10 @@ export default function PlatformBlogEditor({ mode, initialPostId }: PlatformBlog
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">توضیحات متا سئو (Meta Description)</label>
+                  <label className="text-xs font-bold text-slate-700 block flex items-center justify-between">
+                    <span>توضیحات متا سئو (Meta Description)</span>
+                    <InlineGenerateButton fieldKey="metaDescription" actionName="generate_seo_metadata" tooltip="تولید عنوان و توضیحات متا با هوش مصنوعی" />
+                  </label>
                   <textarea
                     rows={3}
                     value={postData.metaDescription}
@@ -819,7 +1083,10 @@ export default function PlatformBlogEditor({ mode, initialPostId }: PlatformBlog
                 {/* Internal / External referencing notes */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-slate-100">
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">لینک‌های داخلی و انکرها (Internal Links)</label>
+                    <label className="text-xs font-bold text-slate-700 block flex items-center justify-between">
+                      <span>لینک‌های داخلی و انکرها (Internal Links)</span>
+                      <InlineGenerateButton fieldKey="internalLinks" actionName="generate_internal_links" tooltip="پیشنهاد لینک‌های داخلی با هوش مصنوعی" />
+                    </label>
                     <textarea
                       rows={3}
                       value={postData.internalLinks}
@@ -830,7 +1097,10 @@ export default function PlatformBlogEditor({ mode, initialPostId }: PlatformBlog
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">ارجاعات علمی و تکنیکال (External References)</label>
+                    <label className="text-xs font-bold text-slate-700 block flex items-center justify-between">
+                      <span>ارجاعات علمی و تکنیکال (External References)</span>
+                      <InlineGenerateButton fieldKey="externalReferences" actionName="generate_external_references" tooltip="پیشنهاد ارجاعات خارجی با هوش مصنوعی" />
+                    </label>
                     <textarea
                       rows={3}
                       value={postData.externalReferences}
@@ -857,9 +1127,12 @@ export default function PlatformBlogEditor({ mode, initialPostId }: PlatformBlog
 
                 {/* Direct summary answer */}
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block flex items-center gap-1">
-                    خلاصه پاسخ مستقیم (Direct Answer - GEO Summary)
-                    <span className="text-[9px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md font-bold">بسیار مهم</span>
+                  <label className="text-xs font-bold text-slate-700 block flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      خلاصه پاسخ مستقیم (Direct Answer - GEO Summary)
+                      <span className="text-[9px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md font-bold">بسیار مهم</span>
+                    </span>
+                    <InlineGenerateButton fieldKey="geoSummary" actionName="generate_direct_answer" tooltip="تولید پاسخ صریح هوش مصنوعی" />
                   </label>
                   <textarea
                     rows={3}
@@ -872,7 +1145,10 @@ export default function PlatformBlogEditor({ mode, initialPostId }: PlatformBlog
 
                 {/* Key takeaways */}
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">نکات کلیدی و نتایج مهم مقاله (Key Takeaways)</label>
+                  <label className="text-xs font-bold text-slate-700 block flex items-center justify-between">
+                    <span>نکات کلیدی و نتایج مهم مقاله (Key Takeaways)</span>
+                    <InlineGenerateButton fieldKey="keyTakeaways" actionName="generate_key_takeaways" tooltip="تولید نکات کلیدی با هوش مصنوعی" />
+                  </label>
                   <textarea
                     rows={3}
                     value={postData.keyTakeaways}
@@ -885,7 +1161,10 @@ export default function PlatformBlogEditor({ mode, initialPostId }: PlatformBlog
                 {/* Entity references & clusters */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">نهادها و موجودیت‌های سمانتیک (Entities)</label>
+                    <label className="text-xs font-bold text-slate-700 block flex items-center justify-between">
+                      <span>نهادها و موجودیت‌های سمانتیک (Entities)</span>
+                      <InlineGenerateButton fieldKey="entityList" actionName="extract_entities" tooltip="استخراج موجودیت‌ها با هوش مصنوعی" />
+                    </label>
                     <input
                       type="text"
                       value={postData.entityList}
@@ -896,7 +1175,10 @@ export default function PlatformBlogEditor({ mode, initialPostId }: PlatformBlog
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">خوشه‌های موضوعی (Topic Clusters)</label>
+                    <label className="text-xs font-bold text-slate-700 block flex items-center justify-between">
+                      <span>خوشه‌های موضوعی (Topic Clusters)</span>
+                      <InlineGenerateButton fieldKey="topicClusters" actionName="cluster_topics" tooltip="خوشه‌بندی موضوعی با هوش مصنوعی" />
+                    </label>
                     <input
                       type="text"
                       value={postData.topicClusters}
@@ -922,9 +1204,12 @@ export default function PlatformBlogEditor({ mode, initialPostId }: PlatformBlog
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block flex items-center gap-1">
-                    کد سفارشی داده‌های ساختاریافته (JSON-LD Schema)
-                    <FileJson className="h-4 w-4 text-slate-400" />
+                  <label className="text-xs font-bold text-slate-700 block flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      کد سفارشی داده‌های ساختاریافته (JSON-LD Schema)
+                      <FileJson className="h-4 w-4 text-slate-400" />
+                    </span>
+                    <InlineGenerateButton fieldKey="structuredData" actionName="generate_schema" tooltip="تولید اسکیما داده با هوش مصنوعی" />
                   </label>
                   <textarea
                     rows={4}
@@ -938,7 +1223,10 @@ export default function PlatformBlogEditor({ mode, initialPostId }: PlatformBlog
 
                 {/* FAQ section */}
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">بخش پرسش و پاسخ‌های متداول (FAQ JSON Array)</label>
+                  <label className="text-xs font-bold text-slate-700 block flex items-center justify-between">
+                    <span>بخش پرسش و پاسخ‌های متداول (FAQ JSON Array)</span>
+                    <InlineGenerateButton fieldKey="faqSection" actionName="generate_faq" tooltip="تولید سوالات متداول با هوش مصنوعی" />
+                  </label>
                   <textarea
                     rows={4}
                     value={postData.faqSection}
@@ -1082,42 +1370,45 @@ export default function PlatformBlogEditor({ mode, initialPostId }: PlatformBlog
         </form>
 
         {/* Real-time SEO Checks Auditor Card */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4">
-          <h4 className="text-xs font-black text-slate-800 flex items-center gap-1.5">
-            <TrendingUp className="h-4 w-4 text-blue-600" />
-            سیستم ممیزی و بازرسی سئو سنتی و سئو هوش مصنوعی (Auditor)
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {seoChecks.map((check, i) => (
-              <div key={i} className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-50 bg-slate-50/20">
-                {check.passed ? (
-                  <span className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">✓</span>
-                ) : (
-                  <span className="w-5 h-5 rounded-full bg-red-50 text-red-600 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">×</span>
-                )}
-                <div className="text-xs">
-                  <p className={`font-bold ${check.passed ? 'text-slate-800' : 'text-slate-500'}`}>{check.label}</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5 leading-relaxed">{check.desc}</p>
+        {isAdvancedMode && (
+          <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4">
+            <h4 className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+              <TrendingUp className="h-4 w-4 text-blue-600" />
+              سیستم ممیزی و بازرسی سئو سنتی و سئو هوش مصنوعی (Auditor)
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {seoChecks.map((check, i) => (
+                <div key={i} className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-50 bg-slate-50/20">
+                  {check.passed ? (
+                    <span className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">✓</span>
+                  ) : (
+                    <span className="w-5 h-5 rounded-full bg-red-50 text-red-600 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">×</span>
+                  )}
+                  <div className="text-xs">
+                    <p className={`font-bold ${check.passed ? 'text-slate-800' : 'text-slate-500'}`}>{check.label}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5 leading-relaxed">{check.desc}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
       </div>
 
       {/* RIGHT COLUMN: AI Sidebar Panel (4 cols) */}
-      <div className="xl:col-span-4 space-y-6">
-        
-        {/* Sticky AI Sidebar Card */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-6 sticky top-20">
-          <div>
-            <h3 className="text-sm font-black text-slate-900 flex items-center gap-1.5">
-              <Sparkles className="h-5 w-5 text-violet-600" />
-              دستیار نویسنده تخصصی هوش مصنوعی
-            </h3>
-            <p className="text-[10px] text-slate-500 mt-1">تولید، بازنویسی و غنی‌سازی سرفصل‌ها و خلاصه‌ها بدون تخریب متن اصلی به صورت دستی</p>
-          </div>
+      {showAiSidebar && (
+        <div className="xl:col-span-4 space-y-6">
+          
+          {/* Sticky AI Sidebar Card */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-6 sticky top-20">
+            <div>
+              <h3 className="text-sm font-black text-slate-900 flex items-center gap-1.5">
+                <Sparkles className="h-5 w-5 text-violet-600" />
+                دستیار نویسنده تخصصی هوش مصنوعی
+              </h3>
+              <p className="text-[10px] text-slate-500 mt-1">تولید، بازنویسی و غنی‌سازی سرفصل‌ها و خلاصه‌ها بدون تخریب متن اصلی به صورت دستی</p>
+            </div>
 
           {/* Prompt options layout */}
           <div className="space-y-4">
@@ -1325,8 +1616,8 @@ export default function PlatformBlogEditor({ mode, initialPostId }: PlatformBlog
           )}
 
         </div>
-
       </div>
+      )}
 
       {/* MODAL: ADD CATEGORY */}
       {isCategoryModalOpen && (

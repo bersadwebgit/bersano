@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getTenantShop } from '@/lib/tenant';
-import { sendStoreSms, hashOtp } from '@/lib/sms';
+import { sendStoreSms, hashOtp, maskPhone } from '@/lib/sms';
 import { isRateLimited } from '@/lib/rate-limiter';
 
 export async function POST(request: Request) {
@@ -116,10 +116,13 @@ export async function POST(request: Request) {
       },
     });
 
-    // In development mode, always print the code to the console for easier testing
-    console.log(`\n==============================================`);
-    console.log(`[OTP SENT] Phone: ${normalizedPhone} | Code: ${code}`);
-    console.log(`==============================================\n`);
+    if (process.env.NODE_ENV === 'production') {
+      console.log(`[OTP SENT] Phone: ${maskPhone(normalizedPhone)}`);
+    } else {
+      console.log(`\n==============================================`);
+      console.log(`[OTP SENT] Phone: ${normalizedPhone} | Code: ${code}`);
+      console.log(`==============================================\n`);
+    }
 
     // Send SMS via the store's own SMS configuration
     const smsResult = await sendStoreSms(shop.shopId, 'otp', normalizedPhone, { code });

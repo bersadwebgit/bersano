@@ -308,8 +308,10 @@ export default function BlogPostClient({ slug, initialData }: BlogPostClientProp
     return `${time} دقیقه`;
   };
 
-  const formatDate = (dateStr: string) => {
+  const formatDate = (dateStr?: string | null) => {
+    if (!dateStr) return '';
     const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return '';
     return date.toLocaleDateString('fa-IR', {
       year: 'numeric',
       month: 'long',
@@ -317,8 +319,9 @@ export default function BlogPostClient({ slug, initialData }: BlogPostClientProp
     });
   };
 
-  const formatNum = (num: number) => {
-    return num.toLocaleString('fa-IR');
+  const formatNum = (num?: number | null) => {
+    if (num === undefined || num === null || isNaN(Number(num))) return '۰';
+    return Number(num).toLocaleString('fa-IR');
   };
 
   if (loading) {

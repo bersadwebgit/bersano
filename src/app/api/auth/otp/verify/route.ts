@@ -4,7 +4,7 @@ import { getTenantShop } from '@/lib/tenant';
 import bcrypt from 'bcryptjs';
 import { SignJWT } from 'jose';
 import { ADMIN_ROLES, isAdminRole } from '@/lib/admin-roles';
-import { hashOtp } from '@/lib/sms';
+import { hashOtp, maskPhone } from '@/lib/sms';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-change-in-production';
 const key = new TextEncoder().encode(JWT_SECRET);
@@ -142,7 +142,8 @@ export async function POST(request: Request) {
         },
       });
 
-      console.log(`[INFO] [OTP_VERIFY]: Dynamically registered new customer for phone ${normalizedPhone}`);
+      const loggedPhone = process.env.NODE_ENV === 'production' ? maskPhone(normalizedPhone) : normalizedPhone;
+      console.log(`[INFO] [OTP_VERIFY]: Dynamically registered new customer for phone ${loggedPhone}`);
     }
 
     // Check if user is blocked

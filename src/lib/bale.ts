@@ -1,3 +1,5 @@
+import { maskPhone } from './sms';
+
 export interface BaleResult {
   success: boolean;
   messageId?: string;
@@ -139,7 +141,11 @@ export async function sendBaleOtp(
       return { success: false, error: 'رمز یکبار مصرف باید فقط شامل ارقام عددی باشد' };
     }
 
-    console.log(`[INFO] [BaleSafir]: Sending OTP code ${code} to ${targetPhone}`);
+    if (process.env.NODE_ENV === 'production') {
+      console.log(`[INFO] [BaleSafir]: Sending OTP to ${maskPhone(targetPhone)}`);
+    } else {
+      console.log(`[INFO] [BaleSafir]: Sending OTP code ${code} to ${targetPhone}`);
+    }
 
     const response = await fetch('https://safir.bale.ai/api/v2/send_otp', {
       method: 'POST',

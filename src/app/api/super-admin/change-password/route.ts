@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import bcrypt from 'bcryptjs';
-import { sendOtpSms, hashOtp } from '@/lib/sms';
+import { sendOtpSms, hashOtp, maskPhone } from '@/lib/sms';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-change-in-production';
 const key = new TextEncoder().encode(JWT_SECRET);
@@ -107,9 +107,13 @@ export async function POST(request: Request) {
         },
       } as any);
 
-      console.log(`\n==============================================`);
-      console.log(`[SUPER ADMIN OTP SENT] Phone: ${normalizedPhone} | Code: ${otpCode}`);
-      console.log(`==============================================\n`);
+      if (process.env.NODE_ENV === 'production') {
+        console.log(`[SUPER ADMIN OTP SENT] Phone: ${maskPhone(normalizedPhone)}`);
+      } else {
+        console.log(`\n==============================================`);
+        console.log(`[SUPER ADMIN OTP SENT] Phone: ${normalizedPhone} | Code: ${otpCode}`);
+        console.log(`==============================================\n`);
+      }
 
       // Send SMS via Melipayamak
       const smsResult = await sendOtpSms(normalizedPhone, otpCode);

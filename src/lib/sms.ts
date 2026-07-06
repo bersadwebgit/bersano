@@ -11,6 +11,15 @@ export function hashOtp(code: string): string {
 }
 
 /**
+ * Masks a phone number for secure logging (e.g. 09312346251 -> 093****6251)
+ */
+export function maskPhone(phone: string): string {
+  const p = phone.trim();
+  if (p.length < 7) return p;
+  return p.substring(0, 3) + '****' + p.substring(p.length - 4);
+}
+
+/**
  * Logs SMS attempts asynchronously to the SmsLog table
  */
 export async function logSms(
@@ -80,7 +89,11 @@ export interface SmsSendResult {
  */
 export async function sendOtpSms(phone: string, code: string): Promise<SmsSendResult> {
   try {
-    console.log(`[INFO] [SMS]: Attempting to send OTP SMS to ${phone} with code ${code}`);
+    if (process.env.NODE_ENV === 'production') {
+      console.log(`[INFO] [SMS]: Attempting to send OTP SMS to ${maskPhone(phone)}`);
+    } else {
+      console.log(`[INFO] [SMS]: Attempting to send OTP SMS to ${phone} with code ${code}`);
+    }
 
     const { username, password, patternCode } = await getGlobalSmsCredentials();
     
@@ -289,7 +302,11 @@ export async function sendStoreSms(
   let targetPhone = normalizePhone(recipientPhone);
   
   try {
-    console.log(`[INFO] [StoreSMS]: Attempting to send store SMS for shop ${shopId}, event ${event} to ${recipientPhone}`);
+    if (process.env.NODE_ENV === 'production') {
+      console.log(`[INFO] [StoreSMS]: Attempting to send store SMS for shop ${shopId}, event ${event} to ${maskPhone(recipientPhone)}`);
+    } else {
+      console.log(`[INFO] [StoreSMS]: Attempting to send store SMS for shop ${shopId}, event ${event} to ${recipientPhone}`);
+    }
     
     // 1. Fetch store settings
     const settings = await prisma.shopSettings.findUnique({
@@ -355,7 +372,15 @@ export async function sendStoreSms(
       });
       const textValue = paramValues.join(';');
 
-      console.log(`[INFO] [StoreSMS]: Sending Melipayamak pattern SMS to ${targetPhone} with bodyId ${patternCode} and text: ${textValue}`);
+      if (process.env.NODE_ENV === 'production') {
+        if (event === 'otp') {
+          console.log(`[INFO] [StoreSMS]: Sending Melipayamak pattern SMS to ${maskPhone(targetPhone)} with bodyId ${patternCode}`);
+        } else {
+          console.log(`[INFO] [StoreSMS]: Sending Melipayamak pattern SMS to ${maskPhone(targetPhone)} with bodyId ${patternCode} and text: ${textValue}`);
+        }
+      } else {
+        console.log(`[INFO] [StoreSMS]: Sending Melipayamak pattern SMS to ${targetPhone} with bodyId ${patternCode} and text: ${textValue}`);
+      }
 
       const params = new URLSearchParams();
       params.append('username', username);
@@ -449,7 +474,11 @@ export async function sendStoreSms(
         value: String(allPlaceholders[key] || '')
       }));
 
-      console.log(`[INFO] [StoreSMS]: Sending SMS.ir verify SMS to ${targetPhone} with templateId ${patternCode}`);
+      if (process.env.NODE_ENV === 'production') {
+        console.log(`[INFO] [StoreSMS]: Sending SMS.ir verify SMS to ${maskPhone(targetPhone)} with templateId ${patternCode}`);
+      } else {
+        console.log(`[INFO] [StoreSMS]: Sending SMS.ir verify SMS to ${targetPhone} with templateId ${patternCode}`);
+      }
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
