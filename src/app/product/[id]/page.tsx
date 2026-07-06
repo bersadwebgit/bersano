@@ -17,6 +17,22 @@ import type { Metadata } from 'next';
 import { injectContextualLinks, generateBreadcrumbSchema, generateDiscussionSchema } from '@/lib/seo-geo';
 import { headers } from 'next/headers';
 
+function isDatabaseSchemaError(error: any): boolean {
+  if (!error) return false;
+  const message = error.message || '';
+  const code = error.code || '';
+  return (
+    code === 'P2022' || // Missing column
+    code === 'P2021' || // Missing table
+    code === 'P2011' || // Null constraint violation
+    code === 'P2012' || // Missing required value
+    message.includes('column') ||
+    message.includes('relation') ||
+    message.includes('does not exist') ||
+    message.includes('mismatch')
+  );
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const shop = await getTenantShop();
@@ -44,7 +60,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     // Extract variant names (e.g., colors or sizes)
     let variantsStr = '';
     if (product.variants && product.variants.length > 0) {
-      const variantNames = product.variants.map((v: any) => v.name.trim()).filter(Boolean);
+      const variantNames = product.variants.map((v: any) => v.name?.trim() || '').filter(Boolean);
       if (variantNames.length > 0) {
         variantsStr = variantNames.join('، ');
       }
@@ -119,6 +135,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       }
     };
   } catch (error) {
+    if (isDatabaseSchemaError(error)) {
+      console.error('[DATABASE SCHEMA ERROR] [generateMetadata]: Database schema mismatch detected:', error);
+      throw error;
+    }
     console.error('[ERROR] [generateMetadata]:', error);
     return {
       title: shop.shopName
@@ -244,6 +264,10 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
       }
     }
   } catch (error) {
+    if (isDatabaseSchemaError(error)) {
+      console.error('[DATABASE SCHEMA ERROR] [ProductPage]: Database schema mismatch detected:', error);
+      throw error;
+    }
     console.error('[ERROR] [ProductPage]: Error loading product data:', error);
   }
   logPerf('product.data_load', startData);
@@ -264,53 +288,61 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   }
 
   if (!product) {
-    // Smart SEO Redirection
-    const decodedId = decodeURIComponent(id);
-    const isDbId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(decodedId) || 
-                   /^[0-9a-fA-F]{24}$/.test(decodedId) || 
-                   (decodedId.startsWith('c') && decodedId.length >= 20);
+    try {
+      // Smart SEO Redirection
+      const decodedId = decodeURIComponent(id);
+      const isDbId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(decodedId) || 
+                     /^[0-9a-fA-F]{24}$/.test(decodedId) || 
+                     (decodedId.startsWith('c') && decodedId.length >= 20);
 
-    if (!isDbId) {
-      const keywords = decodedId.split(/[-_\s]+/).filter(w => w.length > 1);
-      const matchedProduct = await prisma.product.findFirst({
-        where: {
-          shopId: shop.shopId,
-          isActive: true,
-          OR: [
-            { title: { contains: decodedId, mode: 'insensitive' } },
-            ...(keywords.map(keyword => ({
-              title: { contains: keyword, mode: 'insensitive' }
-            })))
-          ]
-        },
-        select: { id: true }
-      });
+      if (!isDbId) {
+        const keywords = decodedId.split(/[-_\s]+/).filter(w => w.length > 1);
+        const matchedProduct = await prisma.product.findFirst({
+          where: {
+            shopId: shop.shopId,
+            isActive: true,
+            OR: [
+              { title: { contains: decodedId, mode: 'insensitive' } },
+              ...(keywords.map(keyword => ({
+                title: { contains: keyword, mode: 'insensitive' }
+              })))
+            ]
+          },
+          select: { id: true }
+        });
 
-      if (matchedProduct) {
-        permanentRedirect(`/product/${matchedProduct.id}`);
+        if (matchedProduct) {
+          permanentRedirect(`/product/${matchedProduct.id}`);
+        }
+
+        // Check category
+        const matchedCategory = await prisma.category.findFirst({
+          where: {
+            shopId: shop.shopId,
+            isActive: true,
+            OR: [
+              { name: { contains: decodedId, mode: 'insensitive' } },
+              { slug: { contains: decodedId, mode: 'insensitive' } }
+            ]
+          },
+          select: { slug: true }
+        });
+
+        if (matchedCategory) {
+          permanentRedirect(`/category/${matchedCategory.slug}`);
+        }
+
+        // If it's a friendly URL, redirect to shop search
+        if (decodedId.trim().length > 2) {
+          permanentRedirect(`/shop?search=${encodeURIComponent(decodedId)}`);
+        }
       }
-
-      // Check category
-      const matchedCategory = await prisma.category.findFirst({
-        where: {
-          shopId: shop.shopId,
-          isActive: true,
-          OR: [
-            { name: { contains: decodedId, mode: 'insensitive' } },
-            { slug: { contains: decodedId, mode: 'insensitive' } }
-          ]
-        },
-        select: { slug: true }
-      });
-
-      if (matchedCategory) {
-        permanentRedirect(`/category/${matchedCategory.slug}`);
+    } catch (error) {
+      if (isDatabaseSchemaError(error)) {
+        console.error('[DATABASE SCHEMA ERROR] [ProductPage redirection]: Database schema mismatch detected:', error);
+        throw error;
       }
-
-      // If it's a friendly URL, redirect to shop search
-      if (decodedId.trim().length > 2) {
-        permanentRedirect(`/shop?search=${encodeURIComponent(decodedId)}`);
-      }
+      console.error('[ERROR] [ProductPage redirection]: Error during smart redirection:', error);
     }
 
     return notFound();
@@ -354,11 +386,14 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     product.fullDescription = injectContextualLinks(product.fullDescription, keywordLinks, currentUrl, 3);
   }
 
+  // Ensure reviews is always an array
+  product.reviews = product.reviews || [];
+
   // Inject links into product reviews to mimic organic semantic mentions (highly valued by GEO)
-  if (product.reviews && product.reviews.length > 0) {
+  if (product.reviews.length > 0) {
     product.reviews = product.reviews.map((rev: any) => ({
       ...rev,
-      comment: injectContextualLinks(rev.comment, keywordLinks, '', 1) // max 1 link per product review to look natural
+      comment: rev.comment ? injectContextualLinks(rev.comment, keywordLinks, '', 1) : '' // max 1 link per product review to look natural
     }));
   }
 
@@ -370,8 +405,8 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   let aggregateRating = undefined;
   if (product.reviews && product.reviews.length > 0) {
     const ratingCount = product.reviews.length;
-    const ratingSum = product.reviews.reduce((acc: number, r: any) => acc + r.rating, 0);
-    const ratingValue = (ratingSum / ratingCount).toFixed(1);
+    const ratingSum = product.reviews.reduce((acc: number, r: any) => acc + (r.rating || 0), 0);
+    const ratingValue = (ratingCount > 0 ? ratingSum / ratingCount : 0).toFixed(1);
     aggregateRating = {
       '@type': 'AggregateRating',
       'ratingValue': ratingValue,
@@ -441,8 +476,8 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     product.title,
     product.reviews.map((r: any) => ({
       name: r.user?.name || 'خریدار سایت',
-      content: r.comment,
-      createdAt: typeof r.createdAt === 'string' ? r.createdAt : r.createdAt.toISOString()
+      content: r.comment || '',
+      createdAt: r.createdAt ? (typeof r.createdAt === 'string' ? r.createdAt : r.createdAt.toISOString()) : new Date().toISOString()
     }))
   );
 
@@ -506,7 +541,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
               faqs={product.faqs}
               reviews={product.reviews.map((r: any) => ({
                 ...r,
-                createdAt: r.createdAt.toISOString()
+                createdAt: r.createdAt ? (typeof r.createdAt === 'string' ? r.createdAt : r.createdAt.toISOString()) : new Date().toISOString()
               }))}
             />
           </div>

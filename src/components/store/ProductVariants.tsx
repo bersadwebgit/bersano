@@ -24,9 +24,9 @@ export default function ProductVariants({ variants, selectedVariantId, onVariant
   if (!hasVariants) return null;
 
   // Detect separator for flat name fallback
-  const separator = variants!.some(v => v.name.includes(' - ')) ? ' - ' :
-                    variants!.some(v => v.name.includes(' / ')) ? ' / ' :
-                    variants!.some(v => v.name.includes(' | ')) ? ' | ' : null;
+  const separator = variants!.some(v => v.name?.includes(' - ')) ? ' - ' :
+                    variants!.some(v => v.name?.includes(' / ')) ? ' / ' :
+                    variants!.some(v => v.name?.includes(' | ')) ? ' | ' : null;
 
   // Unify variants into a structured format with an `options` object
   const parsedVariants = variants!.map(v => {
@@ -41,14 +41,15 @@ export default function ProductVariants({ variants, selectedVariantId, onVariant
     
     // Fallback to name parsing if optionsJson is empty or failed
     if (Object.keys(options).length === 0) {
+      const variantName = v.name || '';
       if (separator) {
-        const parts = v.name.split(separator).map(p => p.trim());
+        const parts = variantName.split(separator).map(p => p.trim());
         parts.forEach((part, idx) => {
           const label = idx === 0 ? 'ویژگی ۱' : idx === 1 ? 'ویژگی ۲' : `ویژگی ${idx + 1}`;
           options[label] = part;
         });
       } else {
-        options['ویژگی'] = v.name;
+        options['ویژگی'] = variantName;
       }
     }
     return { ...v, options };
