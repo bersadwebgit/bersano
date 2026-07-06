@@ -629,11 +629,28 @@ model Otp {
   shopId    String   @map("shop_id")
   phone     String
   code      String
+  attempts  Int      @default(0)
   expiresAt DateTime
   createdAt DateTime @default(now())
 
   @@index([shopId])
   @@index([phone])
+}
+
+model SmsLog {
+  id             String   @id @default(cuid())
+  shopId         String   @map("shop_id")
+  phone          String
+  provider       String
+  event          String
+  messageId      String?
+  status         String
+  error          String?
+  createdAt      DateTime @default(now())
+
+  @@index([shopId])
+  @@index([phone])
+  @@index([createdAt])
 }
 
 model BlogCategory {
@@ -928,6 +945,91 @@ model ShopSeedJob {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@index([shopId])
+}
+
+model PlatformCollaborator {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   // 'superadmin', 'sales', 'content_manager', 'seo_manager'
+  isActive  Boolean  @default(true)
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PlatformBlogCategory {
+  id          String             @id @default(cuid())
+  name        String
+  slug        String             @unique
+  description String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  posts       PlatformBlogPost[]
+}
+
+model PlatformBlogTag {
+  id        String                @id @default(cuid())
+  name      String                @unique
+  posts     PlatformBlogPostTag[]
+}
+
+model PlatformBlogPost {
+  id                 String                @id @default(cuid())
+  title              String
+  slug               String                @unique
+  excerpt            String?
+  content            String                @db.Text
+  coverImage         String?
+  status             String                @default("draft") // draft, published, scheduled
+  categoryId         String?
+  category           PlatformBlogCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  author             String?
+  publishedAt        DateTime?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  readingTime        Int                   @default(0)
+  canonicalUrl       String?
+  metaTitle          String?
+  metaDescription    String?
+  focusKeyword       String?
+  secondaryKeywords  String?               // comma-separated
+  geoSummary         String?               @db.Text // Direct answer summary
+  keyTakeaways       String?               @db.Text // Markdown bullet list
+  entityList         String?               @db.Text // Entity mentions
+  topicClusters      String?               @db.Text // Cluster categories
+  faqSection         String?               @db.Text // JSON string array of FAQs: [{question, answer}]
+  schemaType         String                @default("Article")
+  structuredData     String?               @db.Text // JSON-LD string
+  internalLinks      String?               @db.Text // Suggested links
+  externalReferences String?               @db.Text // References
+  relatedPosts       String?               @db.Text // JSON array of related post IDs
+  noindex            Boolean               @default(false)
+  nofollow           Boolean               @default(false)
+  ogTitle            String?
+  ogDescription      String?
+  ogImage            String?
+  twitterTitle       String?
+  twitterDescription String?
+  twitterImage       String?
+  
+  tags               PlatformBlogPostTag[]
+
+  @@index([status])
+  @@index([publishedAt])
+  @@index([categoryId])
+}
+
+model PlatformBlogPostTag {
+  postId String
+  tagId  String
+  post   PlatformBlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag    PlatformBlogTag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@index([postId])
+  @@index([tagId])
 }
 
 

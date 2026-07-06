@@ -1,9 +1,71 @@
 import { prisma } from './prisma';
 import { decrypt } from './crypto';
+import crypto from 'crypto';
 
-const globalUsername = process.env.MELIPAYAMAK_USERNAME || '29158243254';
-const globalPassword = process.env.MELIPAYAMAK_PASSWORD || '9LZQF';
-const globalPatternCode = process.env.MELIPAYAMAK_PATTERN_CODE || '366075';
+/**
+ * Hashes an OTP code securely using HMAC-SHA256 with a server-side pepper/salt
+ */
+export function hashOtp(code: string): string {
+  const secret = process.env.OTP_HASH_SECRET || 'fallback-secure-otp-hash-pepper-2026';
+  return crypto.createHmac('sha256', secret).update(code.trim()).digest('hex');
+}
+
+/**
+ * Logs SMS attempts asynchronously to the SmsLog table
+ */
+export async function logSms(
+  shopId: string,
+  phone: string,
+  provider: string,
+  event: string,
+  status: 'success' | 'failed',
+  messageId?: string,
+  error?: string
+) {
+  try {
+    await (prisma as any).smsLog.create({
+      data: {
+        shopId,
+        phone,
+        provider,
+        event,
+        status,
+        messageId: messageId || null,
+        error: error ? error.slice(0, 500) : null
+      }
+    });
+  } catch (e) {
+    console.error('[ERROR] [SMS_LOG]: Failed to write SMS log to database:', e);
+  }
+}
+
+/**
+ * Dynamically resolves global SMS credentials from database or environment variables
+ */
+export async function getGlobalSmsCredentials(): Promise<{
+  username: string;
+  password: string;
+  patternCode: string;
+}> {
+  try {
+    const dbUsername = await prisma.systemSetting.findUnique({ where: { key: 'global_melipayamak_username' } });
+    const dbPassword = await prisma.systemSetting.findUnique({ where: { key: 'global_melipayamak_password' } });
+    const dbPatternCode = await prisma.systemSetting.findUnique({ where: { key: 'global_melipayamak_pattern_code' } });
+
+    const username = dbUsername?.value ? decrypt(dbUsername.value) : (process.env.MELIPAYAMAK_USERNAME || '');
+    const password = dbPassword?.value ? decrypt(dbPassword.value) : (process.env.MELIPAYAMAK_PASSWORD || '');
+    const patternCode = dbPatternCode?.value || (process.env.MELIPAYAMAK_PATTERN_CODE || '');
+
+    return { username, password, patternCode };
+  } catch (error) {
+    console.error('[ERROR] [SMS]: Failed to resolve global SMS credentials, falling back to environment variables:', error);
+    return {
+      username: process.env.MELIPAYAMAK_USERNAME || '',
+      password: process.env.MELIPAYAMAK_PASSWORD || '',
+      patternCode: process.env.MELIPAYAMAK_PATTERN_CODE || ''
+    };
+  }
+}
 
 export interface SmsSendResult {
   success: boolean;
@@ -19,6 +81,16 @@ export interface SmsSendResult {
 export async function sendOtpSms(phone: string, code: string): Promise<SmsSendResult> {
   try {
     console.log(`[INFO] [SMS]: Attempting to send OTP SMS to ${phone} with code ${code}`);
+
+    const { username, password, patternCode } = await getGlobalSmsCredentials();
+    
+    if (!username || !password || !patternCode) {
+      console.error(`[ERROR] [SMS]: Global Melipayamak credentials are not configured in system settings or environment variables.`);
+      return {
+        success: false,
+        error: 'سامانه پیامک اصلی پلتفرم پیکربندی نشده است'
+      };
+    }
     
     // Normalize phone number to start with 0 (e.g. +98912... -> 0912...)
     let targetPhone = phone.trim();
@@ -29,20 +101,34 @@ export async function sendOtpSms(phone: string, code: string): Promise<SmsSendRe
     }
     
     const params = new URLSearchParams();
-    params.append('username', globalUsername);
-    params.append('password', globalPassword);
+    params.append('username', username);
+    params.append('password', password);
     params.append('text', code);
     params.append('to', targetPhone);
-    params.append('bodyId', globalPatternCode);
+    params.append('bodyId', patternCode);
 
     console.log(`[INFO] [SMS]: Sending POST request to Melipayamak REST API...`);
-    const response = await fetch('https://rest.payamak-panel.com/api/SendSMS/BaseServiceNumber', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-      },
-      body: params.toString(),
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    let response;
+    try {
+      response = await fetch('https://rest.payamak-panel.com/api/SendSMS/BaseServiceNumber', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        },
+        body: params.toString(),
+        signal: controller.signal,
+      });
+    } catch (fetchErr: any) {
+      if (fetchErr.name === 'AbortError') {
+        throw new Error('زمان پاسخ‌دهی سامانه پیامک به پایان رسید (Timeout)');
+      }
+      throw fetchErr;
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -90,6 +176,17 @@ export async function sendOtpSms(phone: string, code: string): Promise<SmsSendRe
         messageId = val;
       }
     }
+
+    // Log SMS attempt asynchronously
+    logSms(
+      'saas_platform',
+      targetPhone,
+      'melipayamak',
+      'otp',
+      isSuccess ? 'success' : 'failed',
+      isSuccess ? messageId : undefined,
+      isSuccess ? undefined : errorMessage
+    );
     
     return { 
       success: isSuccess, 
@@ -98,6 +195,25 @@ export async function sendOtpSms(phone: string, code: string): Promise<SmsSendRe
     };
   } catch (error: any) {
     console.error(`[ERROR] [SMS]: Exception while sending SMS to ${phone} |`, error);
+    
+    // Log exception asynchronously
+    let targetPhone = phone.trim();
+    if (targetPhone.startsWith('+98')) {
+      targetPhone = '0' + targetPhone.substring(3);
+    } else if (targetPhone.startsWith('98') && targetPhone.length === 12) {
+      targetPhone = '0' + targetPhone.substring(2);
+    }
+    
+    logSms(
+      'saas_platform',
+      targetPhone,
+      'melipayamak',
+      'otp',
+      'failed',
+      undefined,
+      error?.message || 'خطا در ارسال پیامک'
+    );
+
     return { 
       success: false, 
       error: error?.message || 'خطا در ارسال پیامک' 
@@ -111,7 +227,8 @@ export type SmsEvent =
   | 'order_shipped'
   | 'order_cancelled'
   | 'new_registration'
-  | 'otp';
+  | 'otp'
+  | 'product_back_in_stock';
 
 // Define the standard parameter mappings for each event
 export const SMS_EVENT_PARAMS: Record<SmsEvent, { melipayamak: string[]; smsir: string[] }> = {
@@ -138,6 +255,10 @@ export const SMS_EVENT_PARAMS: Record<SmsEvent, { melipayamak: string[]; smsir: 
   otp: {
     melipayamak: ['code'],
     smsir: ['code']
+  },
+  product_back_in_stock: {
+    melipayamak: ['customerName', 'productTitle', 'storeName'],
+    smsir: ['customerName', 'productTitle', 'storeName']
   }
 };
 
@@ -164,6 +285,9 @@ export async function sendStoreSms(
   recipientPhone: string,
   placeholders: Record<string, string>
 ): Promise<SmsSendResult> {
+  let providerStr = 'unknown';
+  let targetPhone = normalizePhone(recipientPhone);
+  
   try {
     console.log(`[INFO] [StoreSMS]: Attempting to send store SMS for shop ${shopId}, event ${event} to ${recipientPhone}`);
     
@@ -193,6 +317,7 @@ export async function sendStoreSms(
     }
 
     const provider = config.provider.toLowerCase();
+    providerStr = provider;
     const patternCode = config.patterns?.[event];
 
     // 4. Check if pattern code is set for this event
@@ -201,9 +326,8 @@ export async function sendStoreSms(
       return { success: false, error: 'Pattern code not configured for this event' };
     }
 
-    const targetPhone = normalizePhone(recipientPhone);
     const storeName = settings.shopName || 'فروشگاه';
-    const allPlaceholders = { storeName, ...placeholders };
+    const allPlaceholders: Record<string, any> = { storeName, ...placeholders };
 
     // 5. Send using the selected provider
     if (provider === 'melipayamak') {
@@ -225,7 +349,10 @@ export async function sendStoreSms(
 
       // Map placeholders to positional parameters
       const paramKeys = SMS_EVENT_PARAMS[event].melipayamak;
-      const paramValues = paramKeys.map(key => allPlaceholders[key] || '');
+      const paramValues = paramKeys.map(key => {
+        const val = String(allPlaceholders[key] || '');
+        return val.replace(/;/g, ' '); // sanitize semicolons
+      });
       const textValue = paramValues.join(';');
 
       console.log(`[INFO] [StoreSMS]: Sending Melipayamak pattern SMS to ${targetPhone} with bodyId ${patternCode} and text: ${textValue}`);
@@ -237,13 +364,27 @@ export async function sendStoreSms(
       params.append('to', targetPhone);
       params.append('bodyId', patternCode);
 
-      const response = await fetch('https://rest.payamak-panel.com/api/SendSMS/BaseServiceNumber', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        },
-        body: params.toString(),
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      let response;
+      try {
+        response = await fetch('https://rest.payamak-panel.com/api/SendSMS/BaseServiceNumber', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          },
+          body: params.toString(),
+          signal: controller.signal,
+        });
+      } catch (fetchErr: any) {
+        if (fetchErr.name === 'AbortError') {
+          throw new Error('زمان پاسخ‌دهی سامانه پیامک ملی‌پیامک به پایان رسید (Timeout)');
+        }
+        throw fetchErr;
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       if (!response.ok) {
         throw new Error(`Melipayamak HTTP error! status: ${response.status}`);
@@ -267,10 +408,23 @@ export async function sendStoreSms(
         isSuccess = true;
       }
 
+      const errorMsg = isSuccess ? undefined : `Melipayamak error code: ${val}`;
+
+      // Log store SMS asynchronously
+      logSms(
+        shopId,
+        targetPhone,
+        'melipayamak',
+        event,
+        isSuccess ? 'success' : 'failed',
+        isSuccess ? val : undefined,
+        errorMsg
+      );
+
       return {
         success: isSuccess,
         messageId: isSuccess ? val : undefined,
-        error: isSuccess ? undefined : `Melipayamak error code: ${val}`
+        error: errorMsg
       };
 
     } else if (provider === 'smsir') {
@@ -297,19 +451,33 @@ export async function sendStoreSms(
 
       console.log(`[INFO] [StoreSMS]: Sending SMS.ir verify SMS to ${targetPhone} with templateId ${patternCode}`);
 
-      const response = await fetch('https://api.sms.ir/v1/send/verify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'text/plain',
-          'x-api-key': apiKey
-        },
-        body: JSON.stringify({
-          mobile: targetPhone,
-          templateId: Number(patternCode),
-          parameters: parameters
-        })
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      let response;
+      try {
+        response = await fetch('https://api.sms.ir/v1/send/verify', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'text/plain',
+            'x-api-key': apiKey
+          },
+          body: JSON.stringify({
+            mobile: targetPhone,
+            templateId: Number(patternCode),
+            parameters: parameters
+          }),
+          signal: controller.signal,
+        });
+      } catch (fetchErr: any) {
+        if (fetchErr.name === 'AbortError') {
+          throw new Error('زمان پاسخ‌دهی سامانه پیامک SMS.ir به پایان رسید (Timeout)');
+        }
+        throw fetchErr;
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       if (!response.ok) {
         throw new Error(`SMS.ir HTTP error! status: ${response.status}`);
@@ -320,11 +488,24 @@ export async function sendStoreSms(
 
       // SMS.ir v2 response has status: 1 for success
       const isSuccess = result?.status === 1;
+      const msgId = isSuccess ? String(result?.data?.messageId || 'sent') : undefined;
+      const errorMsg = isSuccess ? undefined : (result?.message || 'SMS.ir failed to send');
+
+      // Log store SMS asynchronously
+      logSms(
+        shopId,
+        targetPhone,
+        'smsir',
+        event,
+        isSuccess ? 'success' : 'failed',
+        msgId,
+        errorMsg
+      );
 
       return {
         success: isSuccess,
-        messageId: isSuccess ? String(result?.data?.messageId || 'sent') : undefined,
-        error: isSuccess ? undefined : (result?.message || 'SMS.ir failed to send')
+        messageId: msgId,
+        error: errorMsg
       };
     } else {
       console.error(`[ERROR] [StoreSMS]: Unsupported SMS provider: ${provider}`);
@@ -333,6 +514,18 @@ export async function sendStoreSms(
 
   } catch (error: any) {
     console.error(`[ERROR] [StoreSMS]: Exception while sending store SMS for shop ${shopId} |`, error);
+    
+    // Log store SMS exception asynchronously
+    logSms(
+      shopId,
+      targetPhone,
+      providerStr,
+      event,
+      'failed',
+      undefined,
+      error?.message || 'خطا در ارسال پیامک'
+    );
+
     return {
       success: false,
       error: error?.message || 'خطا در ارسال پیامک'

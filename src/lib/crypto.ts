@@ -1,6 +1,17 @@
 import crypto from 'crypto';
 
 const SECRET_KEY_BASE = process.env.SMS_ENCRYPTION_KEY || 'shop-final-sms-secret-key-2026-secure-default';
+
+if (process.env.NODE_ENV === 'production' && !process.env.SMS_ENCRYPTION_KEY) {
+  console.error(
+    '\n================================================================================\n' +
+    '[CRITICAL] [Crypto]: SMS_ENCRYPTION_KEY is NOT set in production!\n' +
+    'Falling back to default key. This is highly insecure and vulnerable to decrypt attacks.\n' +
+    'Please set SMS_ENCRYPTION_KEY in your environment variables immediately!\n' +
+    '================================================================================\n'
+  );
+}
+
 // Derive a 32-byte key using SHA-256
 const ENCRYPTION_KEY = crypto.createHash('sha256').update(SECRET_KEY_BASE).digest();
 const ALGORITHM = 'aes-256-cbc';

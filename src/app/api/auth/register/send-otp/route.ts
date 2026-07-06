@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { sendOtpSms } from '@/lib/sms';
+import { sendOtpSms, hashOtp } from '@/lib/sms';
+import { isRateLimited } from '@/lib/rate-limiter';
 
 export async function POST(request: Request) {
   try {
@@ -80,22 +81,50 @@ export async function POST(request: Request) {
       }
     }
 
+    // 1. IP-based Rate Limiting (30 requests per 5 minutes - Lenient for testing)
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() || '127.0.0.1';
+    const ipLimitKey = `otp:ip:${ip}`;
+    if (await isRateLimited(ipLimitKey, 30, 5 * 60 * 1000)) {
+      return NextResponse.json(
+        { error: 'تعداد درخواست‌های شما بیش از حد مجاز است. لطفاً ۵ دقیقه دیگر تلاش کنید.' },
+        { status: 429 }
+      );
+    }
+
+    // 2. Phone-based Rate Limiting (15 requests per 3 minutes - Lenient for testing)
+    const phoneLimitKey = `otp:phone:${normalizedPhone}`;
+    if (await isRateLimited(phoneLimitKey, 15, 3 * 60 * 1000)) {
+      return NextResponse.json(
+        { error: 'تعداد درخواست‌های ارسال پیامک برای این شماره بیش از حد مجاز است. لطفاً ۳ دقیقه دیگر تلاش کنید.' },
+        { status: 429 }
+      );
+    }
+
+    // 3. Platform-wide Rate Limiting (100 requests per 1 minute - Lenient for testing)
+    const platformLimitKey = 'otp:platform:global';
+    if (await isRateLimited(platformLimitKey, 100, 60 * 1000)) {
+      return NextResponse.json(
+        { error: 'سیستم ثبت نام موقتاً شلوغ است. لطفاً یک دقیقه دیگر تلاش کنید.' },
+        { status: 429 }
+      );
+    }
+
     const now = new Date();
 
-    // Check rate limit: 120 seconds between sends
+    // Check rate limit: 30 seconds between sends (Lenient for testing)
     const recentOtp = await prisma.otp.findFirst({
       where: {
         phone: normalizedPhone,
         shopId: 'saas_platform',
         createdAt: {
-          gte: new Date(now.getTime() - 120 * 1000), // last 120 seconds
+          gte: new Date(now.getTime() - 30 * 1000), // last 30 seconds
         },
       },
     });
 
     if (recentOtp) {
       const elapsedMs = now.getTime() - recentOtp.createdAt.getTime();
-      const secondsLeft = Math.ceil((120 * 1000 - elapsedMs) / 1000);
+      const secondsLeft = Math.ceil((30 * 1000 - elapsedMs) / 1000);
       return NextResponse.json(
         { error: `لطفا پس از ${secondsLeft} ثانیه مجددا تلاش کنید` },
         { status: 429 }
@@ -121,7 +150,7 @@ export async function POST(request: Request) {
       data: {
         phone: normalizedPhone,
         shopId: 'saas_platform',
-        code,
+        code: hashOtp(code),
         expiresAt,
       },
     });

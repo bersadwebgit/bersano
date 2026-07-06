@@ -18,6 +18,22 @@ export async function GET(request: Request) {
       include: { package: true }
     });
 
+    if (settings && settings.smsConfig) {
+      try {
+        const config = typeof settings.smsConfig === 'string' ? JSON.parse(settings.smsConfig) : settings.smsConfig;
+        if (config.credentials) {
+          const maskedCreds = { ...config.credentials };
+          if (maskedCreds.username) maskedCreds.username = '********';
+          if (maskedCreds.password) maskedCreds.password = '********';
+          if (maskedCreds.apiKey) maskedCreds.apiKey = '********';
+          config.credentials = maskedCreds;
+        }
+        settings.smsConfig = JSON.stringify(config);
+      } catch (e) {
+        console.error('Error masking SMS credentials in GET settings:', e);
+      }
+    }
+
     return NextResponse.json({ settings });
   } catch (error) {
     console.error('Error fetching settings:', error);

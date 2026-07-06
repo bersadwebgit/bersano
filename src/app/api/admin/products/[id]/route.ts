@@ -373,6 +373,11 @@ export async function PUT(
       console.error('[PUT Product] Background embedding failed:', err);
     });
 
+    // Trigger back-in-stock notifications in background (non-blocking)
+    triggerBackInStockNotifications(id, payload.shopId, existingProduct, product, data.variants).catch((err) => {
+      console.error('[PUT Product] Back-in-stock notifications failed:', err);
+    });
+
     const responseObj = { product };
     if (idempotencyKey) {
       await saveIdempotency(idempotencyKey, responseObj);
@@ -439,5 +444,89 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+async function triggerBackInStockNotifications(
+  productId: string,
+  shopId: string,
+  oldProduct: any,
+  newProduct: any,
+  incomingVariants?: any[]
+) {
+  try {
+    // 1. Determine if anything is refilled
+    const mainProductRefilled = oldProduct.stock <= 0 && newProduct.stock > 0;
+
+    // 2. Fetch pending notification requests
+    const requests = await prisma.productNotificationRequest.findMany({
+      where: {
+        productId,
+        shopId,
+        isNotified: false
+      }
+    });
+
+    if (requests.length === 0) return;
+
+    // 3. For each request, check if its target is refilled
+    const requestsToNotify = [];
+
+    for (const request of requests) {
+      let shouldNotify = false;
+
+      if (!request.variantId) {
+        // General product notification request
+        if (mainProductRefilled || newProduct.stock > 0) {
+          shouldNotify = true;
+        }
+      } else {
+        // Specific variant notification request
+        const variant = await prisma.productVariant.findFirst({
+          where: { id: request.variantId, productId, shopId }
+        });
+        if (variant && variant.stock > 0) {
+          shouldNotify = true;
+        }
+      }
+
+      if (shouldNotify) {
+        requestsToNotify.push(request);
+      }
+    }
+
+    if (requestsToNotify.length === 0) return;
+
+    console.log(`[INFO] [BackInStock]: Found ${requestsToNotify.length} notifications to send for product ${newProduct.title} (${productId})`);
+
+    // 4. Send SMS to each recipient asynchronously
+    const { sendStoreSms } = await import('@/lib/sms');
+    
+    await Promise.allSettled(
+      requestsToNotify.map(async (req) => {
+        try {
+          const smsRes = await sendStoreSms(shopId, 'product_back_in_stock', req.phone, {
+            customerName: 'مشتری گرامی',
+            productTitle: newProduct.title,
+          });
+
+          if (smsRes.success) {
+            // Mark as notified in database
+            await prisma.productNotificationRequest.update({
+              where: { id: req.id },
+              data: { isNotified: true }
+            });
+            console.log(`[INFO] [BackInStock]: Notified phone ${req.phone} for product ${productId}`);
+          } else {
+            console.error(`[ERROR] [BackInStock]: Failed to send SMS to ${req.phone} |`, smsRes.error);
+          }
+        } catch (smsErr) {
+          console.error(`[ERROR] [BackInStock]: Error sending notification SMS to ${req.phone} |`, smsErr);
+        }
+      })
+    );
+
+  } catch (error) {
+    console.error('[ERROR] [BackInStock]: Error in triggerBackInStockNotifications:', error);
   }
 }

@@ -17,25 +17,54 @@ export async function POST(request: Request) {
       );
     }
 
-    // Find user
+    // Find user or collaborator
+    let isCollaborator = false;
+    let userId = '';
+    let userEmail = '';
+    let userRole = '';
+    let userName = '';
+    let userPasswordHash = '';
+
     const user = await prisma.user.findFirst({
       where: { email },
       allowCrossTenant: true
     } as any);
 
-    if (!user || user.role !== 'superadmin') {
+    if (user && user.role === 'superadmin') {
+      userId = user.id;
+      userEmail = user.email;
+      userRole = user.role;
+      userName = user.name || 'سوپر ادمین';
+      userPasswordHash = user.password;
+    } else {
+      // Look up in PlatformCollaborator
+      const collaborator = await prisma.platformCollaborator.findUnique({
+        where: { email }
+      });
+      if (collaborator && collaborator.isActive) {
+        userId = collaborator.id;
+        userEmail = collaborator.email;
+        userRole = collaborator.role; // 'superadmin', 'sales', 'content_manager', 'seo_manager'
+        userName = collaborator.name;
+        userPasswordHash = collaborator.password;
+        isCollaborator = true;
+      }
+    }
+
+    if (!userRole) {
       // For testing purposes, if no superadmin exists and they use admin@admin.com / admin123
       if (email === 'admin@admin.com' && password === 'admin123') {
         const token = await new SignJWT({ 
           id: 'superadmin-id', 
           email: 'admin@admin.com', 
-          role: 'superadmin' 
+          role: 'superadmin',
+          name: 'مدیر اصلی سیستم'
         })
           .setProtectedHeader({ alg: 'HS256' })
           .setExpirationTime('1d')
           .sign(key);
 
-        const response = NextResponse.json({ success: true });
+        const response = NextResponse.json({ success: true, role: 'superadmin', name: 'مدیر اصلی سیستم' });
         
         const isSecure = request.url.startsWith('https://') || request.headers.get('x-forwarded-proto') === 'https';
 
@@ -57,7 +86,7 @@ export async function POST(request: Request) {
     }
 
     // Verify password
-    const isValid = await bcrypt.compare(password, user.password);
+    const isValid = await bcrypt.compare(password, userPasswordHash);
 
     if (!isValid) {
       return NextResponse.json(
@@ -68,16 +97,18 @@ export async function POST(request: Request) {
 
     // Generate JWT
     const token = await new SignJWT({ 
-      id: user.id, 
-      email: user.email, 
-      role: user.role 
+      id: userId, 
+      email: userEmail, 
+      role: userRole,
+      name: userName,
+      isCollaborator
     })
       .setProtectedHeader({ alg: 'HS256' })
       .setExpirationTime('1d')
       .sign(key);
 
     // Create response with cookie
-    const response = NextResponse.json({ success: true });
+    const response = NextResponse.json({ success: true, role: userRole, name: userName });
     
     const isSecure = request.url.startsWith('https://') || request.headers.get('x-forwarded-proto') === 'https';
 

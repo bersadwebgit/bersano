@@ -6,6 +6,7 @@ import { exec, spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { invalidateModelCache } from '@/lib/ai-model-resolver';
+import { encrypt, decrypt } from '@/lib/crypto';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-change-in-production';
 const key = new TextEncoder().encode(JWT_SECRET);
@@ -422,6 +423,54 @@ export async function GET() {
     const aiEmbeddingBaseUrlSetting = await prisma.systemSetting.findUnique({ where: { key: 'ai_embedding_base_url' } });
     const aiEmbeddingApiKeySetting = await prisma.systemSetting.findUnique({ where: { key: 'ai_embedding_api_key' } });
 
+    const platformBlogIdeaModelSetting = await prisma.systemSetting.findUnique({ where: { key: 'platform_blog_idea_model' } });
+    const platformBlogOutlineModelSetting = await prisma.systemSetting.findUnique({ where: { key: 'platform_blog_outline_model' } });
+    const platformBlogSectionModelSetting = await prisma.systemSetting.findUnique({ where: { key: 'platform_blog_section_model' } });
+    const platformBlogSeoModelSetting = await prisma.systemSetting.findUnique({ where: { key: 'platform_blog_seo_model' } });
+    const platformBlogGeoModelSetting = await prisma.systemSetting.findUnique({ where: { key: 'platform_blog_geo_model' } });
+    const platformBlogRewriteModelSetting = await prisma.systemSetting.findUnique({ where: { key: 'platform_blog_rewrite_model' } });
+    const platformBlogFaqModelSetting = await prisma.systemSetting.findUnique({ where: { key: 'platform_blog_faq_model' } });
+
+    const globalMelipayamakUsernameSetting = await prisma.systemSetting.findUnique({
+      where: { key: 'global_melipayamak_username' },
+    });
+    const globalMelipayamakPasswordSetting = await prisma.systemSetting.findUnique({
+      where: { key: 'global_melipayamak_password' },
+    });
+    const globalMelipayamakPatternCodeSetting = await prisma.systemSetting.findUnique({
+      where: { key: 'global_melipayamak_pattern_code' },
+    });
+
+    let globalSmsUsername = '';
+    if (globalMelipayamakUsernameSetting?.value) {
+      try {
+        const decrypted = decrypt(globalMelipayamakUsernameSetting.value);
+        if (decrypted) {
+          globalSmsUsername = '********';
+        }
+      } catch (e) {
+        console.error('Error decrypting global SMS username:', e);
+      }
+    }
+
+    let globalSmsPassword = '';
+    if (globalMelipayamakPasswordSetting?.value) {
+      try {
+        const decrypted = decrypt(globalMelipayamakPasswordSetting.value);
+        if (decrypted) {
+          globalSmsPassword = '********';
+        }
+      } catch (e) {
+        console.error('Error decrypting global SMS password:', e);
+      }
+    }
+
+    const globalSmsPatternCode = globalMelipayamakPatternCodeSetting?.value || '';
+
+    const smsEncryptionKeyStatus = process.env.SMS_ENCRYPTION_KEY ? 'configured' : 'warning';
+    const otpHashSecretStatus = process.env.OTP_HASH_SECRET ? 'configured' : 'warning';
+    const totalSmsLogs = await (prisma as any).smsLog.count();
+
     const savedPrompts = await prisma.systemSetting.findMany({
       where: { key: { startsWith: 'ai_' } }
     });
@@ -502,6 +551,14 @@ export async function GET() {
     const blogAiMaxChunks = blogAiMaxChunksSetting?.value || '5';
     const blogAiAutoContinue = blogAiAutoContinueSetting ? blogAiAutoContinueSetting.value === 'true' : true;
 
+    const platformBlogIdeaModel = platformBlogIdeaModelSetting?.value || '';
+    const platformBlogOutlineModel = platformBlogOutlineModelSetting?.value || '';
+    const platformBlogSectionModel = platformBlogSectionModelSetting?.value || '';
+    const platformBlogSeoModel = platformBlogSeoModelSetting?.value || '';
+    const platformBlogGeoModel = platformBlogGeoModelSetting?.value || '';
+    const platformBlogRewriteModel = platformBlogRewriteModelSetting?.value || '';
+    const platformBlogFaqModel = platformBlogFaqModelSetting?.value || '';
+
     console.log('[DEBUG SETTINGS GET]', { aiProvider, aiEnabled });
 
     return NextResponse.json({ 
@@ -531,7 +588,20 @@ export async function GET() {
       aiModelFallback,
       aiModelWholesale,
       aiEmbeddingBaseUrl,
-      aiEmbeddingApiKey
+      aiEmbeddingApiKey,
+      platformBlogIdeaModel,
+      platformBlogOutlineModel,
+      platformBlogSectionModel,
+      platformBlogSeoModel,
+      platformBlogGeoModel,
+      platformBlogRewriteModel,
+      platformBlogFaqModel,
+      globalSmsUsername,
+      globalSmsPassword,
+      globalSmsPatternCode,
+      smsEncryptionKeyStatus,
+      otpHashSecretStatus,
+      totalSmsLogs
     });
   } catch (error) {
     console.error('Error fetching system settings:', error);
@@ -572,12 +642,63 @@ export async function POST(request: Request) {
       aiModelFallback,
       aiModelWholesale,
       aiEmbeddingBaseUrl,
-      aiEmbeddingApiKey
+      aiEmbeddingApiKey,
+      platformBlogIdeaModel,
+      platformBlogOutlineModel,
+      platformBlogSectionModel,
+      platformBlogSeoModel,
+      platformBlogGeoModel,
+      platformBlogRewriteModel,
+      platformBlogFaqModel,
+      globalSmsUsername,
+      globalSmsPassword,
+      globalSmsPatternCode,
+      clearSmsLogs,
+      deleteOldSmsLogs
     } = body;
 
     const aiProvider = 'openrouter';
 
     console.log('[DEBUG SETTINGS POST]', { aiProvider, aiEnabled });
+
+    // Handle high-security platform SMS configuration upserts
+    if (globalSmsUsername !== undefined && globalSmsUsername !== '********') {
+      await prisma.systemSetting.upsert({
+        where: { key: 'global_melipayamak_username' },
+        update: { value: globalSmsUsername ? encrypt(globalSmsUsername) : '' },
+        create: { key: 'global_melipayamak_username', value: globalSmsUsername ? encrypt(globalSmsUsername) : '' },
+      });
+    }
+
+    if (globalSmsPassword !== undefined && globalSmsPassword !== '********') {
+      await prisma.systemSetting.upsert({
+        where: { key: 'global_melipayamak_password' },
+        update: { value: globalSmsPassword ? encrypt(globalSmsPassword) : '' },
+        create: { key: 'global_melipayamak_password', value: globalSmsPassword ? encrypt(globalSmsPassword) : '' },
+      });
+    }
+
+    if (globalSmsPatternCode !== undefined) {
+      await prisma.systemSetting.upsert({
+        where: { key: 'global_melipayamak_pattern_code' },
+        update: { value: String(globalSmsPatternCode) },
+        create: { key: 'global_melipayamak_pattern_code', value: String(globalSmsPatternCode) },
+      });
+    }
+
+    // Handle high-security SmsLog clean-ups
+    if (clearSmsLogs === true) {
+      await (prisma as any).smsLog.deleteMany({});
+    } else if (deleteOldSmsLogs === true) {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      await (prisma as any).smsLog.deleteMany({
+        where: {
+          createdAt: {
+            lt: thirtyDaysAgo
+          }
+        }
+      });
+    }
 
     if (centralBaleBotToken !== undefined) {
       await prisma.systemSetting.upsert({
@@ -722,6 +843,13 @@ export async function POST(request: Request) {
       ai_model_wholesale: aiModelWholesale,
       ai_embedding_base_url: aiEmbeddingBaseUrl,
       ai_embedding_api_key: aiEmbeddingApiKey,
+      platform_blog_idea_model: platformBlogIdeaModel,
+      platform_blog_outline_model: platformBlogOutlineModel,
+      platform_blog_section_model: platformBlogSectionModel,
+      platform_blog_seo_model: platformBlogSeoModel,
+      platform_blog_geo_model: platformBlogGeoModel,
+      platform_blog_rewrite_model: platformBlogRewriteModel,
+      platform_blog_faq_model: platformBlogFaqModel,
     };
 
     for (const [key, value] of Object.entries(newSettings)) {

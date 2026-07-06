@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import bcrypt from 'bcryptjs';
-import { sendOtpSms } from '@/lib/sms';
+import { sendOtpSms, hashOtp } from '@/lib/sms';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-change-in-production';
 const key = new TextEncoder().encode(JWT_SECRET);
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
         data: {
           phone: normalizedPhone,
           shopId: 'system',
-          code: otpCode,
+          code: hashOtp(otpCode),
           expiresAt,
         },
       } as any);
@@ -152,7 +152,6 @@ export async function POST(request: Request) {
       const otpRecord = await prisma.otp.findFirst({
         where: {
           phone: normalizedPhone,
-          code: code.trim(),
           shopId: 'system',
           expiresAt: {
             gte: new Date(),
@@ -164,6 +163,49 @@ export async function POST(request: Request) {
       if (!otpRecord) {
         return NextResponse.json(
           { error: 'کد تایید نادرست یا منقضی شده است' },
+          { status: 400 }
+        );
+      }
+
+      if (otpRecord.attempts >= 5) {
+        await prisma.otp.deleteMany({
+          where: {
+            phone: normalizedPhone,
+            shopId: 'system',
+          },
+          allowCrossTenant: true,
+        } as any);
+        return NextResponse.json(
+          { error: 'این کد تایید به دلیل تلاش‌های ناموفق مکرر مسدود شده است. لطفاً مجدداً کد جدید دریافت کنید.' },
+          { status: 400 }
+        );
+      }
+
+      const isMatch = otpRecord.code === hashOtp(code);
+
+      if (!isMatch) {
+        const newAttempts = otpRecord.attempts + 1;
+        if (newAttempts >= 5) {
+          await prisma.otp.deleteMany({
+            where: {
+              phone: normalizedPhone,
+              shopId: 'system',
+            },
+            allowCrossTenant: true,
+          } as any);
+          return NextResponse.json(
+            { error: 'این کد تایید به دلیل تلاش‌های ناموفق مکرر مسدود شده است. لطفاً مجدداً کد جدید دریافت کنید.' },
+            { status: 400 }
+          );
+        }
+
+        await prisma.otp.update({
+          where: { id: otpRecord.id },
+          data: { attempts: newAttempts },
+        } as any);
+
+        return NextResponse.json(
+          { error: `کد تایید وارد شده نادرست است. تعداد تلاش‌های باقی‌مانده: ${5 - newAttempts}` },
           { status: 400 }
         );
       }

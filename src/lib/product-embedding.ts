@@ -283,7 +283,7 @@ export async function startBackgroundEmbedding(shopId?: string, batchSize = 20):
     const totalToProcess = await prisma.product.count({
       where: whereClause,
       allowCrossTenant: true,
-    } as any);
+    } as any) as number;
 
     embeddingProgress.totalToProcess = totalToProcess;
 

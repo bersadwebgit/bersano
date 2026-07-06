@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { hashOtp } from '@/lib/sms';
 
 export async function POST(request: Request) {
   try {
@@ -27,7 +28,6 @@ export async function POST(request: Request) {
       where: {
         phone: normalizedPhone,
         shopId: 'saas_platform',
-        code: code.trim(),
         expiresAt: {
           gt: now,
         },
@@ -37,6 +37,47 @@ export async function POST(request: Request) {
     if (!otpRecord) {
       return NextResponse.json(
         { error: 'کد تایید وارد شده اشتباه یا منقضی شده است.' },
+        { status: 400 }
+      );
+    }
+
+    if (otpRecord.attempts >= 5) {
+      await prisma.otp.deleteMany({
+        where: {
+          phone: normalizedPhone,
+          shopId: 'saas_platform',
+        },
+      });
+      return NextResponse.json(
+        { error: 'این کد تایید به دلیل تلاش‌های ناموفق مکرر مسدود شده است. لطفاً مجدداً کد جدید دریافت کنید.' },
+        { status: 400 }
+      );
+    }
+
+    const isMatch = otpRecord.code === hashOtp(code);
+
+    if (!isMatch) {
+      const newAttempts = otpRecord.attempts + 1;
+      if (newAttempts >= 5) {
+        await prisma.otp.deleteMany({
+          where: {
+            phone: normalizedPhone,
+            shopId: 'saas_platform',
+          },
+        });
+        return NextResponse.json(
+          { error: 'این کد تایید به دلیل تلاش‌های ناموفق مکرر مسدود شده است. لطفاً مجدداً کد جدید دریافت کنید.' },
+          { status: 400 }
+        );
+      }
+
+      await prisma.otp.update({
+        where: { id: otpRecord.id },
+        data: { attempts: newAttempts },
+      });
+
+      return NextResponse.json(
+        { error: `کد تایید وارد شده نادرست است. تعداد تلاش‌های باقی‌مانده: ${5 - newAttempts}` },
         { status: 400 }
       );
     }

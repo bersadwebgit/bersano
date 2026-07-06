@@ -45,12 +45,49 @@ import {
   Zap,
   Lock
 } from 'lucide-react';
+import CollaboratorsTab from '@/components/super-admin/CollaboratorsTab';
+
+function decodeToken(token: string) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      window.atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    return null;
+  }
+}
 
 export default function SuperAdminDashboard() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'shops' | 'tickets' | 'packages' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'shops' | 'tickets' | 'packages' | 'settings' | 'collaborators'>('overview');
+  const [userSession, setUserSession] = useState<{ name: string; role: string } | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [baseDomainSuffix, setBaseDomainSuffix] = useState('.localhost:3000');
   const [baseDomainOnly, setBaseDomainOnly] = useState('localhost:3000');
+
+  useEffect(() => {
+    const token = document.cookie
+      .split('; ')
+      .find((row) => row.startsWith('super_admin_token='))
+      ?.split('=')[1];
+    if (token) {
+      const decoded = decodeToken(token);
+      if (decoded) {
+        setUserSession({ name: decoded.name || 'همکار', role: decoded.role });
+        // Set proper default active tab based on role
+        if (decoded.role === 'sales') {
+          setActiveTab('overview');
+        } else if (decoded.role === 'content_manager' || decoded.role === 'seo_manager') {
+          setActiveTab('overview');
+        }
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -181,6 +218,13 @@ export default function SuperAdminDashboard() {
   const [aiModelWholesale, setAiModelWholesale] = useState('');
   const [aiEmbeddingBaseUrl, setAiEmbeddingBaseUrl] = useState('');
   const [aiEmbeddingApiKey, setAiEmbeddingApiKey] = useState('');
+  const [platformBlogIdeaModel, setPlatformBlogIdeaModel] = useState('');
+  const [platformBlogOutlineModel, setPlatformBlogOutlineModel] = useState('');
+  const [platformBlogSectionModel, setPlatformBlogSectionModel] = useState('');
+  const [platformBlogSeoModel, setPlatformBlogSeoModel] = useState('');
+  const [platformBlogGeoModel, setPlatformBlogGeoModel] = useState('');
+  const [platformBlogRewriteModel, setPlatformBlogRewriteModel] = useState('');
+  const [platformBlogFaqModel, setPlatformBlogFaqModel] = useState('');
   const [blogAiChunkSize, setBlogAiChunkSize] = useState(800);
   const [blogAiOverlapTokens, setBlogAiOverlapTokens] = useState(200);
   const [blogAiMaxChunks, setBlogAiMaxChunks] = useState(5);
@@ -196,11 +240,32 @@ export default function SuperAdminDashboard() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState('');
   const [settingsError, setSettingsError] = useState('');
-  const [embedStats, setEmbedStats] = useState<{ totalProducts: number; embeddedProducts: number; pendingProducts: number } | null>(null);
+  const [embedStats, setEmbedStats] = useState<{
+    totalProducts: number;
+    embeddedProducts: number;
+    pendingProducts: number;
+    progress?: {
+      isProcessing: boolean;
+      totalToProcess: number;
+      processedCount: number;
+      failedCount: number;
+      startedAt: string | null;
+      lastError: string | null;
+    } | null;
+  } | null>(null);
   const [isEmbeddingLoading, setIsEmbeddingLoading] = useState(false);
   const [embeddingMessage, setEmbeddingMessage] = useState('');
   const [accountInfo, setAccountInfo] = useState<any>(null);
-  const [activeSettingsTab, setActiveSettingsTab] = useState<'api_keys' | 'central_bale' | 'central_telegram' | 'base_prompts' | 'advanced_prompts' | 'article_prompts' | 'faq_prompts' | 'change_password'>('api_keys');
+  const [activeSettingsTab, setActiveSettingsTab] = useState<'api_keys' | 'central_bale' | 'central_telegram' | 'base_prompts' | 'advanced_prompts' | 'article_prompts' | 'faq_prompts' | 'change_password' | 'security_settings'>('api_keys');
+
+  // High Security & SMS Settings State
+  const [globalSmsUsername, setGlobalSmsUsername] = useState('');
+  const [globalSmsPassword, setGlobalSmsPassword] = useState('');
+  const [globalSmsPatternCode, setGlobalSmsPatternCode] = useState('');
+  const [smsEncryptionKeyStatus, setSmsEncryptionKeyStatus] = useState<'configured' | 'warning' | ''>('');
+  const [otpHashSecretStatus, setOtpHashSecretStatus] = useState<'configured' | 'warning' | ''>('');
+  const [totalSmsLogs, setTotalSmsLogs] = useState(0);
+  const [clearingLogs, setClearingLogs] = useState(false);
 
   // Change Password State
   const [currentPassword, setCurrentPassword] = useState('');
@@ -320,6 +385,19 @@ export default function SuperAdminDashboard() {
         setAiModelWholesale(data.aiModelWholesale || '');
         setAiEmbeddingBaseUrl(data.aiEmbeddingBaseUrl || '');
         setAiEmbeddingApiKey(data.aiEmbeddingApiKey || '');
+        setPlatformBlogIdeaModel(data.platformBlogIdeaModel || '');
+        setPlatformBlogOutlineModel(data.platformBlogOutlineModel || '');
+        setPlatformBlogSectionModel(data.platformBlogSectionModel || '');
+        setPlatformBlogSeoModel(data.platformBlogSeoModel || '');
+        setPlatformBlogGeoModel(data.platformBlogGeoModel || '');
+        setPlatformBlogRewriteModel(data.platformBlogRewriteModel || '');
+        setPlatformBlogFaqModel(data.platformBlogFaqModel || '');
+        setGlobalSmsUsername(data.globalSmsUsername || '');
+        setGlobalSmsPassword(data.globalSmsPassword || '');
+        setGlobalSmsPatternCode(data.globalSmsPatternCode || '');
+        setSmsEncryptionKeyStatus(data.smsEncryptionKeyStatus || '');
+        setOtpHashSecretStatus(data.otpHashSecretStatus || '');
+        setTotalSmsLogs(data.totalSmsLogs || 0);
       }
     } catch (error) {
       console.error('Error fetching system settings:', error);
@@ -364,7 +442,17 @@ export default function SuperAdminDashboard() {
           aiModelFallback,
           aiModelWholesale,
           aiEmbeddingBaseUrl,
-          aiEmbeddingApiKey
+          aiEmbeddingApiKey,
+          platformBlogIdeaModel,
+          platformBlogOutlineModel,
+          platformBlogSectionModel,
+          platformBlogSeoModel,
+          platformBlogGeoModel,
+          platformBlogRewriteModel,
+          platformBlogFaqModel,
+          globalSmsUsername,
+          globalSmsPassword,
+          globalSmsPatternCode
         }),
       });
 
@@ -379,6 +467,36 @@ export default function SuperAdminDashboard() {
       setSettingsError('خطای سرور در برقراری ارتباط');
     } finally {
       setSavingSettings(false);
+    }
+  };
+
+  const handleClearSmsLogs = async (deleteOldOnly = false) => {
+    if (!window.confirm(deleteOldOnly ? 'آیا از حذف لاگ‌های قدیمی‌تر از ۳۰ روز اطمینان دارید؟' : 'آیا از حذف تمامی لاگ‌های سیستم پیامک اطمینان دارید؟')) {
+      return;
+    }
+    setClearingLogs(true);
+    setSettingsMessage('');
+    setSettingsError('');
+    try {
+      const res = await fetch('/api/super-admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clearSmsLogs: !deleteOldOnly,
+          deleteOldSmsLogs: deleteOldOnly,
+        }),
+      });
+      if (res.ok) {
+        setSettingsMessage(deleteOldOnly ? 'لاگ‌های قدیمی‌تر از ۳۰ روز با موفقیت حذف شدند.' : 'تمامی لاگ‌های سیستم پیامک با موفقیت حذف شدند.');
+        fetchSystemSettings();
+      } else {
+        const data = await res.json();
+        setSettingsError(data.error || 'خطا در حذف لاگ‌ها');
+      }
+    } catch (error) {
+      setSettingsError('خطای ارتباط با سرور');
+    } finally {
+      setClearingLogs(false);
     }
   };
 
@@ -597,6 +715,7 @@ export default function SuperAdminDashboard() {
           bgRemovalLimit: 0,
           staffEnabled: false,
           maxStaff: 0,
+          onlineChatEnabled: false,
           customDomainEnabled: false,
           maxDomains: 1,
         }
@@ -1018,13 +1137,30 @@ export default function SuperAdminDashboard() {
     return 'bg-white hover:bg-slate-50/50 border border-slate-100';
   };
 
-  const sidebarItems = [
-    { id: 'overview', label: 'پیشخوان', icon: LayoutDashboard },
-    { id: 'shops', label: 'فروشگاه‌ها', icon: Store, badge: shops.length },
-    { id: 'packages', label: 'پکیج‌های اشتراک', icon: Award, badge: packages.length > 0 ? packages.length : null },
-    { id: 'tickets', label: 'تیکت‌های پشتیبانی', icon: Headphones, badge: stats.openTickets > 0 ? stats.openTickets : null },
-    { id: 'settings', label: 'تنظیمات سیستم', icon: Settings },
-  ];
+  const sidebarItems = [];
+  const currentRole = userSession?.role || 'superadmin';
+
+  if (currentRole === 'superadmin') {
+    sidebarItems.push(
+      { id: 'overview', label: 'پیشخوان', icon: LayoutDashboard },
+      { id: 'shops', label: 'فروشگاه‌ها', icon: Store, badge: shops.length },
+      { id: 'packages', label: 'پکیج‌های اشتراک', icon: Award, badge: packages.length > 0 ? packages.length : null },
+      { id: 'tickets', label: 'تیکت‌های پشتیبانی', icon: Headphones, badge: stats.openTickets > 0 ? stats.openTickets : null },
+      { id: 'collaborators', label: 'همکاران پلتفرم', icon: Users },
+      { id: 'blog', label: 'وبلاگ اصلی پلتفرم', icon: FileText, isLink: true, href: '/super-admin/blog' },
+      { id: 'settings', label: 'تنظیمات سیستم', icon: Settings }
+    );
+  } else if (currentRole === 'sales') {
+    sidebarItems.push(
+      { id: 'overview', label: 'پیشخوان', icon: LayoutDashboard },
+      { id: 'tickets', label: 'تیکت‌های پشتیبانی', icon: Headphones, badge: stats.openTickets > 0 ? stats.openTickets : null }
+    );
+  } else if (currentRole === 'content_manager' || currentRole === 'seo_manager') {
+    sidebarItems.push(
+      { id: 'overview', label: 'پیشخوان', icon: LayoutDashboard },
+      { id: 'blog', label: 'وبلاگ اصلی پلتفرم', icon: FileText, isLink: true, href: '/super-admin/blog' }
+    );
+  }
 
   if (loadingShops && activeTab === 'overview') {
     return (
@@ -1097,7 +1233,11 @@ export default function SuperAdminDashboard() {
                 <button
                   key={item.id}
                   onClick={() => {
-                    setActiveTab(item.id as any);
+                    if (item.isLink && item.href) {
+                      router.push(item.href);
+                    } else {
+                      setActiveTab(item.id as any);
+                    }
                     setIsMobileSidebarOpen(false);
                   }}
                   className={`
@@ -1159,6 +1299,7 @@ export default function SuperAdminDashboard() {
               {activeTab === 'packages' && 'تعریف و طراحی پکیج‌های اشتراک'}
               {activeTab === 'tickets' && 'پشتیبانی و تیکت‌های سیستمی'}
               {activeTab === 'settings' && 'تنظیمات سیستم'}
+              {activeTab === 'collaborators' && 'همکاران پلتفرم'}
             </h2>
             <p className="text-[10px] text-gray-400 font-medium mt-0.5">
               {activeTab === 'overview' && 'خلاصه وضعیت کلی سیستم و فروشگاه‌های فعال'}
@@ -1166,6 +1307,7 @@ export default function SuperAdminDashboard() {
               {activeTab === 'packages' && 'ایجاد، ویرایش، حذف و مدیریت پکیج‌های اشتراک فروشگاهی'}
               {activeTab === 'tickets' && 'پاسخگویی به تیکت‌های ارسالی از سمت ادمین‌های فروشگاه‌ها'}
               {activeTab === 'settings' && 'مدیریت کلیدهای API و ارتباط با پلتفرم‌های جانبی'}
+              {activeTab === 'collaborators' && 'مدیریت و نظارت بر دسترسی همکاران پلتفرم'}
             </p>
           </div>
           
@@ -1589,6 +1731,7 @@ export default function SuperAdminDashboard() {
                         bgRemovalLimit: 0,
                         staffEnabled: false,
                         maxStaff: 0,
+                        onlineChatEnabled: false,
                         customDomainEnabled: false,
                         maxDomains: 1,
                       }
@@ -2033,6 +2176,11 @@ export default function SuperAdminDashboard() {
             </div>
           )}
 
+          {/* ==================== 6. COLLABORATORS TAB ==================== */}
+          {activeTab === 'collaborators' && (
+            <CollaboratorsTab />
+          )}
+
           {/* ==================== 5. SETTINGS TAB ==================== */}
           {activeTab === 'settings' && (
             <div className="space-y-6">
@@ -2053,6 +2201,7 @@ export default function SuperAdminDashboard() {
                       { id: 'advanced_prompts', label: 'پرامپت‌های پیشرفته سئو', icon: Sparkles },
                       { id: 'article_prompts', label: 'پرامپت مقاله سئو', icon: Edit3 },
                       { id: 'faq_prompts', label: 'پرامپت سوالات متداول', icon: HelpCircle },
+                      { id: 'security_settings', label: 'تنظیمات امنیت بالا', icon: Shield },
                       { id: 'change_password', label: 'تغییر رمز عبور', icon: Lock },
                     ].map((subTab) => {
                       const Icon = subTab.icon;
@@ -2414,6 +2563,122 @@ export default function SuperAdminDashboard() {
                               />
                               <p className="text-[10px] text-gray-500 font-bold leading-relaxed">
                                 کلید اختصاصی برای احراز هویت در سرویس embedding.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="border-t border-gray-100 my-4 pt-4"></div>
+
+                        <div className="space-y-4">
+                          <h4 className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+                            مدل‌های هوش مصنوعی وبلاگ اصلی پلتفرم
+                          </h4>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="block text-xs font-bold text-gray-700 mb-1">مدل ایده مقاله (Idea Model)</label>
+                              <input
+                                type="text"
+                                value={platformBlogIdeaModel}
+                                onChange={(e) => setPlatformBlogIdeaModel(e.target.value)}
+                                placeholder="google/gemini-2.5-flash"
+                                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none text-xs font-mono text-gray-800 transition-all text-left"
+                                dir="ltr"
+                              />
+                              <p className="text-[10px] text-gray-500 font-bold leading-relaxed">
+                                برای بررسی موضوعات ترند، خوشه‌های محتوایی و ایده‌پردازی مقالات جدید.
+                              </p>
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="block text-xs font-bold text-gray-700 mb-1">مدل ساختار و سرفصل‌ها (Outline Model)</label>
+                              <input
+                                type="text"
+                                value={platformBlogOutlineModel}
+                                onChange={(e) => setPlatformBlogOutlineModel(e.target.value)}
+                                placeholder="google/gemini-2.5-flash"
+                                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none text-xs font-mono text-gray-800 transition-all text-left"
+                                dir="ltr"
+                              />
+                              <p className="text-[10px] text-gray-500 font-bold leading-relaxed">
+                                جهت طراحی ساختار درختی و هدرهای سمانتیک (H2/H3/H4) متوازن.
+                              </p>
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="block text-xs font-bold text-gray-700 mb-1">مدل نگارش بخش‌ها (Section Model)</label>
+                              <input
+                                type="text"
+                                value={platformBlogSectionModel}
+                                onChange={(e) => setPlatformBlogSectionModel(e.target.value)}
+                                placeholder="anthropic/claude-sonnet-4.6"
+                                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none text-xs font-mono text-gray-800 transition-all text-left"
+                                dir="ltr"
+                              />
+                              <p className="text-[10px] text-gray-500 font-bold leading-relaxed">
+                                مدل قدرتمند جهت نگارش متن کامل هر بخش به زبان فارسی سلیس و غنی.
+                              </p>
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="block text-xs font-bold text-gray-700 mb-1">مدل بهینه‌سازی سئو (SEO Model)</label>
+                              <input
+                                type="text"
+                                value={platformBlogSeoModel}
+                                onChange={(e) => setPlatformBlogSeoModel(e.target.value)}
+                                placeholder="google/gemini-2.5-flash"
+                                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none text-xs font-mono text-gray-800 transition-all text-left"
+                                dir="ltr"
+                              />
+                              <p className="text-[10px] text-gray-500 font-bold leading-relaxed">
+                                برای بهینه‌سازی بریف سئو، توزیع کلیدواژه‌ها، تولید متا و ساخت تگ‌های OG/Twitter.
+                              </p>
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="block text-xs font-bold text-gray-700 mb-1">مدل بهینه‌سازی GEO (GEO Model)</label>
+                              <input
+                                type="text"
+                                value={platformBlogGeoModel}
+                                onChange={(e) => setPlatformBlogGeoModel(e.target.value)}
+                                placeholder="anthropic/claude-sonnet-4.6"
+                                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none text-xs font-mono text-gray-800 transition-all text-left"
+                                dir="ltr"
+                              />
+                              <p className="text-[10px] text-gray-500 font-bold leading-relaxed">
+                                بهینه‌سازی موتورهای پاسخ تولیدی هوش مصنوعی: نکات کلیدی، خلاصه‌های مستقیم و تطابق هویت سمانتیک.
+                              </p>
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="block text-xs font-bold text-gray-700 mb-1">مدل بازنویسی و بهبود متن (Rewrite Model)</label>
+                              <input
+                                type="text"
+                                value={platformBlogRewriteModel}
+                                onChange={(e) => setPlatformBlogRewriteModel(e.target.value)}
+                                placeholder="google/gemini-2.5-flash"
+                                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none text-xs font-mono text-gray-800 transition-all text-left"
+                                dir="ltr"
+                              />
+                              <p className="text-[10px] text-gray-500 font-bold leading-relaxed">
+                                برای افزایش خوانایی، بازنویسی صریح، رفع ابهامات و افزایش لحن رسمی یا عامیانه مقاله.
+                              </p>
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="block text-xs font-bold text-gray-700 mb-1">مدل پرسش و پاسخ (FAQ Model)</label>
+                              <input
+                                type="text"
+                                value={platformBlogFaqModel}
+                                onChange={(e) => setPlatformBlogFaqModel(e.target.value)}
+                                placeholder="google/gemini-2.5-flash"
+                                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none text-xs font-mono text-gray-800 transition-all text-left"
+                                dir="ltr"
+                              />
+                              <p className="text-[10px] text-gray-500 font-bold leading-relaxed">
+                                طراحی اتوماتیک سوالات متداول به همراه اسکیما استاندارد JSON-LD برای موتورهای جستجو.
                               </p>
                             </div>
                           </div>
@@ -2872,6 +3137,143 @@ export default function SuperAdminDashboard() {
                             className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500/10 focus:border-purple-500 outline-none text-[11px] font-medium text-gray-800 leading-relaxed transition-all"
                             dir="rtl"
                           />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* SUB TAB 6: SECURITY SETTINGS */}
+                  {activeSettingsTab === 'security_settings' && (
+                    <div className="space-y-6 animate-fadeIn">
+                      <div>
+                        <h4 className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                          <Shield className="w-4 h-4 text-emerald-600" />
+                          تنظیمات امنیت بالا و سامانه پیامک پلتفرم
+                        </h4>
+                        <p className="text-[10px] text-gray-500 font-bold leading-relaxed mt-1">
+                          مدیریت متمرکز وضعیت رمزنگاری‌ها، کلیدهای مخفی سرور، اعتبارنامه سامانه پیامک سراسری و پاک‌سازی لاگ‌ها.
+                        </p>
+                      </div>
+
+                      {/* Security Status Cards */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Encryption Key Status */}
+                        <div className="p-4 border border-gray-100 rounded-2xl bg-gray-50/50 space-y-2 text-right">
+                          <span className="text-[10px] font-bold text-gray-400">کلید رمزنگاری پیامک (SMS_ENCRYPTION_KEY)</span>
+                          {smsEncryptionKeyStatus === 'configured' ? (
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600">
+                              <CheckCircle className="w-4 h-4 text-emerald-500" />
+                              <span>کلید اختصاصی فعال و ایمن</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-red-600">
+                              <AlertCircle className="w-4 h-4 text-red-500 animate-pulse" />
+                              <span>استفاده از کلید پیش‌فرض پلتفرم! (ناامن)</span>
+                            </div>
+                          )}
+                          <p className="text-[9px] text-gray-400 font-bold leading-relaxed">
+                            این کلید متغیر محیطی سرور است که برای ذخیره‌سازی رمزنگاری‌شده اطلاعات پنل‌های پیامکی فروشگاه‌ها استفاده می‌شود.
+                          </p>
+                        </div>
+
+                        {/* OTP Hash Pepper Status */}
+                        <div className="p-4 border border-gray-100 rounded-2xl bg-gray-50/50 space-y-2 text-right">
+                          <span className="text-[10px] font-bold text-gray-400">رمزگذاری کدهای تایید (OTP_HASH_SECRET)</span>
+                          {otpHashSecretStatus === 'configured' ? (
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600">
+                              <CheckCircle className="w-4 h-4 text-emerald-500" />
+                              <span>رمزگذاری قوی HMAC-SHA256 فعال است</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-600">
+                              <AlertCircle className="w-4 h-4 text-amber-500" />
+                              <span>بدون کلید نمک اختصاصی (امنیت متوسط)</span>
+                            </div>
+                          )}
+                          <p className="text-[9px] text-gray-400 font-bold leading-relaxed">
+                            این متغیر برای درهم‌سازی کدهای OTP استفاده شده تا از حملات آفلاین روی دیتابیس کاملاً جلوگیری شود.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Global Melipayamak Panel Form */}
+                      <div className="border border-gray-100 bg-gray-50/20 rounded-2xl p-5 space-y-4 text-right">
+                        <h5 className="text-[11px] font-bold text-gray-700 pb-2 border-b border-gray-100">پیکربندی پیامک سراسری پلتفرم (Melipayamak)</h5>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <label className="block text-[10px] font-bold text-gray-600">نام کاربری ملی پیامک پلتفرم:</label>
+                            <input
+                              type="text"
+                              value={globalSmsUsername}
+                              onChange={(e) => setGlobalSmsUsername(e.target.value)}
+                              placeholder="نام کاربری سامانه"
+                              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none text-xs font-medium text-gray-800 transition-all text-left"
+                              dir="ltr"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="block text-[10px] font-bold text-gray-600">رمز عبور ملی پیامک پلتفرم:</label>
+                            <input
+                              type="password"
+                              value={globalSmsPassword}
+                              onChange={(e) => setGlobalSmsPassword(e.target.value)}
+                              placeholder="password"
+                              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none text-xs font-medium text-gray-800 transition-all text-left"
+                              dir="ltr"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="block text-[10px] font-bold text-gray-600">کد وب‌سرویس اشتراکی (Pattern Code):</label>
+                          <input
+                            type="text"
+                            value={globalSmsPatternCode}
+                            onChange={(e) => setGlobalSmsPatternCode(e.target.value)}
+                            placeholder="مثال: 123456"
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none text-xs font-medium text-gray-800 transition-all text-left"
+                            dir="ltr"
+                          />
+                          <p className="text-[9px] text-gray-400 font-bold leading-relaxed pt-1">
+                            این سامانه پیامکی سراسری برای خدمات پلتفرم (مانند ورود کاربران به پنل ادمین، ثبت‌نام فروشگاه جدید، تغییر کلمه عبور) و همچنین به‌عنوان پشتیبان پیش‌فرض برای کل فروشگاه‌های تابعه استفاده می‌شود.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* SMS Logs management */}
+                      <div className="border border-gray-100 bg-gray-50/20 rounded-2xl p-5 space-y-4 text-right">
+                        <h5 className="text-[11px] font-bold text-gray-700 pb-2 border-b border-gray-100">مدیریت لاگ‌های پیامکی پلتفرم</h5>
+                        
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <div>
+                            <span className="text-[10px] font-bold text-gray-400">تعداد کل لاگ‌های پیامکی ثبت شده:</span>
+                            <div className="text-lg font-extrabold text-blue-600 mt-1 flex items-center gap-1.5">
+                              <span>{totalSmsLogs.toLocaleString('fa-IR')}</span>
+                              <span className="text-[10px] text-gray-400 font-bold">لاگ</span>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              disabled={clearingLogs || totalSmsLogs === 0}
+                              onClick={() => handleClearSmsLogs(true)}
+                              className="px-3.5 py-2 border border-gray-200 hover:border-amber-200 hover:bg-amber-50 text-amber-700 rounded-xl text-[10px] font-bold transition-all cursor-pointer disabled:opacity-40"
+                            >
+                              پاک‌سازی لاگ‌های بیش از ۳۰ روز
+                            </button>
+                            <button
+                              type="button"
+                              disabled={clearingLogs || totalSmsLogs === 0}
+                              onClick={() => handleClearSmsLogs(false)}
+                              className="px-3.5 py-2 border border-red-100 hover:bg-red-50 text-red-600 rounded-xl text-[10px] font-bold transition-all cursor-pointer disabled:opacity-40 flex items-center gap-1"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                              حذف کامل لاگ‌های پیامک پلتفرم
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>

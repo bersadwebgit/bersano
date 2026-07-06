@@ -11,6 +11,61 @@ import { cache } from 'react';
 import { headers } from 'next/headers';
 import { verifyAuth } from '@/lib/auth';
 import { injectContextualLinks, generateBreadcrumbSchema, generateDiscussionSchema } from '@/lib/seo-geo';
+import Link from 'next/link';
+
+// Cached function to fetch platform-level blog post data
+const getPlatformBlogPostData = cache(async (slug: string) => {
+  let decodedSlug = slug;
+  try {
+    decodedSlug = decodeURIComponent(slug);
+  } catch (e) {
+    console.error('Failed to decode blog slug:', e);
+  }
+
+  const post = await prisma.platformBlogPost.findUnique({
+    where: {
+      slug: decodedSlug.trim().toLowerCase()
+    },
+    include: {
+      category: true,
+      tags: {
+        include: { tag: true }
+      }
+    }
+  });
+
+  if (!post) {
+    return null;
+  }
+
+  // Related posts (same category, up to 3)
+  let relatedPosts: any[] = [];
+  if (post.categoryId) {
+    relatedPosts = await prisma.platformBlogPost.findMany({
+      where: {
+        categoryId: post.categoryId,
+        status: 'published',
+        NOT: { id: post.id }
+      },
+      orderBy: { publishedAt: 'desc' },
+      take: 3,
+      include: {
+        category: true
+      }
+    });
+  }
+
+  return {
+    post,
+    comments: [], // platform posts don't have dynamic comments yet
+    relatedPosts,
+    relatedProducts: [],
+    navigation: {
+      prevPost: null,
+      nextPost: null
+    }
+  };
+});
 
 // Cached function to fetch blog post data to avoid duplicate queries
 const getBlogPostData = cache(async (slug: string, shopId: string, isAdmin: boolean = false) => {
@@ -224,11 +279,46 @@ const getBlogPostData = cache(async (slug: string, shopId: string, isAdmin: bool
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const shop = await getTenantShop();
+  const { slug } = await params;
+
   if (!shop) {
-    return { title: 'مطلب یافت نشد' };
+    const data = await getPlatformBlogPostData(slug);
+    if (!data || !data.post) {
+      return { title: 'مطلب پیدا نشد' };
+    }
+    const post = data.post;
+    const pageTitle = `${post.metaTitle || post.title} | وبلاگ رسمی برسانا`;
+    const pageDesc = post.metaDescription || post.excerpt || 'مشاهده مقاله در وبلاگ رسمی پلتفرم برسانا';
+    const pageImage = post.coverImage || '';
+
+    const headersList = await headers();
+    const host = headersList.get('host') || 'localhost:3000';
+    const protocol = host.includes('localhost') ? 'http' : 'https';
+    const canonicalUrl = `${protocol}://${host}/blog/${post.slug}`;
+
+    return {
+      title: pageTitle,
+      description: pageDesc,
+      alternates: {
+        canonical: canonicalUrl,
+      },
+      openGraph: {
+        title: pageTitle,
+        description: pageDesc,
+        url: canonicalUrl,
+        siteName: 'برسانا',
+        images: pageImage ? [{ url: pageImage, alt: post.title }] : [],
+        type: 'article',
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: pageTitle,
+        description: pageDesc,
+        images: pageImage ? [pageImage] : [],
+      }
+    };
   }
 
-  const { slug } = await params;
   const headersList = await headers();
   const mockReq = new Request(`http://${headersList.get('host') || 'localhost'}`, {
     headers: headersList
@@ -287,7 +377,161 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   const shop = await getTenantShop();
   
   if (!shop) {
-    return notFound();
+    const { slug } = await params;
+    const postData = await getPlatformBlogPostData(slug);
+    if (!postData || !postData.post) {
+      return notFound();
+    }
+
+    const { post } = postData;
+    const headersList = await headers();
+    const host = headersList.get('host') || 'localhost:3000';
+    const protocol = host.includes('localhost') ? 'http' : 'https';
+    const canonicalUrl = `${protocol}://${host}/blog/${post.slug}`;
+
+    const jsonLdSchema = {
+      '@context': 'https://schema.org',
+      '@type': 'BlogPosting',
+      '@id': `${canonicalUrl}#article`,
+      'mainEntityOfPage': {
+        '@type': 'WebPage',
+        '@id': canonicalUrl,
+      },
+      'headline': post.title,
+      'description': post.metaDescription || post.excerpt || post.title,
+      'image': post.coverImage ? [post.coverImage] : [],
+      'datePublished': post.publishedAt ? post.publishedAt.toISOString() : post.createdAt.toISOString(),
+      'dateModified': post.updatedAt.toISOString(),
+      'author': {
+        '@type': 'Person',
+        'name': post.author || 'سوپر ادمین',
+      },
+      'publisher': {
+        '@type': 'Organization',
+        'name': 'برسانا',
+      },
+    };
+
+    const breadcrumbItems = [
+      { name: 'خانه', url: '/' },
+      { name: 'وبلاگ', url: '/blog' },
+      ...(post.category ? [{ name: post.category.name, url: `/blog?category=${post.category.slug}` }] : []),
+      { name: post.title, url: `/blog/${post.slug}` }
+    ];
+    const breadcrumbSchema = generateBreadcrumbSchema(host, breadcrumbItems);
+
+    // Format for BlogPostClient
+    const formattedPost = {
+      id: post.id,
+      title: post.title,
+      slug: post.slug,
+      content: post.content,
+      summary: post.excerpt,
+      featuredImage: post.coverImage,
+      publishedAt: post.publishedAt || post.createdAt,
+      updatedAt: post.updatedAt,
+      authorName: post.author || 'سوپر ادمین',
+      author: null,
+      category: post.category ? { id: post.category.id, name: post.category.name, slug: post.category.slug } : null,
+      tags: JSON.stringify(post.tags.map((t: any) => t.tag.name)),
+      seoTitle: post.metaTitle,
+      seoDescription: post.metaDescription,
+      ogImage: post.ogImage,
+      allowComments: false,
+      faqs: post.faqSection || '[]',
+      // GEO fields
+      geoSummary: post.geoSummary,
+      keyTakeaways: post.keyTakeaways,
+      entityList: post.entityList,
+      topicClusters: post.topicClusters,
+      schemaType: post.schemaType,
+      structuredData: post.structuredData,
+      internalLinks: post.internalLinks,
+      externalReferences: post.externalReferences,
+      noindex: post.noindex,
+      nofollow: post.nofollow,
+    };
+
+    const formattedRelatedPosts = postData.relatedPosts.map(rp => ({
+      id: rp.id,
+      title: rp.title,
+      slug: rp.slug,
+      summary: rp.excerpt,
+      featuredImage: rp.coverImage,
+      publishedAt: rp.publishedAt || rp.createdAt,
+      authorName: rp.author || 'سوپر ادمین',
+      category: rp.category ? { id: rp.category.id, name: rp.category.name, slug: rp.category.slug } : null,
+    }));
+
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-black font-sans pb-20 lg:pb-0" dir="rtl">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdSchema) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        />
+
+        {/* Central Website Header */}
+        <div className="bg-white border-b border-slate-100 shadow-3xs">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-2">
+              <span className="font-black text-lg text-slate-900">برسانا</span>
+              <span className="bg-slate-900 text-white text-[9px] px-2 py-0.5 rounded-full font-bold">فروشگاه‌ساز</span>
+            </Link>
+            <div className="flex items-center gap-6 text-xs font-bold text-slate-600">
+              <Link href="/" className="hover:text-slate-900">صفحه اصلی</Link>
+              <Link href="/blog" className="text-slate-900 font-extrabold border-b-2 border-slate-900 pb-1">وبلاگ</Link>
+              <Link href="/super-admin" className="bg-slate-900 text-white px-3.5 py-1.5 rounded-xl hover:bg-slate-800 transition-all">ورود همکاران</Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Blog Post Content */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <BlogPostClient
+            slug={post.slug}
+            initialData={{
+              post: formattedPost as any,
+              comments: [],
+              relatedPosts: formattedRelatedPosts as any,
+              relatedProducts: [],
+              navigation: { prevPost: null, nextPost: null }
+            }}
+          />
+        </main>
+
+        {/* Central Website Footer */}
+        <footer className="bg-slate-950 text-slate-400 py-12 mt-20 border-t border-slate-900">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="space-y-4">
+              <h4 className="text-white font-black text-sm">پلتفرم فروشگاه‌ساز برسانا</h4>
+              <p className="text-xs leading-relaxed max-w-sm">
+                برسانا کامل‌ترین پلتفرم چندمستأجری برای ساخت و مدیریت فروشگاه‌های اینترنتی با هوش مصنوعی و سئو پیشرفته در ایران است.
+              </p>
+            </div>
+            <div className="space-y-4">
+              <h4 className="text-white font-black text-sm">لینک‌های مفید</h4>
+              <ul className="space-y-2 text-xs">
+                <li><Link href="/" className="hover:text-white">صفحه اصلی</Link></li>
+                <li><Link href="/blog" className="hover:text-white">وبلاگ پلتفرم</Link></li>
+              </ul>
+            </div>
+            <div className="space-y-4">
+              <h4 className="text-white font-black text-sm">پشتیبانی پلتفرم</h4>
+              <p className="text-xs leading-relaxed">
+                در صورت بروز هرگونه مشکل سیستمی یا سوال در مورد اشتراک‌ها، می‌توانید با واحد پشتیبانی سوپر ادمین برسانا در ارتباط باشید.
+              </p>
+            </div>
+          </div>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-900 mt-10 pt-6 text-center text-xs">
+            کلیه حقوق این سایت متعلق به پلتفرم فروشگاه‌ساز برسانا می‌باشد. © ۲۰۲۶
+          </div>
+        </footer>
+      </div>
+    );
   }
 
   const { slug } = await params;

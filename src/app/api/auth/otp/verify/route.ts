@@ -4,6 +4,7 @@ import { getTenantShop } from '@/lib/tenant';
 import bcrypt from 'bcryptjs';
 import { SignJWT } from 'jose';
 import { ADMIN_ROLES, isAdminRole } from '@/lib/admin-roles';
+import { hashOtp } from '@/lib/sms';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-change-in-production';
 const key = new TextEncoder().encode(JWT_SECRET);
@@ -44,7 +45,6 @@ export async function POST(request: Request) {
       where: {
         phone: normalizedPhone,
         shopId: shop.shopId,
-        code: code.trim(),
         expiresAt: {
           gt: now, // Must not be expired
         },
@@ -54,6 +54,47 @@ export async function POST(request: Request) {
     if (!otpRecord) {
       return NextResponse.json(
         { error: 'کد تایید وارد شده اشتباه یا منقضی شده است' },
+        { status: 400 }
+      );
+    }
+
+    if (otpRecord.attempts >= 5) {
+      await prisma.otp.deleteMany({
+        where: {
+          phone: normalizedPhone,
+          shopId: shop.shopId,
+        },
+      });
+      return NextResponse.json(
+        { error: 'این کد تایید به دلیل تلاش‌های ناموفق مکرر مسدود شده است. لطفاً مجدداً کد جدید دریافت کنید.' },
+        { status: 400 }
+      );
+    }
+
+    const isMatch = otpRecord.code === hashOtp(code);
+
+    if (!isMatch) {
+      const newAttempts = otpRecord.attempts + 1;
+      if (newAttempts >= 5) {
+        await prisma.otp.deleteMany({
+          where: {
+            phone: normalizedPhone,
+            shopId: shop.shopId,
+          },
+        });
+        return NextResponse.json(
+          { error: 'این کد تایید به دلیل تلاش‌های ناموفق مکرر مسدود شده است. لطفاً مجدداً کد جدید دریافت کنید.' },
+          { status: 400 }
+        );
+      }
+
+      await prisma.otp.update({
+        where: { id: otpRecord.id },
+        data: { attempts: newAttempts },
+      });
+
+      return NextResponse.json(
+        { error: `کد تایید وارد شده نادرست است. تعداد تلاش‌های باقی‌مانده: ${5 - newAttempts}` },
         { status: 400 }
       );
     }
