@@ -493,7 +493,7 @@ export async function saveQuickSeedData(
         mediaUrl: storyImg,
         mediaType: 'image',
         text: storyText,
-        linkUrl: `/products/${createdProd.id}`,
+        linkUrl: `/product/${createdProd.id}`,
         linkText: 'مشاهده و خرید محصول',
         category: 'داستان ما',
         duration: 6,
@@ -512,7 +512,7 @@ export async function saveQuickSeedData(
         imageUrl: sliderImg,
         title: sliderTitle,
         subtitle: sliderSubtitle,
-        linkUrl: `/products/${createdProd.id}`,
+        linkUrl: `/product/${createdProd.id}`,
         linkText: 'خرید محصول ویژه',
         isDemo: true
       }
