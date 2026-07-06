@@ -64,7 +64,7 @@ export async function generateBusinessBlueprint(
     shopName,
     description = '',
     businessField = 'general',
-    productType = 'physical',
+    productType = 'digital',
     shortDescription = '',
     targetAudience = '',
     brandTone = '',

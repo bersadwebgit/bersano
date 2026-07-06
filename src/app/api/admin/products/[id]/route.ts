@@ -250,6 +250,28 @@ export async function PUT(
 
     // Handle variants update
     if (data.variants) {
+      // Enforce single default variant logic on incoming variants
+      const hasDefault = data.variants.some((v: any) => !!v.isDefault);
+      if (!hasDefault) {
+        const firstInStockIdx = data.variants.findIndex((v: any) => Math.round(parseNumber(v.stock, 0)) > 0);
+        const targetIdx = firstInStockIdx > -1 ? firstInStockIdx : 0;
+        data.variants = data.variants.map((v: any, idx: number) => ({
+          ...v,
+          isDefault: idx === targetIdx,
+        }));
+      } else {
+        let foundDefault = false;
+        data.variants = data.variants.map((v: any) => {
+          if (v.isDefault) {
+            if (foundDefault) {
+              return { ...v, isDefault: false };
+            }
+            foundDefault = true;
+          }
+          return v;
+        });
+      }
+
       // Get existing variants
       const existingVariants = await prisma.productVariant.findMany({
         where: { productId: id, shopId: payload.shopId }
@@ -280,7 +302,9 @@ export async function PUT(
               imageUrl: variant.imageUrl || null,
               price: parseNumber(variant.price, 0),
               stock: Math.round(parseNumber(variant.stock, 0)),
-              isDefault: !!variant.isDefault
+              isDefault: !!variant.isDefault,
+              sku: variant.sku || null,
+              optionsJson: variant.optionsJson || null,
             }
           });
         } else {
@@ -293,11 +317,26 @@ export async function PUT(
               imageUrl: variant.imageUrl || null,
               price: parseNumber(variant.price, 0),
               stock: Math.round(parseNumber(variant.stock, 0)),
-              isDefault: !!variant.isDefault
+              isDefault: !!variant.isDefault,
+              sku: variant.sku || null,
+              optionsJson: variant.optionsJson || null,
             }
           });
         }
       }
+    }
+
+    // Calculate product stock based on variants if they exist
+    let finalStock = data.stock !== undefined ? Math.round(parseNumber(data.stock, 0)) : existingProduct.stock;
+    if (data.type !== 'digital') {
+      const activeVariants = await prisma.productVariant.findMany({
+        where: { productId: id, shopId: payload.shopId }
+      });
+      if (activeVariants.length > 0) {
+        finalStock = activeVariants.reduce((sum, v) => sum + v.stock, 0);
+      }
+    } else {
+      finalStock = 999999;
     }
 
     // If no image is provided or it is explicitly set to null/empty, generate a minimal SVG placeholder
@@ -330,7 +369,7 @@ export async function PUT(
         discountMinQty: data.discountMinQty !== undefined ? (data.discountMinQty ? Math.round(parseNumber(data.discountMinQty, 0)) : 0) : existingProduct.discountMinQty,
         imageUrl: finalImageUrl,
         galleryUrls: data.galleryUrls !== undefined ? data.galleryUrls : existingProduct.galleryUrls,
-        stock: data.stock !== undefined ? Math.round(parseNumber(data.stock, 0)) : existingProduct.stock,
+        stock: finalStock,
         fullDescription: data.fullDescription !== undefined ? data.fullDescription : existingProduct.fullDescription,
         seoTitle: data.seoTitle !== undefined ? data.seoTitle : (existingProduct as any).seoTitle,
         seoDescription: data.seoDescription !== undefined ? data.seoDescription : (existingProduct as any).seoDescription,

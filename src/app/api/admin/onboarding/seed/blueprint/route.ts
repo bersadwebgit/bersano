@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       shopName: body.shopName || 'فروشگاه من',
       description: body.shortDescription || '',
       businessField: body.businessField || 'general',
-      productType: body.productType || 'physical',
+      productType: body.productType || 'digital',
       shortDescription: body.shortDescription || '',
       targetAudience: body.targetAudience || '',
       brandTone: body.brandTone || '',

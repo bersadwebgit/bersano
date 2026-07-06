@@ -55,7 +55,7 @@ export default function ProductPurchaseSection({ product, selectedVariantId }: P
   const finalPrice = product.discount 
     ? currentPrice - product.discount 
     : currentPrice;
-  const currentStock = selectedVariant ? selectedVariant.stock : product.stock;
+  const currentStock = selectedVariant ? selectedVariant.stock : (hasVariants ? 0 : product.stock);
   const discountPercent = product.discount && currentPrice > 0
     ? Math.round((product.discount / currentPrice) * 100)
     : 0;

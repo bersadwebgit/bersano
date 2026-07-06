@@ -599,6 +599,12 @@ export async function POST(request: Request) {
             if (updatedRows === 0) {
               throw new CheckoutError(`موجودی برای تنوع محصول "${itemTitle}" کافی نیست`, 400);
             }
+            // Decrement parent product stock by same quantity to keep in sync
+            await tx.$executeRaw`
+              UPDATE "Product"
+              SET stock = stock - ${item.quantity}
+              WHERE id = ${item.productId} AND "shop_id" = ${user.shopId}
+            `;
           } else {
             const updatedRows = await tx.$executeRaw`
               UPDATE "Product"

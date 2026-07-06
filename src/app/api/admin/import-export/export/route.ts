@@ -189,7 +189,9 @@ export async function GET(req: NextRequest) {
             colorCode: v.colorCode,
             imageUrl: v.imageUrl,
             price: v.price,
-            stock: v.stock
+            stock: v.stock,
+            sku: v.sku,
+            optionsJson: v.optionsJson
           })) : []
         ];
 

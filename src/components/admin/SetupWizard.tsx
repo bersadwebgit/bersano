@@ -54,7 +54,7 @@ export default function SetupWizard({
   const [contactPhone, setContactPhone] = useState(initialPhone || '');
   const [contactEmail, setContactEmail] = useState(initialEmail || '');
   const [address, setAddress] = useState('');
-  const [productType, setProductType] = useState('physical');
+  const [productType, setProductType] = useState('digital');
   const [shortDescription, setShortDescription] = useState('');
   const [targetAudience, setTargetAudience] = useState('');
   const [activityLocation, setActivityLocation] = useState('');

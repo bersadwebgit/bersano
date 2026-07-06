@@ -43,7 +43,11 @@ import {
   Trash2,
   Eye,
   Zap,
-  Lock
+  Lock,
+  Smartphone,
+  ShieldCheck,
+  Globe,
+  HeartHandshake
 } from 'lucide-react';
 import CollaboratorsTab from '@/components/super-admin/CollaboratorsTab';
 
@@ -256,7 +260,19 @@ export default function SuperAdminDashboard() {
   const [isEmbeddingLoading, setIsEmbeddingLoading] = useState(false);
   const [embeddingMessage, setEmbeddingMessage] = useState('');
   const [accountInfo, setAccountInfo] = useState<any>(null);
-  const [activeSettingsTab, setActiveSettingsTab] = useState<'api_keys' | 'central_bale' | 'central_telegram' | 'base_prompts' | 'advanced_prompts' | 'article_prompts' | 'faq_prompts' | 'change_password' | 'security_settings'>('api_keys');
+  const [activeSettingsTab, setActiveSettingsTab] = useState<'api_keys' | 'central_bale' | 'central_telegram' | 'base_prompts' | 'advanced_prompts' | 'article_prompts' | 'faq_prompts' | 'change_password' | 'security_settings' | 'saas_features'>('api_keys');
+  const [saasFeatures, setSaasFeatures] = useState<Array<{ id: string; title: string; desc: string; icon: string; color: string }>>([]);
+  const [saasMetaTitle, setSaasMetaTitle] = useState('');
+  const [saasMetaDesc, setSaasMetaDesc] = useState('');
+  const [saasHeroTitle, setSaasHeroTitle] = useState('');
+  const [saasHeroSubtitle, setSaasHeroSubtitle] = useState('');
+  const [saasPrimaryCta, setSaasPrimaryCta] = useState('');
+  const [saasSecondaryCta, setSaasSecondaryCta] = useState('');
+  const [saasFaqs, setSaasFaqs] = useState<Array<{ q: string; a: string }>>([]);
+  const [saasDemos, setSaasDemos] = useState<Array<{ id: string; title: string; type: string; desc: string; features: string[]; aiCapabilities: string[]; image: string; ctaLink: string }>>([]);
+  const [saasPricing, setSaasPricing] = useState<Array<{ id: string; name: string; desc: string; price: string; period: string; features: string[]; badge?: string; ctaText: string; ctaLink: string }>>([]);
+  const [saasComparisons, setSaasComparisons] = useState<Array<{ feature: string; instagram: string; standard: string; bersana: string; isAi?: boolean }>>([]);
+  const [saasPrompts, setSaasPrompts] = useState<Array<{ id: string; prompt: string; outputType: string; outputPreview: string }>>([]);
 
   // High Security & SMS Settings State
   const [globalSmsUsername, setGlobalSmsUsername] = useState('');
@@ -398,6 +414,46 @@ export default function SuperAdminDashboard() {
         setSmsEncryptionKeyStatus(data.smsEncryptionKeyStatus || '');
         setOtpHashSecretStatus(data.otpHashSecretStatus || '');
         setTotalSmsLogs(data.totalSmsLogs || 0);
+
+        if (data.saasFeatures) {
+          try {
+            setSaasFeatures(JSON.parse(data.saasFeatures));
+          } catch (e) {
+            console.error('Error parsing saasFeatures:', e);
+          }
+        } else {
+          setSaasFeatures([
+            { id: '1', title: 'سرعت لود زیر ۵۰۰ میلی‌ثانیه', desc: 'با استفاده از تکنولوژی پیشرفته Next.js و کشینگ تهاجمی، صفحات فروشگاه شما در کسری از ثانیه لود می‌شوند تا مشتریان را از دست ندهید.', icon: 'Zap', color: 'blue' },
+            { id: '2', title: 'طراحی اول-موبایل (Mobile-First)', desc: 'بیش از ۸۰٪ خریدهای اینترنتی با موبایل انجام می‌شود. قالب‌های ما ۱۰۰٪ برای موبایل بهینه‌سازی شده‌اند و تجربه‌ای شبیه به اپلیکیشن ارائه می‌دهند.', icon: 'Smartphone', color: 'indigo' },
+            { id: '3', title: 'امنیت و پایداری تضمین‌شده', desc: 'فروشگاه شما روی سرورهای ابری امن میزبانی می‌شود و اطلاعات شما و مشتریانتان با بالاترین استانداردهای امنیتی محافظت می‌گردد.', icon: 'ShieldCheck', color: 'emerald' },
+            { id: '4', title: 'اتصال دامنه اختصاصی', desc: 'می‌توانید دامنه شخصی خود (مانند yourdomain.com) را به راحتی متصل کنید تا برند شما کاملاً مستقل و حرفه‌ای دیده شود.', icon: 'Globe', color: 'amber' },
+            { id: '5', title: 'راه‌اندازی فوق‌العاده سریع', desc: 'هیچ نیازی به نصب، پیکربندی یا خرید هاست ندارید. همه‌چیز به صورت ابری و خودکار در چند ثانیه تحویل شما می‌شود.', icon: 'Clock', color: 'rose' },
+            { id: '6', title: 'پشتیبانی و تیکت مشتریان', desc: 'سیستم تیکتینگ داخلی به مشتریان شما اجازه می‌دهد تا به راحتی با شما در ارتباط باشند و مشکلات خود را پیگیری کنند.', icon: 'HeartHandshake', color: 'purple' }
+          ]);
+        }
+
+        setSaasMetaTitle(data.saasMetaTitle || '');
+        setSaasMetaDesc(data.saasMetaDesc || '');
+        setSaasHeroTitle(data.saasHeroTitle || '');
+        setSaasHeroSubtitle(data.saasHeroSubtitle || '');
+        setSaasPrimaryCta(data.saasPrimaryCta || '');
+        setSaasSecondaryCta(data.saasSecondaryCta || '');
+
+        if (data.saasFaqs) {
+          try { setSaasFaqs(JSON.parse(data.saasFaqs)); } catch (e) { console.error(e); }
+        }
+        if (data.saasDemos) {
+          try { setSaasDemos(JSON.parse(data.saasDemos)); } catch (e) { console.error(e); }
+        }
+        if (data.saasPricing) {
+          try { setSaasPricing(JSON.parse(data.saasPricing)); } catch (e) { console.error(e); }
+        }
+        if (data.saasComparisons) {
+          try { setSaasComparisons(JSON.parse(data.saasComparisons)); } catch (e) { console.error(e); }
+        }
+        if (data.saasPrompts) {
+          try { setSaasPrompts(JSON.parse(data.saasPrompts)); } catch (e) { console.error(e); }
+        }
       }
     } catch (error) {
       console.error('Error fetching system settings:', error);
@@ -452,7 +508,19 @@ export default function SuperAdminDashboard() {
           platformBlogFaqModel,
           globalSmsUsername,
           globalSmsPassword,
-          globalSmsPatternCode
+          globalSmsPatternCode,
+          saasFeatures: JSON.stringify(saasFeatures),
+          saasMetaTitle,
+          saasMetaDesc,
+          saasHeroTitle,
+          saasHeroSubtitle,
+          saasPrimaryCta,
+          saasSecondaryCta,
+          saasFaqs: saasFaqs.length > 0 ? JSON.stringify(saasFaqs) : undefined,
+          saasDemos: saasDemos.length > 0 ? JSON.stringify(saasDemos) : undefined,
+          saasPricing: saasPricing.length > 0 ? JSON.stringify(saasPricing) : undefined,
+          saasComparisons: saasComparisons.length > 0 ? JSON.stringify(saasComparisons) : undefined,
+          saasPrompts: saasPrompts.length > 0 ? JSON.stringify(saasPrompts) : undefined
         }),
       });
 
@@ -2195,6 +2263,7 @@ export default function SuperAdminDashboard() {
                   <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-100/50 self-start md:self-auto flex-wrap gap-1">
                     {[
                       { id: 'api_keys', label: 'کلیدهای API سیستم', icon: Key },
+                      { id: 'saas_features', label: 'مدیریت قابلیت‌های سایت اصلی', icon: Sparkles },
                       { id: 'central_bale', label: 'مدیریت ربات بله', icon: MessageSquare },
                       { id: 'central_telegram', label: 'مدیریت ربات تلگرام', icon: Send },
                       { id: 'base_prompts', label: 'پرامپت‌های پایه سئو', icon: FileText },
@@ -2892,6 +2961,422 @@ export default function SuperAdminDashboard() {
                             </div>
                           </div>
                         </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* SUB TAB: SAAS CMS */}
+                  {activeSettingsTab === 'saas_features' && (
+                    <div className="space-y-8 animate-fadeIn">
+                      <div className="border-b border-gray-100 pb-3">
+                        <h4 className="text-xs font-bold text-gray-850 flex items-center gap-1.5">
+                          <Sparkles className="w-4 h-4 text-blue-600 animate-pulse" />
+                          <span>مدیریت محتوای سایت اصلی (SaaS CMS)</span>
+                        </h4>
+                        <p className="text-[10px] text-gray-400 mt-0.5">تمام بخش‌های متنی، سئو، قابلیت‌ها، دموها، سوالات متداول و پرامپت‌های سایت اصلی برسانا را در اینجا مدیریت کنید.</p>
+                      </div>
+
+                      {/* 1. SEO & Hero Config */}
+                      <div className="bg-white rounded-2xl border border-gray-150 p-5 space-y-4">
+                        <h5 className="text-[11px] font-black text-slate-800 border-b border-gray-50 pb-2">۱. تنظیمات سئو و بخش هیرو (Hero & SEO)</h5>
+                        
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="block text-[11px] font-bold text-gray-600">عنوان سئو سایت (Meta Title)</label>
+                            <input
+                              type="text"
+                              value={saasMetaTitle}
+                              onChange={(e) => setSaasMetaTitle(e.target.value)}
+                              placeholder="عنوان مرورگر را وارد کنید..."
+                              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none text-xs font-semibold text-gray-800"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="block text-[11px] font-bold text-gray-600">توضیحات سئو سایت (Meta Description)</label>
+                            <input
+                              type="text"
+                              value={saasMetaDesc}
+                              onChange={(e) => setSaasMetaDesc(e.target.value)}
+                              placeholder="توضیحات سئو گوگل را بنویسید..."
+                              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none text-xs font-semibold text-gray-800"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="block text-[11px] font-bold text-gray-600">عنوان اصلی هیرو (H1 Title)</label>
+                            <input
+                              type="text"
+                              value={saasHeroTitle}
+                              onChange={(e) => setSaasHeroTitle(e.target.value)}
+                              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none text-xs font-semibold text-gray-800"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="block text-[11px] font-bold text-gray-600">توضیحات فرعی هیرو (Subtitle)</label>
+                            <textarea
+                              rows={2}
+                              value={saasHeroSubtitle}
+                              onChange={(e) => setSaasHeroSubtitle(e.target.value)}
+                              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none text-xs font-semibold text-gray-800"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="block text-[11px] font-bold text-gray-600">متن دکمه شروع اصلی (Primary CTA)</label>
+                            <input
+                              type="text"
+                              value={saasPrimaryCta}
+                              onChange={(e) => setSaasPrimaryCta(e.target.value)}
+                              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none text-xs font-semibold text-gray-800"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="block text-[11px] font-bold text-gray-600">متن دکمه دمو فرعی (Secondary CTA)</label>
+                            <input
+                              type="text"
+                              value={saasSecondaryCta}
+                              onChange={(e) => setSaasSecondaryCta(e.target.value)}
+                              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none text-xs font-semibold text-gray-800"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 2. Features Manager */}
+                      <div className="bg-white rounded-2xl border border-gray-150 p-5 space-y-4">
+                        <div className="flex items-center justify-between border-b border-gray-50 pb-2">
+                          <h5 className="text-[11px] font-black text-slate-800">۲. مدیریت قابلیت‌ها (Features Grid)</h5>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newId = String(Date.now());
+                              setSaasFeatures([
+                                ...saasFeatures,
+                                { id: newId, title: 'قابلیت جدید', desc: 'توضیحات قابلیت جدید خود را بنویسید.', icon: 'Sparkles', color: 'blue' }
+                              ]);
+                            }}
+                            className="flex items-center gap-1 bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-1.5 rounded-xl text-[11px] font-black transition-all cursor-pointer"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>افزودن قابلیت</span>
+                          </button>
+                        </div>
+
+                      {saasFeatures.length === 0 ? (
+                        <div className="text-center py-8 text-gray-400 font-bold text-xs">
+                          هیچ قابلیتی تعریف نشده است. برای شروع روی دکمه «افزودن قابلیت جدید» کلیک کنید.
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {saasFeatures.map((feat, idx) => (
+                            <div key={feat.id || idx} className="bg-gray-50/50 rounded-2xl border border-gray-100 p-4 space-y-4 relative">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-bold text-gray-400">قابلیت شماره {idx + 1}</span>
+                                <div className="flex items-center gap-1.5">
+                                  {/* Move Up */}
+                                  <button
+                                    type="button"
+                                    disabled={idx === 0}
+                                    onClick={() => {
+                                      if (idx === 0) return;
+                                      const newFeats = [...saasFeatures];
+                                      const temp = newFeats[idx];
+                                      newFeats[idx] = newFeats[idx - 1];
+                                      newFeats[idx - 1] = temp;
+                                      setSaasFeatures(newFeats);
+                                    }}
+                                    className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 disabled:opacity-30 cursor-pointer"
+                                    title="انتقال به بالا"
+                                  >
+                                    <ChevronRight className="w-4 h-4 rotate-90" />
+                                  </button>
+                                  {/* Move Down */}
+                                  <button
+                                    type="button"
+                                    disabled={idx === saasFeatures.length - 1}
+                                    onClick={() => {
+                                      if (idx === saasFeatures.length - 1) return;
+                                      const newFeats = [...saasFeatures];
+                                      const temp = newFeats[idx];
+                                      newFeats[idx] = newFeats[idx + 1];
+                                      newFeats[idx + 1] = temp;
+                                      setSaasFeatures(newFeats);
+                                    }}
+                                    className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 disabled:opacity-30 cursor-pointer"
+                                    title="انتقال به پایین"
+                                  >
+                                    <ChevronLeft className="w-4 h-4 rotate-90" />
+                                  </button>
+                                  {/* Delete */}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (confirm('آیا از حذف این قابلیت اطمینان دارید؟')) {
+                                        setSaasFeatures(saasFeatures.filter(f => f.id !== feat.id));
+                                      }
+                                    }}
+                                    className="p-1.5 hover:bg-red-50 hover:text-red-500 rounded-lg text-gray-400 cursor-pointer"
+                                    title="حذف"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                  <label className="block text-[11px] font-bold text-gray-600">عنوان قابلیت</label>
+                                  <input
+                                    type="text"
+                                    required
+                                    value={feat.title}
+                                    onChange={(e) => {
+                                      const newFeats = [...saasFeatures];
+                                      newFeats[idx].title = e.target.value;
+                                      setSaasFeatures(newFeats);
+                                    }}
+                                    placeholder="مثال: سرعت لود فوق‌العاده"
+                                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none text-xs font-semibold text-gray-800"
+                                  />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div className="space-y-1">
+                                    <label className="block text-[11px] font-bold text-gray-600">آیکون مرتبط</label>
+                                    <select
+                                      value={feat.icon}
+                                      onChange={(e) => {
+                                        const newFeats = [...saasFeatures];
+                                        newFeats[idx].icon = e.target.value;
+                                        setSaasFeatures(newFeats);
+                                      }}
+                                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none text-xs font-semibold text-gray-800"
+                                    >
+                                      <option value="Zap">Zap (سرعت / انرژی)</option>
+                                      <option value="Smartphone">Smartphone (موبایل)</option>
+                                      <option value="ShieldCheck">ShieldCheck (امنیت تایید شده)</option>
+                                      <option value="Globe">Globe (دامنه / وب)</option>
+                                      <option value="Clock">Clock (سریع / زمان)</option>
+                                      <option value="HeartHandshake">HeartHandshake (پشتیبانی / اعتماد)</option>
+                                      <option value="Sparkles">Sparkles (هوش مصنوعی / درخشش)</option>
+                                      <option value="Shield">Shield (سپر)</option>
+                                      <option value="Activity">Activity (فعالیت / چارت)</option>
+                                      <option value="TrendingUp">TrendingUp (رشد / صعودی)</option>
+                                      <option value="Award">Award (جایزه / برتر)</option>
+                                      <option value="Gift">Gift (هدیه / آفر)</option>
+                                    </select>
+                                  </div>
+
+                                  <div className="space-y-1">
+                                    <label className="block text-[11px] font-bold text-gray-600">رنگ پس‌زمینه آیکون</label>
+                                    <select
+                                      value={feat.color}
+                                      onChange={(e) => {
+                                        const newFeats = [...saasFeatures];
+                                        newFeats[idx].color = e.target.value;
+                                        setSaasFeatures(newFeats);
+                                      }}
+                                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none text-xs font-semibold text-gray-800"
+                                    >
+                                      <option value="blue">آبی</option>
+                                      <option value="indigo">نیلی</option>
+                                      <option value="emerald">سبز</option>
+                                      <option value="amber">زرد / طلایی</option>
+                                      <option value="rose">قرمز / صورتی</option>
+                                      <option value="purple">بنفش</option>
+                                    </select>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="block text-[11px] font-bold text-gray-600">توضیحات کامل قابلیت</label>
+                                <textarea
+                                  required
+                                  rows={3}
+                                  value={feat.desc}
+                                  onChange={(e) => {
+                                    const newFeats = [...saasFeatures];
+                                    newFeats[idx].desc = e.target.value;
+                                    setSaasFeatures(newFeats);
+                                  }}
+                                  placeholder="توضیحات کامل این قابلیت را در اینجا بنویسید..."
+                                  className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 outline-none text-xs font-semibold text-gray-800 leading-relaxed"
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      </div>
+
+                      {/* 3. FAQs Manager */}
+                      <div className="bg-white rounded-2xl border border-gray-150 p-5 space-y-4">
+                        <div className="flex items-center justify-between border-b border-gray-50 pb-2">
+                          <h5 className="text-[11px] font-black text-slate-800 flex items-center gap-1.5">
+                            <HelpCircle className="w-4 h-4 text-amber-500" />
+                            <span>۳. مدیریت سوالات متداول (FAQ)</span>
+                          </h5>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSaasFaqs([...saasFaqs, { q: 'سوال جدید؟', a: 'پاسخ سوال جدید را بنویسید.' }]);
+                            }}
+                            className="bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-1 rounded-xl text-[10px] font-black transition-all cursor-pointer flex items-center gap-1"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>افزودن سوال جدید</span>
+                          </button>
+                        </div>
+
+                        {saasFaqs.length === 0 ? (
+                          <p className="text-center py-4 text-xs font-bold text-gray-400">هیچ سوالی تعریف نشده است.</p>
+                        ) : (
+                          <div className="space-y-4">
+                            {saasFaqs.map((faq, idx) => (
+                              <div key={idx} className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-3 relative">
+                                <button
+                                  type="button"
+                                  onClick={() => setSaasFaqs(saasFaqs.filter((_, i) => i !== idx))}
+                                  className="absolute top-3 left-3 text-red-400 hover:text-red-600 cursor-pointer"
+                                  title="حذف سوال"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                                <div className="space-y-1.5">
+                                  <label className="block text-[10px] font-bold text-gray-500">سوال متداول</label>
+                                  <input
+                                    type="text"
+                                    value={faq.q}
+                                    onChange={(e) => {
+                                      const newFaqs = [...saasFaqs];
+                                      newFaqs[idx].q = e.target.value;
+                                      setSaasFaqs(newFaqs);
+                                    }}
+                                    className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs"
+                                  />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <label className="block text-[10px] font-bold text-gray-500">پاسخ سوال</label>
+                                  <textarea
+                                    rows={2}
+                                    value={faq.a}
+                                    onChange={(e) => {
+                                      const newFaqs = [...saasFaqs];
+                                      newFaqs[idx].a = e.target.value;
+                                      setSaasFaqs(newFaqs);
+                                    }}
+                                    className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs"
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 4. Prompts Manager */}
+                      <div className="bg-white rounded-2xl border border-gray-150 p-5 space-y-4">
+                        <div className="flex items-center justify-between border-b border-gray-50 pb-2">
+                          <h5 className="text-[11px] font-black text-slate-800 flex items-center gap-1.5">
+                            <Sparkles className="w-4 h-4 text-blue-500" />
+                            <span>۴. مدیریت پرامپت‌های تست آنلاین (Interactive Prompts)</span>
+                          </h5>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newId = String(Date.now());
+                              setSaasPrompts([...saasPrompts, { id: newId, prompt: 'پرامپت جدید برای تست', outputType: 'سئو و محتوا', outputPreview: 'پیش‌نمایش خروجی چت دستیار...' }]);
+                            }}
+                            className="bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-1 rounded-xl text-[10px] font-black transition-all cursor-pointer flex items-center gap-1"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>افزودن پرامپت تست</span>
+                          </button>
+                        </div>
+
+                        {saasPrompts.length === 0 ? (
+                          <p className="text-center py-4 text-xs font-bold text-gray-400">هیچ پرامپتی تعریف نشده است.</p>
+                        ) : (
+                          <div className="space-y-4">
+                            {saasPrompts.map((p, idx) => (
+                              <div key={p.id || idx} className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-3 relative">
+                                <button
+                                  type="button"
+                                  onClick={() => setSaasPrompts(saasPrompts.filter(pr => pr.id !== p.id))}
+                                  className="absolute top-3 left-3 text-red-400 hover:text-red-600 cursor-pointer"
+                                  title="حذف پرامپت"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                                <div className="grid md:grid-cols-2 gap-4">
+                                  <div className="space-y-1">
+                                    <label className="block text-[10px] font-bold text-gray-500">پرامپت نمونه فارسی</label>
+                                    <input
+                                      type="text"
+                                      value={p.prompt}
+                                      onChange={(e) => {
+                                        const newP = [...saasPrompts];
+                                        newP[idx].prompt = e.target.value;
+                                        setSaasPrompts(newP);
+                                      }}
+                                      className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs"
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <label className="block text-[10px] font-bold text-gray-500">نوع ماژول عملیاتی (مثال: سئو و محتوا)</label>
+                                    <input
+                                      type="text"
+                                      value={p.outputType}
+                                      onChange={(e) => {
+                                        const newP = [...saasPrompts];
+                                        newP[idx].outputType = e.target.value;
+                                        setSaasPrompts(newP);
+                                      }}
+                                      className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="block text-[10px] font-bold text-gray-500">پیش‌نمایش خروجی دستیار AI</label>
+                                  <textarea
+                                    rows={2}
+                                    value={p.outputPreview}
+                                    onChange={(e) => {
+                                      const newP = [...saasPrompts];
+                                      newP[idx].outputPreview = e.target.value;
+                                      setSaasPrompts(newP);
+                                    }}
+                                    className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs"
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Save Button */}
+                      <div className="pt-4 border-t border-gray-100 flex justify-end">
+                        <button
+                          type="submit"
+                          disabled={savingSettings}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-2xl text-xs font-black shadow-lg shadow-blue-500/10 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                        >
+                          {savingSettings ? (
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <>
+                              <CheckCircle2 className="w-4 h-4" />
+                              <span>ذخیره نهایی محتوای پلتفرم (CMS)</span>
+                            </>
+                          )}
+                        </button>
                       </div>
                     </div>
                   )}

@@ -99,7 +99,7 @@ export async function PUT(request: Request) {
       } else if (packageFeatures.physicalProducts && !packageFeatures.digitalProducts) {
         data.productType = 'physical';
       } else if (!packageFeatures.physicalProducts && !packageFeatures.digitalProducts) {
-        data.productType = 'physical'; // fallback
+        data.productType = 'digital'; // fallback
       }
     }
 

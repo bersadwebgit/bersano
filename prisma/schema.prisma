@@ -117,7 +117,7 @@ model ShopSettings {
   address      String?
   registrationNumber String?  @default("")
   economicCode       String?  @default("")
-  productType  String   @default("both") // physical, digital, both
+  productType  String   @default("digital") // physical, digital, both
   headerConfig String?  // JSON string for header configuration
   footerConfig String?  // JSON string for footer configuration
   bottomNavConfig String? // JSON string for mobile bottom navigation bar configuration
@@ -354,6 +354,8 @@ model ProductVariant {
   price       Float    // Final price for this variant
   stock       Int      @default(0)
   isDefault   Boolean  @default(false)
+  sku         String?  // Optional SKU for this variant
+  optionsJson String?  // JSON string representing structured options, e.g. {"رنگ": "سبز", "سایز": "M"}
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

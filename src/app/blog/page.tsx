@@ -11,6 +11,9 @@ import BlogListClient from './BlogListClient';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import Link from 'next/link';
+import MarketingHeader from '@/components/layout/MarketingHeader';
+import MarketingFooter from '@/components/layout/MarketingFooter';
+import StickyMobileCTA from '@/components/layout/StickyMobileCTA';
 
 export async function generateMetadata(): Promise<Metadata> {
   const shop = await getTenantShop();
@@ -237,29 +240,17 @@ export default async function BlogListPage({ searchParams }: BlogListPageProps) 
     };
 
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-black font-sans pb-20 lg:pb-0" dir="rtl">
+      <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950 font-sans" dir="rtl">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdSchema) }}
         />
 
-        {/* Central Website Header */}
-        <div className="bg-white border-b border-slate-100 shadow-3xs">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <span className="font-black text-lg text-slate-900">برسانا</span>
-              <span className="bg-slate-900 text-white text-[9px] px-2 py-0.5 rounded-full font-bold">فروشگاه‌ساز</span>
-            </Link>
-            <div className="flex items-center gap-6 text-xs font-bold text-slate-600">
-              <Link href="/" className="hover:text-slate-900">صفحه اصلی</Link>
-              <Link href="/blog" className="text-slate-900 font-extrabold border-b-2 border-slate-900 pb-1">وبلاگ</Link>
-              <Link href="/super-admin" className="bg-slate-900 text-white px-3.5 py-1.5 rounded-xl hover:bg-slate-800 transition-all">ورود همکاران</Link>
-            </div>
-          </div>
-        </div>
+        {/* Unified Premium Marketing Header */}
+        <MarketingHeader />
 
         {/* Blog Content */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <BlogListClient
             shopName="برسانا"
             initialPosts={formattedPosts}
@@ -275,33 +266,9 @@ export default async function BlogListPage({ searchParams }: BlogListPageProps) 
           />
         </main>
 
-        {/* Central Website Footer */}
-        <footer className="bg-slate-950 text-slate-400 py-12 mt-20 border-t border-slate-900">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="space-y-4">
-              <h4 className="text-white font-black text-sm">پلتفرم فروشگاه‌ساز برسانا</h4>
-              <p className="text-xs leading-relaxed max-w-sm">
-                برسانا کامل‌ترین پلتفرم چندمستأجری برای ساخت و مدیریت فروشگاه‌های اینترنتی با هوش مصنوعی و سئو پیشرفته در ایران است.
-              </p>
-            </div>
-            <div className="space-y-4">
-              <h4 className="text-white font-black text-sm">لینک‌های مفید</h4>
-              <ul className="space-y-2 text-xs">
-                <li><Link href="/" className="hover:text-white">صفحه اصلی</Link></li>
-                <li><Link href="/blog" className="hover:text-white">وبلاگ پلتفرم</Link></li>
-              </ul>
-            </div>
-            <div className="space-y-4">
-              <h4 className="text-white font-black text-sm">پشتیبانی پلتفرم</h4>
-              <p className="text-xs leading-relaxed">
-                در صورت بروز هرگونه مشکل سیستمی یا سوال در مورد اشتراک‌ها، می‌توانید با واحد پشتیبانی سوپر ادمین برسانا در ارتباط باشید.
-              </p>
-            </div>
-          </div>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-900 mt-10 pt-6 text-center text-xs">
-            کلیه حقوق این سایت متعلق به پلتفرم فروشگاه‌ساز برسانا می‌باشد. © ۲۰۲۶
-          </div>
-        </footer>
+        {/* Unified Premium Marketing Footer & Sticky Mobile CTA */}
+        <MarketingFooter />
+        <StickyMobileCTA />
       </div>
     );
   }

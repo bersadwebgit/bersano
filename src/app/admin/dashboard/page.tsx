@@ -18,6 +18,7 @@ import {
   CheckCircle2, 
   Truck, 
   XCircle, 
+  X,
   Activity, 
   RotateCcw, 
   RefreshCw,
@@ -215,6 +216,7 @@ export default function AdminDashboardPage() {
   const [activeExportMenu, setActiveExportMenu] = useState<string | null>(null);
   const [greeting, setGreeting] = useState('وقت بخیر');
   const [showWizard, setShowWizard] = useState(false);
+  const [isBannerDismissed, setIsBannerDismissed] = useState(true); // Init true for SSR
 
   // AI Analyst States
   const [analystOpen, setAnalystOpen] = useState(false);
@@ -385,6 +387,10 @@ export default function AdminDashboardPage() {
         console.error('Failed to parse pinned widgets:', e);
       }
     }
+
+    // Load setup banner dismissed state
+    const dismissed = localStorage.getItem('ai-setup-banner-dismissed') === 'true';
+    setIsBannerDismissed(dismissed);
   }, []);
 
   useEffect(() => {
@@ -1420,8 +1426,18 @@ export default function AdminDashboardPage() {
         />
       )}
 
-      {profile && profile.setupWizardCompleted === false && (
+      {profile && profile.setupWizardCompleted === false && !isBannerDismissed && (
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 border border-indigo-500/30 p-6 md:p-8 text-white shadow-2xl shadow-indigo-500/10">
+          <button
+            onClick={() => {
+              setIsBannerDismissed(true);
+              localStorage.setItem('ai-setup-banner-dismissed', 'true');
+            }}
+            className="absolute left-4 top-4 md:left-6 md:top-6 p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10 transition-colors z-20 cursor-pointer"
+            title="بستن"
+          >
+            <X className="w-4 h-4" />
+          </button>
           {/* Ambient Glows */}
           <div className="absolute -right-20 -top-20 w-64 h-64 bg-violet-600/20 rounded-full blur-3xl pointer-events-none animate-pulse"></div>
           <div className="absolute -left-20 -bottom-20 w-64 h-64 bg-blue-600/20 rounded-full blur-3xl pointer-events-none animate-pulse delay-1000"></div>
@@ -1587,7 +1603,8 @@ export default function AdminDashboardPage() {
         {/* ستون اول و دوم: چک‌لیست آماده‌سازی و میانبرهای سریع */}
         <div className="lg:col-span-2 space-y-6">
           {/* بخش چک‌لیست آماده‌سازی */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800/80 shadow-sm space-y-5">
+          {readiness && readiness.percentage < 100 && (
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800/80 shadow-sm space-y-5">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-50 dark:border-slate-800/50 pb-4 select-none">
               <div className="space-y-1">
                 <h2 className="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2">
@@ -1651,6 +1668,7 @@ export default function AdminDashboardPage() {
               ))}
             </div>
           </div>
+          )}
 
           {/* بخش میانبرهای سریع */}
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800/80 shadow-sm space-y-4">

@@ -142,6 +142,12 @@ export async function GET(request: Request) {
                 if (updatedRows === 0) {
                   throw new Error(`موجودی برای تنوع محصول "${item.product.title}" کافی نیست`);
                 }
+                // Decrement parent product stock by same quantity to keep in sync
+                await tx.$executeRaw`
+                  UPDATE "Product"
+                  SET stock = stock - ${item.quantity}
+                  WHERE id = ${item.productId}
+                `;
               } else {
                 const updatedRows = await tx.$executeRaw`
                   UPDATE "Product"
@@ -303,6 +309,12 @@ export async function GET(request: Request) {
                 if (updatedRows === 0) {
                   throw new Error(`موجودی برای تنوع محصول "${item.product.title}" کافی نیست`);
                 }
+                // Decrement parent product stock by same quantity to keep in sync
+                await tx.$executeRaw`
+                  UPDATE "Product"
+                  SET stock = stock - ${item.quantity}
+                  WHERE id = ${item.productId}
+                `;
               } else {
                 const updatedRows = await tx.$executeRaw`
                   UPDATE "Product"
@@ -459,6 +471,12 @@ export async function GET(request: Request) {
               if (updatedRows === 0) {
                 throw new Error(`موجودی برای تنوع محصول "${item.product.title}" کافی نیست`);
               }
+              // Decrement parent product stock by same quantity to keep in sync
+              await tx.$executeRaw`
+                UPDATE "Product"
+                SET stock = stock - ${item.quantity}
+                WHERE id = ${item.productId}
+              `;
             } else {
               const updatedRows = await tx.$executeRaw`
                 UPDATE "Product"
@@ -682,6 +700,12 @@ export async function POST(request: Request) {
                 if (updatedRows === 0) {
                   throw new Error(`موجودی برای تنوع محصول "${item.product.title}" کافی نیست`);
                 }
+                // Decrement parent product stock by same quantity to keep in sync
+                await tx.$executeRaw`
+                  UPDATE "Product"
+                  SET stock = stock - ${item.quantity}
+                  WHERE id = ${item.productId}
+                `;
               } else {
                 const updatedRows = await tx.$executeRaw`
                   UPDATE "Product"

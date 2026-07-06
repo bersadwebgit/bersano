@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     const result = await prisma.$transaction(async (tx) => {
       // 1. Remove previous demo data only — keep real merchant content intact
       await clearShopDemoDataWithTx(shopId, tx);
-      const demoData = await getDemoSeedingData(businessField, shopName, productType || 'physical', {
+      const demoData = await getDemoSeedingData(businessField, shopName, productType || 'digital', {
         shortDescription,
         targetAudience,
         brandTone,
@@ -139,7 +139,7 @@ export async function POST(request: Request) {
           address: address || undefined,
           setupWizardCompleted: true,
           hasDemoData: true, // We have successfully seeded field-specific demo data
-          productType: productType || 'physical',
+          productType: productType || 'digital',
           footerConfig: JSON.stringify(customFooterConfig),
           aboutUsPage: demoData.aboutUsPage || undefined,
           termsPage: demoData.termsPage || undefined,

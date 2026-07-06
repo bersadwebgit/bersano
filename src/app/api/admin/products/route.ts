@@ -266,6 +266,35 @@ export async function POST(req: NextRequest) {
       finalImageUrl = generateMinimalImage(data.title, 'product', categoryName, shopSettings?.themeColor || undefined);
     }
 
+    // Enforce single default variant logic and calculate total stock if variants exist
+    if (data.variants && data.variants.length > 0) {
+      const hasDefault = data.variants.some((v: any) => !!v.isDefault);
+      if (!hasDefault) {
+        const firstInStockIdx = data.variants.findIndex((v: any) => Math.round(parseNumber(v.stock, 0)) > 0);
+        const targetIdx = firstInStockIdx > -1 ? firstInStockIdx : 0;
+        data.variants = data.variants.map((v: any, idx: number) => ({
+          ...v,
+          isDefault: idx === targetIdx,
+        }));
+      } else {
+        let foundDefault = false;
+        data.variants = data.variants.map((v: any) => {
+          if (v.isDefault) {
+            if (foundDefault) {
+              return { ...v, isDefault: false };
+            }
+            foundDefault = true;
+          }
+          return v;
+        });
+      }
+    }
+
+    let calculatedStock = data.type === 'digital' ? 999999 : Math.round(parseNumber(data.stock, 0));
+    if (data.variants && data.variants.length > 0 && data.type !== 'digital') {
+      calculatedStock = data.variants.reduce((sum: number, v: any) => sum + Math.round(parseNumber(v.stock, 0)), 0);
+    }
+
     const product = await prisma.product.create({
       data: {
         shopId: payload.shopId,
@@ -276,7 +305,7 @@ export async function POST(req: NextRequest) {
         discount: data.discount ? parseNumber(data.discount, 0) : 0,
         discountMinQty: data.discountMinQty ? Math.round(parseNumber(data.discountMinQty, 0)) : 0,
         imageUrl: finalImageUrl,
-        stock: data.type === 'digital' ? 999999 : Math.round(parseNumber(data.stock, 0)),
+        stock: calculatedStock,
         fullDescription: data.fullDescription || null,
         seoTitle: data.seoTitle || null,
         seoDescription: data.seoDescription || null,
@@ -319,7 +348,9 @@ export async function POST(req: NextRequest) {
             imageUrl: v.imageUrl || null,
             price: parseNumber(v.price, 0),
             stock: Math.round(parseNumber(v.stock, 0)),
-            isDefault: !!v.isDefault
+            isDefault: !!v.isDefault,
+            sku: v.sku || null,
+            optionsJson: v.optionsJson || null,
           }))
         } : undefined
       },

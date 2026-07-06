@@ -422,6 +422,18 @@ export async function GET() {
     const aiModelWholesaleSetting = await prisma.systemSetting.findUnique({ where: { key: 'ai_model_wholesale' } });
     const aiEmbeddingBaseUrlSetting = await prisma.systemSetting.findUnique({ where: { key: 'ai_embedding_base_url' } });
     const aiEmbeddingApiKeySetting = await prisma.systemSetting.findUnique({ where: { key: 'ai_embedding_api_key' } });
+    const saasFeaturesSetting = await prisma.systemSetting.findUnique({ where: { key: 'saas_features' } });
+    const saasMetaTitleSetting = await prisma.systemSetting.findUnique({ where: { key: 'saas_meta_title' } });
+    const saasMetaDescSetting = await prisma.systemSetting.findUnique({ where: { key: 'saas_meta_desc' } });
+    const saasHeroTitleSetting = await prisma.systemSetting.findUnique({ where: { key: 'saas_hero_title' } });
+    const saasHeroSubtitleSetting = await prisma.systemSetting.findUnique({ where: { key: 'saas_hero_subtitle' } });
+    const saasPrimaryCtaSetting = await prisma.systemSetting.findUnique({ where: { key: 'saas_primary_cta' } });
+    const saasSecondaryCtaSetting = await prisma.systemSetting.findUnique({ where: { key: 'saas_secondary_cta' } });
+    const saasFaqsSetting = await prisma.systemSetting.findUnique({ where: { key: 'saas_faqs' } });
+    const saasDemosSetting = await prisma.systemSetting.findUnique({ where: { key: 'saas_demos' } });
+    const saasPricingSetting = await prisma.systemSetting.findUnique({ where: { key: 'saas_pricing' } });
+    const saasComparisonsSetting = await prisma.systemSetting.findUnique({ where: { key: 'saas_comparisons' } });
+    const saasPromptsSetting = await prisma.systemSetting.findUnique({ where: { key: 'saas_prompts' } });
 
     const platformBlogIdeaModelSetting = await prisma.systemSetting.findUnique({ where: { key: 'platform_blog_idea_model' } });
     const platformBlogOutlineModelSetting = await prisma.systemSetting.findUnique({ where: { key: 'platform_blog_outline_model' } });
@@ -546,6 +558,18 @@ export async function GET() {
     const aiModelWholesale = aiModelWholesaleSetting?.value || '';
     const aiEmbeddingBaseUrl = aiEmbeddingBaseUrlSetting?.value || '';
     const aiEmbeddingApiKey = aiEmbeddingApiKeySetting?.value || '';
+    const saasFeatures = saasFeaturesSetting?.value || '';
+    const saasMetaTitle = saasMetaTitleSetting?.value || '';
+    const saasMetaDesc = saasMetaDescSetting?.value || '';
+    const saasHeroTitle = saasHeroTitleSetting?.value || '';
+    const saasHeroSubtitle = saasHeroSubtitleSetting?.value || '';
+    const saasPrimaryCta = saasPrimaryCtaSetting?.value || '';
+    const saasSecondaryCta = saasSecondaryCtaSetting?.value || '';
+    const saasFaqs = saasFaqsSetting?.value || '';
+    const saasDemos = saasDemosSetting?.value || '';
+    const saasPricing = saasPricingSetting?.value || '';
+    const saasComparisons = saasComparisonsSetting?.value || '';
+    const saasPrompts = saasPromptsSetting?.value || '';
     const blogAiChunkSize = blogAiChunkSizeSetting?.value || '800';
     const blogAiOverlapTokens = blogAiOverlapTokensSetting?.value || '200';
     const blogAiMaxChunks = blogAiMaxChunksSetting?.value || '5';
@@ -601,7 +625,19 @@ export async function GET() {
       globalSmsPatternCode,
       smsEncryptionKeyStatus,
       otpHashSecretStatus,
-      totalSmsLogs
+      totalSmsLogs,
+      saasFeatures,
+      saasMetaTitle,
+      saasMetaDesc,
+      saasHeroTitle,
+      saasHeroSubtitle,
+      saasPrimaryCta,
+      saasSecondaryCta,
+      saasFaqs,
+      saasDemos,
+      saasPricing,
+      saasComparisons,
+      saasPrompts
     });
   } catch (error) {
     console.error('Error fetching system settings:', error);
@@ -653,8 +689,20 @@ export async function POST(request: Request) {
       globalSmsUsername,
       globalSmsPassword,
       globalSmsPatternCode,
+      saasFeatures,
       clearSmsLogs,
-      deleteOldSmsLogs
+      deleteOldSmsLogs,
+      saasMetaTitle,
+      saasMetaDesc,
+      saasHeroTitle,
+      saasHeroSubtitle,
+      saasPrimaryCta,
+      saasSecondaryCta,
+      saasFaqs,
+      saasDemos,
+      saasPricing,
+      saasComparisons,
+      saasPrompts
     } = body;
 
     const aiProvider = 'openrouter';
@@ -853,6 +901,38 @@ export async function POST(request: Request) {
     };
 
     for (const [key, value] of Object.entries(newSettings)) {
+      if (value !== undefined) {
+        await prisma.systemSetting.upsert({
+          where: { key },
+          update: { value: String(value) },
+          create: { key, value: String(value) },
+        });
+      }
+    }
+
+    if (saasFeatures !== undefined) {
+      await prisma.systemSetting.upsert({
+        where: { key: 'saas_features' },
+        update: { value: String(saasFeatures) },
+        create: { key: 'saas_features', value: String(saasFeatures) },
+      });
+    }
+
+    const marketingSettings = {
+      saas_meta_title: saasMetaTitle,
+      saas_meta_desc: saasMetaDesc,
+      saas_hero_title: saasHeroTitle,
+      saas_hero_subtitle: saasHeroSubtitle,
+      saas_primary_cta: saasPrimaryCta,
+      saas_secondary_cta: saasSecondaryCta,
+      saas_faqs: saasFaqs,
+      saas_demos: saasDemos,
+      saas_pricing: saasPricing,
+      saas_comparisons: saasComparisons,
+      saas_prompts: saasPrompts,
+    };
+
+    for (const [key, value] of Object.entries(marketingSettings)) {
       if (value !== undefined) {
         await prisma.systemSetting.upsert({
           where: { key },

@@ -865,6 +865,24 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
             if (localPath) vImageUrl = localPath
           }
 
+          let optionsJson = v.optionsJson || null
+          if (!optionsJson && v.name) {
+            const separator = v.name.includes(' - ') ? ' - ' :
+                              v.name.includes(' / ') ? ' / ' :
+                              v.name.includes(' | ') ? ' | ' : null;
+            if (separator) {
+              const parts = v.name.split(separator).map((p: string) => p.trim());
+              const optionsObj: Record<string, string> = {};
+              parts.forEach((part: string, idx: number) => {
+                const label = idx === 0 ? 'ویژگی ۱' : idx === 1 ? 'ویژگی ۲' : `ویژگی ${idx + 1}`;
+                optionsObj[label] = part;
+              });
+              optionsJson = JSON.stringify(optionsObj);
+            } else {
+              optionsJson = JSON.stringify({ "ویژگی": v.name });
+            }
+          }
+
           await prisma.productVariant.create({
             data: {
               shopId,
@@ -873,11 +891,20 @@ export async function executeImport(job: Job, updateProgress: (progress: number)
               colorCode: v.colorCode || getColorHexFromName(v.name),
               imageUrl: vImageUrl,
               price: parseFloat(v.price) || parseFloat(item.price) || 0,
-              stock: parseInt(v.stock) || 10,
+              stock: parseInt(v.stock) || 0,
               isDefault: v.isDefault !== undefined ? !!v.isDefault : false,
+              sku: v.sku || null,
+              optionsJson: optionsJson,
             }
           })
         }
+
+        // Recalculate total product stock from imported variants
+        const totalVariantStock = item.variants.reduce((sum: number, v: any) => sum + (parseInt(v.stock) || 0), 0);
+        await prisma.product.update({
+          where: { id: productId, shopId },
+          data: { stock: totalVariantStock }
+        });
       }
       await updateJobProgress()
     }

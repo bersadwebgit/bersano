@@ -28,6 +28,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 import * as LucideIcons from 'lucide-react';
 import { jwtVerify } from 'jose';
+import { getMarketingCMSContent } from '@/lib/marketing-cms';
+import MarketingHeader from '@/components/layout/MarketingHeader';
+import MarketingFooter from '@/components/layout/MarketingFooter';
+import StickyMobileCTA from '@/components/layout/StickyMobileCTA';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-change-in-production';
 const key = new TextEncoder().encode(JWT_SECRET);
@@ -43,10 +47,11 @@ export async function generateMetadata(): Promise<Metadata> {
   const metadataBase = new URL(baseUrl);
 
   if (!shop) {
+    const cms = await getMarketingCMSContent();
     return {
       metadataBase,
-      title: "شاپ بیلدر | پلتفرم فروشگاه‌ساز ابری و هوشمند",
-      description: "فروشگاه اینترنتی خود را در کمتر از ۶۰ ثانیه به صورت کاملاً رایگان و آنی بسازید و از همین امروز فروش خود را آغاز کنید.",
+      title: cms.metaTitle,
+      description: cms.metaDesc,
     };
   }
 
@@ -72,7 +77,17 @@ export default async function Home() {
   logPerf('tenant.resolve', startHome);
   
   if (!shop) {
-    return <SaaSLandingPage />;
+    const cmsContent = await getMarketingCMSContent();
+    return (
+      <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950">
+        <MarketingHeader />
+        <main className="flex-grow">
+          <SaaSLandingPage content={cmsContent} />
+        </main>
+        <MarketingFooter />
+        <StickyMobileCTA />
+      </div>
+    );
   }
 
   // If shop is not approved or inactive, show the "Waiting for admin approval" panel!

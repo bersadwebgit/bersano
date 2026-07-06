@@ -1372,14 +1372,14 @@ export default function NewProductPage() {
 
   return (
     <div className="max-w-4xl mx-auto pb-24">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div className="flex items-center gap-4">
           <Link href="/admin/products" className="p-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
             <ArrowRight className="w-5 h-5 text-gray-600 dark:text-gray-300" />
           </Link>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">افزودن محصول جدید</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">افزودن محصول جدید</h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
           <button
             type="button"
             onClick={() => {
@@ -1402,7 +1402,7 @@ export default function NewProductPage() {
               setWizardError('');
               setShowAiWizard(true);
             }}
-            className="flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-4 py-2.5 rounded-xl transition-all font-bold text-xs cursor-pointer shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-95 duration-150"
+            className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-4 py-2.5 rounded-xl transition-all font-bold text-xs cursor-pointer shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-95 duration-150 w-full sm:w-auto"
           >
             <Sparkles className="w-4 h-4 animate-pulse" />
             تولید جادویی کل کالا با AI
@@ -1413,7 +1413,7 @@ export default function NewProductPage() {
             disabled={saving || (productLimit > 0 && currentCount >= productLimit)}
             data-testid="save-status"
             data-status-state={saveStatus}
-            className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2.5 rounded-xl hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 text-xs"
+            className="flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-2.5 rounded-xl hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 text-xs w-full sm:w-auto"
           >
             <Save className="w-4 h-4" />
             {saving ? 'در حال ذخیره...' : 'ذخیره محصول'}
@@ -1442,7 +1442,7 @@ export default function NewProductPage() {
         {shopProductType === 'both' && (
           <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">نوع محصول</label>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {isFeatureEnabled('physicalProducts') && (
                 <label className={`
                   flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors
@@ -2801,67 +2801,13 @@ export default function NewProductPage() {
           </div>
         </div>
 
-        {/* Features and Specs */}
-        <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
-          <h2 className="text-lg font-bold text-gray-800 dark:text-white mb-6">ویژگی‌ها و مشخصات فنی</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            
-            {/* Features */}
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">ویژگی‌های برجسته</label>
-                <button type="button" onClick={() => setFeaturesList([...featuresList, {key: '', value: ''}])} className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded hover:bg-blue-100 transition-colors">+ افزودن ویژگی</button>
-              </div>
-              <div className="space-y-3">
-                {featuresList.map((f, i) => (
-                  <div key={i} className="flex gap-2 items-center">
-                    <input type="text" placeholder="مثال: گارانتی" value={f.key} onChange={(e) => { const l = [...featuresList]; l[i].key = e.target.value; setFeaturesList(l); }} className="w-1/3 px-3 py-1.5 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded-lg text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    <input type="text" placeholder="مثال: ۱۸ ماهه شرکتی" value={f.value} onChange={(e) => { const l = [...featuresList]; l[i].value = e.target.value; setFeaturesList(l); }} className="flex-1 px-3 py-1.5 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded-lg text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    <button type="button" onClick={() => setFeaturesList(featuresList.filter((_, idx) => idx !== i))} className="text-red-500 p-1.5 hover:bg-red-50 rounded-lg"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
-                  </div>
-                ))}
-                {featuresList.length === 0 && <div className="text-xs text-gray-400">ویژگی برجسته‌ای اضافه نشده است.</div>}
-              </div>
-            </div>
-
-            {/* Specs */}
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">جدول مشخصات فنی</label>
-                <button type="button" onClick={() => setSpecsList([...specsList, {key: '', value: ''}])} className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded hover:bg-blue-100 transition-colors">+ افزودن مشخصه</button>
-              </div>
-              <div className="space-y-3">
-                {specsList.map((f, i) => (
-                  <div key={i} className="flex gap-2 items-center">
-                    <input type="text" placeholder="نام، مثال: وزن" value={f.key} onChange={(e) => { const l = [...specsList]; l[i].key = e.target.value; setSpecsList(l); }} className="w-1/3 px-3 py-1.5 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded-lg text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    <input type="text" placeholder="مقدار، مثال: ۲۰۰ گرم" value={f.value} onChange={(e) => { const l = [...specsList]; l[i].value = e.target.value; setSpecsList(l); }} className="flex-1 px-3 py-1.5 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded-lg text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    <button type="button" onClick={() => setSpecsList(specsList.filter((_, idx) => idx !== i))} className="text-red-500 p-1.5 hover:bg-red-50 rounded-lg"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
-                  </div>
-                ))}
-                {specsList.length === 0 && <div className="text-xs text-gray-400">مشخصه فنی اضافه نشده است.</div>}
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        {/* Variants */}
-        <VariantManager
-          variants={variants}
-          setVariants={setVariants}
-          mainPrice={formData.price}
-          mainStock={formData.stock}
-          imageUrl={formData.imageUrl}
-          onPickImage={(index) => {
-            setVariantImageIndex(index);
-            setShowMediaPickerFor('variant');
-          }}
-        />
-
         {/* Pricing and Stock */}
         {!formData.isWholesaleOnly && (
-          <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
-            <h2 className="text-lg font-bold text-gray-800 dark:text-white mb-6">قیمت و موجودی</h2>
+          <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 space-y-6">
+            <div>
+              <h2 className="text-lg font-bold text-gray-800 dark:text-white">قیمت و موجودی اصلی</h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">قیمت پایه و موجودی انبار محصول را مشخص کنید.</p>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">قیمت (تومان)</label>
@@ -2874,20 +2820,48 @@ export default function NewProductPage() {
                   min="0"
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white"
                 />
+                {variants.length > 0 && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 font-bold mt-1.5">
+                    توجه: این محصول دارای تنوع است. قیمت هر تنوع به صورت مجزا اعمال خواهد شد.
+                  </p>
+                )}
               </div>
               
               {formData.type === 'physical' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">موجودی در انبار</label>
-                  <input
-                    type="number"
-                    name="stock"
-                    value={formData.stock}
-                    onChange={handleChange}
-                    min="0"
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white"
-                  />
+                  {variants.length > 0 ? (
+                    <div className="space-y-1.5">
+                      <input
+                        type="text"
+                        readOnly
+                        disabled
+                        value={`${variants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0).toLocaleString('fa-IR')} عدد`}
+                        className="w-full px-4 py-2 border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-gray-500 dark:text-gray-400 font-bold cursor-not-allowed"
+                      />
+                      <p className="text-xs text-blue-600 dark:text-blue-400 font-bold">
+                        موجودی کل بر اساس تنوع‌ها: {variants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0).toLocaleString('fa-IR')} عدد
+                      </p>
+                      <p className="text-[10px] text-gray-400 leading-relaxed">
+                        این کالا دارای تنوع است؛ بنابراین موجودی کل محصول از جمع موجودی تنوع‌ها محاسبه می‌شود.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <input
+                        type="number"
+                        name="stock"
+                        value={formData.stock}
+                        onChange={handleChange}
+                        min="0"
+                        required
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-gray-900 dark:text-white"
+                      />
+                      <p className="text-xs text-gray-400 mt-1.5">
+                        این عدد موجودی اصلی محصول است و فقط وقتی تنوع ندارید استفاده می‌شود.
+                      </p>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -2968,6 +2942,67 @@ export default function NewProductPage() {
             </div>
           </div>
         )}
+
+        {/* Variants */}
+        <VariantManager
+          variants={variants}
+          setVariants={setVariants}
+          mainPrice={formData.price}
+          mainStock={formData.stock}
+          imageUrl={formData.imageUrl}
+          onPickImage={(index) => {
+            setVariantImageIndex(index);
+            setShowMediaPickerFor('variant');
+          }}
+        />
+
+        {/* Product Features */}
+        <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 space-y-4">
+          <div>
+            <h2 className="text-lg font-bold text-gray-800 dark:text-white">ویژگی‌های برجسته</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              این بخش فقط برای معرفی محصول است و قیمت یا موجودی جدا ندارد.
+            </p>
+          </div>
+          <div className="flex justify-between items-center">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">لیست ویژگی‌های کلیدی</label>
+            <button type="button" onClick={() => setFeaturesList([...featuresList, {key: '', value: ''}])} className="text-xs text-blue-600 bg-blue-50 px-2.5 py-1.5 rounded-lg hover:bg-blue-100 transition-colors">+ افزودن ویژگی</button>
+          </div>
+          <div className="space-y-3">
+            {featuresList.map((f, i) => (
+              <div key={i} className="flex gap-2 items-center">
+                <input type="text" placeholder="مثال: گارانتی" value={f.key} onChange={(e) => { const l = [...featuresList]; l[i].key = e.target.value; setFeaturesList(l); }} className="w-1/3 px-3 py-1.5 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded-lg text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input type="text" placeholder="مثال: ۱۸ ماهه شرکتی" value={f.value} onChange={(e) => { const l = [...featuresList]; l[i].value = e.target.value; setFeaturesList(l); }} className="flex-1 px-3 py-1.5 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded-lg text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <button type="button" onClick={() => setFeaturesList(featuresList.filter((_, idx) => idx !== i))} className="text-red-500 p-1.5 hover:bg-red-50 rounded-lg"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+              </div>
+            ))}
+            {featuresList.length === 0 && <div className="text-xs text-gray-400">ویژگی برجسته‌ای اضافه نشده است.</div>}
+          </div>
+        </div>
+
+        {/* Technical Specs */}
+        <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 space-y-4">
+          <div>
+            <h2 className="text-lg font-bold text-gray-800 dark:text-white">مشخصات فنی</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              این بخش برای جدول مشخصات فنی محصول استفاده می‌شود.
+            </p>
+          </div>
+          <div className="flex justify-between items-center">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">جدول مشخصات فنی کالا</label>
+            <button type="button" onClick={() => setSpecsList([...specsList, {key: '', value: ''}])} className="text-xs text-blue-600 bg-blue-50 px-2.5 py-1.5 rounded-lg hover:bg-blue-100 transition-colors">+ افزودن مشخصه</button>
+          </div>
+          <div className="space-y-3">
+            {specsList.map((f, i) => (
+              <div key={i} className="flex gap-2 items-center">
+                <input type="text" placeholder="نام، مثال: وزن" value={f.key} onChange={(e) => { const l = [...specsList]; l[i].key = e.target.value; setSpecsList(l); }} className="w-1/3 px-3 py-1.5 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded-lg text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input type="text" placeholder="مقدار، مثال: ۲۰۰ گرم" value={f.value} onChange={(e) => { const l = [...specsList]; l[i].value = e.target.value; setSpecsList(l); }} className="flex-1 px-3 py-1.5 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded-lg text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <button type="button" onClick={() => setSpecsList(specsList.filter((_, idx) => idx !== i))} className="text-red-500 p-1.5 hover:bg-red-50 rounded-lg"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+              </div>
+            ))}
+            {specsList.length === 0 && <div className="text-xs text-gray-400">مشخصه فنی اضافه نشده است.</div>}
+          </div>
+        </div>
 
         {/* تنظیمات عمده‌فروشی (B2B) - در صورتی که خرده‌فروشی و عمده‌فروشی ترکیبی باشد */}
         {!formData.isWholesaleOnly && renderWholesaleSettings()}
