@@ -7,7 +7,7 @@ import { openRouterFetch, getIranDateTime } from '@/lib/openrouter-fetch';
 import { isRateLimited } from '@/lib/rate-limiter';
 import { parseAiJson } from '@/lib/parse-ai-json';
 import { validateAiRequest } from '@/lib/validate-ai-request';
-import { validators } from '@/lib/validate-ai-output';
+import { validators, validateAndSanitizeProductControl } from '@/lib/validate-ai-output';
 import { getAiModel } from '@/lib/ai-model-resolver';
 import { searchProducts, formatProductsForContext } from '@/lib/product-search';
 
@@ -715,8 +715,32 @@ ${productContext ? `\n=== محصولات مرتبط ===\n${productContext}` : ''
       }
     }
 
-    const outputIssues = validators.product(parsedResult as any);
-    parsedResult.warnings = [...parseWarnings, ...outputIssues];
+    const { isValid, issues: validationIssues, sanitizedData } = validateAndSanitizeProductControl(parsedResult);
+    if (sanitizedData) {
+      sanitizedData.featuresList = parsedResult.featuresList !== undefined ? parsedResult.featuresList : (featuresList || []);
+      sanitizedData.specsList = parsedResult.specsList !== undefined ? parsedResult.specsList : (specsList || []);
+      sanitizedData.galleryUrls = parsedResult.galleryUrls !== undefined ? parsedResult.galleryUrls : (galleryUrls || []);
+      sanitizedData.faqItems = parsedResult.faqItems !== undefined ? parsedResult.faqItems : (faqItems || []);
+      
+      parsedResult = sanitizedData;
+    }
+
+    // Category Verification
+    if (parsedResult.formData && parsedResult.formData.categoryId) {
+      const category = await prisma.category.findFirst({
+        where: {
+          id: parsedResult.formData.categoryId,
+          shopId,
+        }
+      });
+      if (!category) {
+        console.warn(`[AI-CONTROL] Invalid categoryId ${parsedResult.formData.categoryId} for shopId ${shopId}. Removing categoryId.`);
+        parsedResult.formData.categoryId = null;
+        validationIssues.push('دسته بندی پیشنهادی هوش مصنوعی در این فروشگاه یافت نشد و حذف شد.');
+      }
+    }
+
+    parsedResult.warnings = [...parseWarnings, ...validationIssues, ...(parsedResult.warnings || [])];
     
     return NextResponse.json(parsedResult);
 

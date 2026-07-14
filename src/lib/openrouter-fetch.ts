@@ -2,14 +2,33 @@
  * [AI-OPTIMIZED] Shared OpenRouter fetch utility with retry and exponential backoff.
  */
 
-export async function openRouterFetch(url: string, options: RequestInit): Promise<Response> {
+export async function openRouterFetch(url: string, options: RequestInit, timeoutMs = 30000): Promise<Response> {
   const maxAttempts = 3;
   const delays = [1000, 2000, 4000];
   let lastError: any = null;
 
+  const finalTimeout = Math.min(Math.max(timeoutMs, 1000), 60000);
+
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, finalTimeout);
+
     try {
-      const response = await fetch(url, options);
+      // Merge signals if options.signal exists
+      let signal = controller.signal;
+      if (options.signal) {
+        if (options.signal.aborted) {
+          controller.abort();
+        }
+        options.signal.addEventListener('abort', () => controller.abort());
+      }
+
+      const response = await fetch(url, {
+        ...options,
+        signal,
+      });
 
       if (response.ok) {
         return response;
@@ -17,17 +36,22 @@ export async function openRouterFetch(url: string, options: RequestInit): Promis
 
       const status = response.status;
 
+      // Do not retry 400, 401, 403
+      if (status === 400 || status === 401 || status === 403) {
+        return response;
+      }
+
       if (status === 429) {
         const retryAfterHeader = response.headers.get('Retry-After');
         let waitTime = delays[attempt - 1] || 1000;
         if (retryAfterHeader) {
           const parsedSeconds = parseInt(retryAfterHeader, 10);
           if (!isNaN(parsedSeconds)) {
-            waitTime = parsedSeconds * 1000;
+            waitTime = Math.min(parsedSeconds * 1000, 10000); // Safe max delay of 10s
           } else {
             const parsedDate = Date.parse(retryAfterHeader);
             if (!isNaN(parsedDate)) {
-              waitTime = Math.max(0, parsedDate - Date.now());
+              waitTime = Math.min(Math.max(0, parsedDate - Date.now()), 10000); // Safe max delay of 10s
             }
           }
         }
@@ -43,20 +67,29 @@ export async function openRouterFetch(url: string, options: RequestInit): Promis
         continue;
       }
 
-      // On 4xx (except 429): fail immediately, no retry
       return response;
     } catch (error: any) {
-      lastError = error;
-      console.error(`[OpenRouter] Fetch error on attempt ${attempt}/${maxAttempts}:`, error);
+      const isTimeout = error.name === 'AbortError' || error.message?.includes('aborted');
+      if (isTimeout) {
+        lastError = new Error(`Request timed out after ${finalTimeout}ms`);
+      } else {
+        lastError = error;
+      }
+
+      console.error(`[OpenRouter] Fetch error on attempt ${attempt}/${maxAttempts}:`, lastError.message || lastError);
+
       if (attempt < maxAttempts) {
         const waitTime = delays[attempt - 1] || 1000;
         await new Promise(resolve => setTimeout(resolve, waitTime));
       }
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
   if (lastError) {
-    throw lastError;
+    const sanitizedMsg = lastError.message ? lastError.message.replace(/bearer\s+[a-z0-9-_.]+/gi, 'Bearer ••••••••') : 'OpenRouter fetch failed';
+    throw new Error(sanitizedMsg);
   }
 
   throw new Error('OpenRouter fetch failed after maximum attempts');

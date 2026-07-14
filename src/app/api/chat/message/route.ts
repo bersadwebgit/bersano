@@ -5,6 +5,8 @@ import { openRouterFetch, parseOpenRouterJsonResponse } from '@/lib/openrouter-f
 import { parseAiJson } from '@/lib/parse-ai-json';
 import { getAiModel } from '@/lib/ai-model-resolver';
 import { searchProducts } from '@/lib/product-search';
+import { isRateLimited } from '@/lib/rate-limiter';
+import { callAiGateway } from '@/lib/ai-gateway';
 
 const PERSIAN_STOPWORDS = new Set([
   'این', 'آن', 'چی', 'چرا', 'چگونه', 'است', 'هست', 'بود', 'شد', 'با', 'در', 'به', 'از', 'رو', 'تا', 'که', 'را', 'یک', 'من', 'تو', 'او', 'ما', 'شما', 'آنها', 'برای', 'روی', 'زیر', 'هم', 'همین', 'همان', 'و', 'یا', 'اما', 'اگر', 'ولی', 'کی', 'کجا', 'کدام', 'کدوم', 'چند', 'چقدر', 'چطور', 'دارد', 'دارند', 'دارم', 'داریم', 'دارید', 'کنید', 'کنم', 'کنیم', 'کنند', 'کند', 'بسیار', 'خیلی', 'لطفا', 'لطفاً', 'ممنون', 'تشکر', 'سلام', 'درود', 'خوب', 'بد', 'عالی', 'مرسی', 'اینها', 'آنها', 'چیز', 'چیزها', 'کار', 'کارهای', 'مورد', 'موردی', 'باره', 'بابت', 'درباره', 'جهت', 'حدود', 'حدودی'
@@ -25,11 +27,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Shop not found' }, { status: 404 });
     }
 
-    const body = await request.json();
+    // Validate request body
+    let body: any;
+    try {
+      body = await request.json();
+    } catch (e) {
+      return NextResponse.json({ error: 'درخواست نامعتبر است.' }, { status: 400 });
+    }
+
     const { sessionId, message, sender = 'customer', messageType = 'text', metadata } = body;
 
-    if (!sessionId || !message) {
-      return NextResponse.json({ error: 'Missing sessionId or message' }, { status: 400 });
+    if (!sessionId || typeof sessionId !== 'string' || sessionId.length > 100) {
+      return NextResponse.json({ error: 'شناسه نشست نامعتبر است.' }, { status: 400 });
+    }
+
+    if (!message || typeof message !== 'string' || message.trim().length === 0) {
+      return NextResponse.json({ error: 'متن پیام نمی‌تواند خالی باشد.' }, { status: 400 });
+    }
+
+    if (message.length > 2000) {
+      return NextResponse.json({ error: 'متن پیام نمی‌تواند بیشتر از ۲۰۰۰ کاراکتر باشد.' }, { status: 400 });
     }
 
     // Verify session exists and belongs to shop
@@ -39,6 +56,18 @@ export async function POST(request: Request) {
 
     if (!session || session.shopId !== shop.shopId) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+    }
+
+    // Layered Rate Limiting (only for customer messages)
+    if (sender !== 'admin') {
+      const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() || '127.0.0.1';
+      const ipLimit = await isRateLimited(`chat:ip:${ip}`, 10, 60000);
+      const sessionLimit = await isRateLimited(`chat:session:${sessionId}`, 20, 10 * 60000);
+      const shopLimit = await isRateLimited(`chat:shop:${shop.shopId}`, 100, 60000);
+
+      if (ipLimit || sessionLimit || shopLimit) {
+        return NextResponse.json({ error: 'تعداد درخواست‌های شما بیش از حد مجاز است. لطفاً کمی صبر کنید.' }, { status: 429 });
+      }
     }
 
     // Save user message
@@ -71,23 +100,6 @@ export async function POST(request: Request) {
 
     // Trigger AI Auto-Reply
     try {
-      // Fetch system settings for OpenRouter
-      const systemSettings = await prisma.systemSetting.findMany({
-        where: {
-          key: {
-            in: ['ai_enabled', 'openrouter_api_key', 'openrouter_model', 'openrouter_control_model']
-          }
-        }
-      });
-      const settingsMap = new Map(systemSettings.map(s => [s.key, s.value]));
-      const apiKey = settingsMap.get('openrouter_api_key') || '';
-      const openrouterModel = await getAiModel('chat', shop.shopId);
-
-      if (settingsMap.get('ai_enabled') === 'false' || !apiKey) {
-        // AI is disabled or API key is missing, return only user message
-        return NextResponse.json({ message: savedMessage });
-      }
-
       // Smart database search for relevant products and articles
       const cleanedMessage = cleanText(message);
       const words = cleanedMessage.split(/\s+/).filter((w: string) => w.length > 1 && !PERSIAN_STOPWORDS.has(w));
@@ -321,110 +333,116 @@ Instructions:
 
 Format your response strictly as a JSON object. Do not include any markdown formatting outside the JSON block.`;
 
-      const response = await openRouterFetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-          'HTTP-Referer': 'http://localhost:3000',
-          'X-Title': 'SaaS Shop Online Chat Auto-Reply',
-        },
-        body: JSON.stringify({
-          model: openrouterModel,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: message }
-          ],
-          response_format: { type: 'json_object' }
-        })
-      });
-
-      if (response.ok) {
-        const data = await parseOpenRouterJsonResponse(response);
-        const aiRawResponse = data.choices?.[0]?.message?.content || '{}';
-        
-        const { data: parsedAi } = parseAiJson<{
-          reply: string;
-          suggestedProducts: string[];
-          suggestedArticles: string[];
-        }>(aiRawResponse, ['reply'], {
+      const result = await callAiGateway<{
+        reply: string;
+        suggestedProducts: string[];
+        suggestedArticles: string[];
+      }>({
+        shopId: shop.shopId,
+        endpoint: 'chat-message',
+        slot: 'chat',
+        featureKey: 'aiChatEnabled',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: message }
+        ],
+        mode: 'json',
+        temperature: 0.5,
+        maxTokens: 1000,
+        requiredFields: ['reply'],
+        fallbackValue: {
           reply: 'متاسفانه در حال حاضر قادر به پاسخگویی نیستم. پیام شما برای مدیریت ارسال شد.',
           suggestedProducts: [],
           suggestedArticles: []
-        });
-
-        // Save AI Text Reply
-        const aiMessage = await prisma.chatMessage.create({
-          data: {
-            shopId: shop.shopId,
-            sessionId,
-            sender: 'ai',
-            message: parsedAi.reply,
-            messageType: 'text',
-          }
-        });
-
-        // If AI suggested products, fetch full details and save as product message
-        if (parsedAi.suggestedProducts && parsedAi.suggestedProducts.length > 0) {
-          const suggestedProductsDetails = await prisma.product.findMany({
-            where: {
-              id: { in: parsedAi.suggestedProducts },
-              shopId: shop.shopId,
-              isActive: true,
-            },
-            select: {
-              id: true,
-              title: true,
-              price: true,
-              discount: true,
-              imageUrl: true,
-              brand: true,
-            }
-          });
-
-          if (suggestedProductsDetails.length > 0) {
-            await prisma.chatMessage.create({
-              data: {
-                shopId: shop.shopId,
-                sessionId,
-                sender: 'ai',
-                message: 'محصولات پیشنهادی:',
-                messageType: 'product',
-                metadata: JSON.stringify(suggestedProductsDetails),
-              }
-            });
-          }
         }
+      });
 
-        // If AI suggested articles, fetch full details and save as article message
-        if (parsedAi.suggestedArticles && parsedAi.suggestedArticles.length > 0) {
-          const suggestedArticlesDetails = await prisma.blogPost.findMany({
-            where: {
-              id: { in: parsedAi.suggestedArticles },
+      let parsedAi = {
+        reply: 'متاسفانه در حال حاضر قادر به پاسخگویی نیستم. پیام شما برای مدیریت ارسال شد.',
+        suggestedProducts: [] as string[],
+        suggestedArticles: [] as string[]
+      };
+
+      if (result.success && result.data) {
+        parsedAi = result.data;
+      } else if (result.error) {
+        console.error('[ChatAutoReply] callAiGateway failed:', result.error);
+        if (result.error.includes('پکیج') || result.error.includes('محدودیت') || result.error.includes('سهمیه') || result.error.includes('غیرفعال')) {
+          parsedAi.reply = result.error;
+        }
+      }
+
+      // Save AI Text Reply
+      const aiMessage = await prisma.chatMessage.create({
+        data: {
+          shopId: shop.shopId,
+          sessionId,
+          sender: 'ai',
+          message: parsedAi.reply,
+          messageType: 'text',
+        }
+      });
+
+      // If AI suggested products, fetch full details and save as product message
+      if (parsedAi.suggestedProducts && parsedAi.suggestedProducts.length > 0) {
+        const suggestedProductsDetails = await prisma.product.findMany({
+          where: {
+            id: { in: parsedAi.suggestedProducts },
+            shopId: shop.shopId,
+            isActive: true,
+          },
+          select: {
+            id: true,
+            title: true,
+            price: true,
+            discount: true,
+            imageUrl: true,
+            brand: true,
+          }
+        });
+
+        if (suggestedProductsDetails.length > 0) {
+          await prisma.chatMessage.create({
+            data: {
               shopId: shop.shopId,
-              status: 'published',
-            },
-            select: {
-              id: true,
-              title: true,
-              slug: true,
-              summary: true,
-              featuredImage: true,
+              sessionId,
+              sender: 'ai',
+              message: 'محصولات پیشنهادی:',
+              messageType: 'product',
+              metadata: JSON.stringify(suggestedProductsDetails),
             }
           });
+        }
+      }
 
-          if (suggestedArticlesDetails.length > 0) {
-            await prisma.chatMessage.create({
-              data: {
-                shopId: shop.shopId,
-                sessionId,
-                sender: 'ai',
-                message: 'مقالات پیشنهادی:',
-                messageType: 'article',
-                metadata: JSON.stringify(suggestedArticlesDetails),
-              }
-            });
+      // If AI suggested articles, fetch full details and save as article message
+      if (parsedAi.suggestedArticles && parsedAi.suggestedArticles.length > 0) {
+        const suggestedArticlesDetails = await prisma.blogPost.findMany({
+          where: {
+            id: { in: parsedAi.suggestedArticles },
+            shopId: shop.shopId,
+            status: 'published',
+          },
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            summary: true,
+            featuredImage: true,
           }
+        });
+
+        if (suggestedArticlesDetails.length > 0) {
+          await prisma.chatMessage.create({
+            data: {
+              shopId: shop.shopId,
+              sessionId,
+              sender: 'ai',
+              message: 'مقالات پیشنهادی:',
+              messageType: 'article',
+              metadata: JSON.stringify(suggestedArticlesDetails),
+            }
+          });
         }
       }
     } catch (aiError) {

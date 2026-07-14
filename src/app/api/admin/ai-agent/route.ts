@@ -11,6 +11,68 @@ import { getAiModel } from '@/lib/ai-model-resolver';
 import { searchProducts } from '@/lib/product-search';
 import crypto from 'crypto';
 
+interface RegistryEntry {
+  aiControlEndpoint: string;
+  saveEndpointBase: string;
+  allowIdSuffix?: boolean;
+}
+
+const TARGET_REGISTRY: Record<string, RegistryEntry> = {
+  products: { aiControlEndpoint: '/api/admin/products/ai-control', saveEndpointBase: '/api/admin/products', allowIdSuffix: true },
+  stories: { aiControlEndpoint: '/api/admin/stories/ai-control', saveEndpointBase: '/api/stories' },
+  blog: { aiControlEndpoint: '/api/admin/blog/ai-control', saveEndpointBase: '/api/admin/blog/posts', allowIdSuffix: true },
+  discounts: { aiControlEndpoint: '/api/admin/discounts/ai-control', saveEndpointBase: '/api/admin/discounts' },
+  categories: { aiControlEndpoint: '/api/admin/categories/ai-control', saveEndpointBase: '/api/admin/categories', allowIdSuffix: true },
+  orders: { aiControlEndpoint: '/api/admin/orders/ai-control', saveEndpointBase: '/api/admin/orders/ai-control' },
+  settings: { aiControlEndpoint: '/api/admin/settings/ai-control', saveEndpointBase: '/api/settings' },
+  custom_home: { aiControlEndpoint: '/api/admin/settings/custom-home/ai-control', saveEndpointBase: '/api/settings' },
+  slider: { aiControlEndpoint: '/api/admin/slider/ai-control', saveEndpointBase: '/api/admin/slider' },
+  reviews: { aiControlEndpoint: '/api/admin/reviews/ai-control', saveEndpointBase: '/api/admin/reviews' },
+  media: { aiControlEndpoint: '/api/admin/media/ai-control', saveEndpointBase: '/api/admin/media/process' },
+  shoppable: { aiControlEndpoint: '/api/admin/shoppable/ai-control', saveEndpointBase: '/api/admin/shoppable' },
+  footer: { aiControlEndpoint: '/api/admin/footer/ai-control', saveEndpointBase: '/api/admin/footer' },
+  header: { aiControlEndpoint: '/api/admin/header/ai-control', saveEndpointBase: '/api/admin/header' },
+  users: { aiControlEndpoint: '/api/admin/users/ai-control', saveEndpointBase: '/api/admin/users' },
+  tickets: { aiControlEndpoint: '/api/admin/tickets/ai-control', saveEndpointBase: '/api/admin/tickets' },
+  system_tickets: { aiControlEndpoint: '/api/admin/system-tickets/ai-control', saveEndpointBase: '/api/admin/system-tickets' },
+  staff: { aiControlEndpoint: '/api/admin/staff/ai-control', saveEndpointBase: '/api/admin/staff' },
+  profile: { aiControlEndpoint: '/api/admin/profile/ai-control', saveEndpointBase: '/api/admin/profile' },
+  import_export: { aiControlEndpoint: '/api/admin/import-export/ai-control', saveEndpointBase: '/api/admin/import-export' },
+  brand: { aiControlEndpoint: '/api/admin/brands/ai-control', saveEndpointBase: '/api/admin/brands/ai-control' },
+  content_calendar: { aiControlEndpoint: '/api/admin/blog/content-calendar/ai-control', saveEndpointBase: '/api/admin/blog/content-calendar/ai-control' },
+  blog_comments: { aiControlEndpoint: '/api/admin/blog/comments/ai-control', saveEndpointBase: '/api/admin/blog/comments/ai-control' },
+  about_us: { aiControlEndpoint: '/api/admin/settings/about-us/ai-control', saveEndpointBase: '/api/settings' },
+  contact_us: { aiControlEndpoint: '/api/admin/settings/contact-us/ai-control', saveEndpointBase: '/api/settings' },
+};
+
+function resolveSaveEndpoint(target: string, modelProvidedEndpoint: string | undefined): string {
+  const entry = TARGET_REGISTRY[target];
+  if (!entry) return '';
+
+  if (!modelProvidedEndpoint) return entry.saveEndpointBase;
+
+  // Normalize path
+  let path = modelProvidedEndpoint.trim().toLowerCase();
+  if (path.endsWith('/edit')) {
+    path = path.substring(0, path.length - 5);
+  }
+
+  if (entry.allowIdSuffix) {
+    // Extract the last segment if it is alphanumeric and different from the base path segments
+    const segments = path.split('/').filter(Boolean);
+    const baseSegments = entry.saveEndpointBase.split('/').filter(Boolean);
+    
+    if (segments.length > baseSegments.length) {
+      const lastSegment = segments[segments.length - 1];
+      if (/^[a-z0-9-]+$/i.test(lastSegment) && lastSegment !== 'new') {
+        return `${entry.saveEndpointBase}/${lastSegment}`;
+      }
+    }
+  }
+
+  return entry.saveEndpointBase;
+}
+
 
 const SYSTEM_PROMPT = `You are the Coordinator/Manager AI Agent of a multi-tenant e-commerce platform.
 Your job is to analyze a high-level natural language command from an administrator, break it down into a sequence of distinct, structured sub-tasks, engineer/enhance the prompts for the specific sub-modules, and return them as a JSON execution plan.
@@ -1267,25 +1329,41 @@ Your output must be a valid JSON object matching the ManagerResponse interface, 
           parsedResult.warnings = warnings;
 
           if (Array.isArray(parsedResult.tasks)) {
+            if (parsedResult.tasks.length > 10) {
+              parsedResult.tasks = parsedResult.tasks.slice(0, 10);
+            }
+
+            const validTasks = [];
+
             for (const task of parsedResult.tasks) {
-              if (typeof task.aiControlEndpoint === 'string') {
-                task.aiControlEndpoint = task.aiControlEndpoint.startsWith('/')
-                  ? task.aiControlEndpoint
-                  : `/${task.aiControlEndpoint.replace(/^\/+/, '')}`;
-              }
-              if (typeof task.saveEndpoint === 'string' && !/^https?:\/\//i.test(task.saveEndpoint)) {
-                let sanitizedEndpoint = task.saveEndpoint.startsWith('/')
-                  ? task.saveEndpoint
-                  : `/${task.saveEndpoint.replace(/^\/+/, '')}`;
-                
-                // If it is a product task and saveEndpoint has "/edit" suffix, strip it
-                if (task.target === 'products' && sanitizedEndpoint.endsWith('/edit')) {
-                  sanitizedEndpoint = sanitizedEndpoint.substring(0, sanitizedEndpoint.length - 5);
-                }
-                task.saveEndpoint = sanitizedEndpoint;
+              if (!task.target || typeof task.target !== 'string' || !TARGET_REGISTRY[task.target]) {
+                console.warn(`[AI-AGENT] Rejected task with invalid target: ${task.target}`);
+                continue;
               }
 
-              // Generate unique idempotencyKey for each task
+              const registryEntry = TARGET_REGISTRY[task.target];
+              task.aiControlEndpoint = registryEntry.aiControlEndpoint;
+              task.saveEndpoint = resolveSaveEndpoint(task.target, task.saveEndpoint);
+
+              if (typeof task.improvedPrompt === 'string') {
+                if (task.improvedPrompt.length > 4000) {
+                  task.improvedPrompt = task.improvedPrompt.substring(0, 4000);
+                }
+              } else {
+                task.improvedPrompt = '';
+              }
+
+              if (task.payload && typeof task.payload === 'object') {
+                delete task.payload.shopId;
+                delete task.payload.shop_id;
+              }
+
+              validTasks.push(task);
+            }
+
+            parsedResult.tasks = validTasks;
+
+            for (const task of parsedResult.tasks) {
               const hashInput = `${shopId}:${task.id}:${task.target}:${task.action}:${task.improvedPrompt}`;
               task.idempotencyKey = crypto.createHash('sha256').update(hashInput).digest('hex');
             }

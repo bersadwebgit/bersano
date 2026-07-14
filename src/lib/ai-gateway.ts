@@ -3,6 +3,7 @@ import { getAiModel, AiModelSlot } from './ai-model-resolver';
 import { openRouterFetch, parseOpenRouterJsonResponse } from './openrouter-fetch';
 import { parseAiJson } from './parse-ai-json';
 import { calculateAiCost } from './ai-pricing';
+import { redis } from './redis';
 
 export interface AiGatewayOptions {
   shopId: string;
@@ -20,6 +21,7 @@ export interface AiGatewayOptions {
   fallbackValue?: any;
   enableFallback?: boolean;
   skipQuotaCheck?: boolean;
+  featureKey?: string;
 }
 
 export interface AiGatewayResult<T = any> {
@@ -38,7 +40,7 @@ export interface AiGatewayResult<T = any> {
 /**
  * Checks if the shop has exceeded its monthly AI requests quota.
  */
-async function checkShopQuota(shopId: string): Promise<{ allowed: boolean; message?: string }> {
+async function checkShopQuota(shopId: string, featureKey = 'aiAgentEnabled'): Promise<{ allowed: boolean; message?: string }> {
   try {
     const shopSettings = await prisma.shopSettings.findUnique({
       where: { shopId },
@@ -66,23 +68,71 @@ async function checkShopQuota(shopId: string): Promise<{ allowed: boolean; messa
       console.error('Error parsing package features:', e);
     }
 
-    if (!packageFeatures.aiAgentEnabled) {
-      return { allowed: false, message: 'قابلیت دستیار هوشمند ادمین در پکیج فعلی شما فعال نیست. لطفاً پکیج خود را ارتقا دهید.' };
+    // Backward compatibility: if aiChatEnabled is not explicitly defined, fallback to aiAgentEnabled
+    let isFeatureAllowed = !!packageFeatures[featureKey];
+    if (featureKey === 'aiChatEnabled' && packageFeatures.aiChatEnabled === undefined) {
+      isFeatureAllowed = !!packageFeatures.aiAgentEnabled;
+    }
+
+    if (!isFeatureAllowed) {
+      const featureNames: Record<string, string> = {
+        aiAgentEnabled: 'دستیار هوشمند ادمین',
+        aiChatEnabled: 'چت هوشمند مشتریان',
+        aiSeoEnabled: 'تولید سئو هوشمند',
+        aiArticleEnabled: 'تولید مقاله هوشمند',
+        aiFaqsEnabled: 'تولید سوالات متداول هوشمند',
+      };
+      const name = featureNames[featureKey] || 'قابلیت‌های هوش مصنوعی';
+      return { allowed: false, message: `قابلیت ${name} در پکیج فعلی شما فعال نیست. لطفاً پکیج خود را ارتقا دهید.` };
     }
 
     const aiRequestsLimit = parseInt(packageFeatures.aiRequestsLimit) || 100;
     const now = new Date();
     const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-    // Count requests in current month across all endpoints
-    const monthlyRequestsCount = await prisma.aiUsage.count({
-      where: {
-        shopId,
-        monthKey,
+    let monthlyRequestsCount = 0;
+    const redisKey = `quota:${shopId}:${monthKey}`;
+
+    if (redis) {
+      try {
+        // Increment the concurrent quota counter in Redis
+        const currentIncr = await redis.incr(redisKey);
+        if (currentIncr === 1) {
+          // If key was just created, initialize it with the DB count + 1
+          const dbCount = await prisma.aiUsage.count({
+            where: {
+              shopId,
+              monthKey,
+            }
+          });
+          await redis.set(redisKey, String(dbCount + 1), { ex: 30 * 24 * 3600 }); // 30 days TTL
+          monthlyRequestsCount = dbCount;
+        } else {
+          monthlyRequestsCount = currentIncr - 1;
+        }
+      } catch (redisErr) {
+        console.error('[checkShopQuota] Redis quota check error, falling back to DB:', redisErr);
+        monthlyRequestsCount = await prisma.aiUsage.count({
+          where: {
+            shopId,
+            monthKey,
+          }
+        });
       }
-    });
+    } else {
+      // Count requests in current month across all endpoints
+      monthlyRequestsCount = await prisma.aiUsage.count({
+        where: {
+          shopId,
+          monthKey,
+        }
+      });
+    }
 
     if (monthlyRequestsCount >= aiRequestsLimit) {
+      if (redis) {
+        await redis.decr(redisKey).catch(() => {});
+      }
       return {
         allowed: false,
         message: 'محدودیت استفاده از هوش مصنوعی برای این ماه تمام شده است. لطفاً پکیج خود را ارتقا دهید یا ماه بعد دوباره تلاش کنید.'
@@ -142,9 +192,18 @@ export async function callAiGateway<T = any>(options: AiGatewayOptions): Promise
     fallbackValue = {},
     enableFallback = true,
     skipQuotaCheck = false,
+    featureKey = 'aiAgentEnabled',
   } = options;
 
   const startTime = Date.now();
+
+  const decrementQuota = async () => {
+    if (redis && !skipQuotaCheck) {
+      const now = new Date();
+      const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      await redis.decr(`quota:${shopId}:${monthKey}`).catch(() => {});
+    }
+  };
 
   try {
     // 1. Validate AI System Settings & API Key (No fallback allowed for these)
@@ -176,7 +235,7 @@ export async function callAiGateway<T = any>(options: AiGatewayOptions): Promise
 
     // 2. Validate Quota (No fallback allowed for these)
     if (!skipQuotaCheck) {
-      const quotaCheck = await checkShopQuota(shopId);
+      const quotaCheck = await checkShopQuota(shopId, featureKey);
       if (!quotaCheck.allowed) {
         return {
           success: false,
@@ -236,6 +295,7 @@ export async function callAiGateway<T = any>(options: AiGatewayOptions): Promise
       console.warn(`[AiGateway] Primary model (${primaryModel}) failed:`, primaryError);
       
       if (!enableFallback) {
+        await decrementQuota();
         return {
           success: false,
           text: '',
@@ -272,6 +332,7 @@ export async function callAiGateway<T = any>(options: AiGatewayOptions): Promise
         } else {
           console.warn('[AiGateway] Primary model JSON validation failed.');
           if (!enableFallback) {
+            await decrementQuota();
             return {
               success: false,
               text: aiText,
@@ -353,6 +414,7 @@ export async function callAiGateway<T = any>(options: AiGatewayOptions): Promise
               latencyMs,
             };
           } else {
+            await decrementQuota();
             return {
               success: false,
               text: fallbackAiText,
@@ -383,6 +445,7 @@ export async function callAiGateway<T = any>(options: AiGatewayOptions): Promise
       }
     }
 
+    await decrementQuota();
     return {
       success: false,
       text: '',
@@ -390,6 +453,7 @@ export async function callAiGateway<T = any>(options: AiGatewayOptions): Promise
     };
   } catch (globalError: any) {
     console.error('[AiGateway] Global error:', globalError);
+    await decrementQuota();
     return {
       success: false,
       text: '',

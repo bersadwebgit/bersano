@@ -583,11 +583,19 @@ export async function GET() {
     const platformBlogRewriteModel = platformBlogRewriteModelSetting?.value || '';
     const platformBlogFaqModel = platformBlogFaqModelSetting?.value || '';
 
+    const hasPoofApiKey = !!poofSetting?.value;
+    const hasOpenRouterApiKey = !!openrouterApiKeySetting?.value;
+    const hasEmbeddingApiKey = !!aiEmbeddingApiKeySetting?.value;
+
+    const maskedPoofApiKey = hasPoofApiKey ? '••••••••••••••••' : '';
+    const maskedOpenRouterApiKey = hasOpenRouterApiKey ? '••••••••••••••••' : '';
+    const maskedEmbeddingApiKey = hasEmbeddingApiKey ? '••••••••••••••••' : '';
+
     console.log('[DEBUG SETTINGS GET]', { aiProvider, aiEnabled });
 
     return NextResponse.json({ 
-      apiKey, 
-      openrouterApiKey, 
+      apiKey: maskedPoofApiKey, 
+      openrouterApiKey: maskedOpenRouterApiKey, 
       openrouterModel, 
       openrouterControlModel, 
       openrouterBlogModel,
@@ -612,7 +620,10 @@ export async function GET() {
       aiModelFallback,
       aiModelWholesale,
       aiEmbeddingBaseUrl,
-      aiEmbeddingApiKey,
+      aiEmbeddingApiKey: maskedEmbeddingApiKey,
+      hasPoofApiKey,
+      hasOpenRouterApiKey,
+      hasEmbeddingApiKey,
       platformBlogIdeaModel,
       platformBlogOutlineModel,
       platformBlogSectionModel,
@@ -820,7 +831,7 @@ export async function POST(request: Request) {
       });
     }
 
-    if (apiKey !== undefined) {
+    if (apiKey !== undefined && apiKey !== '••••••••••••••••' && apiKey !== '') {
       await prisma.systemSetting.upsert({
         where: { key: 'poof_api_key' },
         update: { value: apiKey },
@@ -828,7 +839,7 @@ export async function POST(request: Request) {
       });
     }
 
-    if (openrouterApiKey !== undefined) {
+    if (openrouterApiKey !== undefined && openrouterApiKey !== '••••••••••••••••' && openrouterApiKey !== '') {
       await prisma.systemSetting.upsert({
         where: { key: 'openrouter_api_key' },
         update: { value: openrouterApiKey },
@@ -890,7 +901,6 @@ export async function POST(request: Request) {
       ai_model_fallback: aiModelFallback,
       ai_model_wholesale: aiModelWholesale,
       ai_embedding_base_url: aiEmbeddingBaseUrl,
-      ai_embedding_api_key: aiEmbeddingApiKey,
       platform_blog_idea_model: platformBlogIdeaModel,
       platform_blog_outline_model: platformBlogOutlineModel,
       platform_blog_section_model: platformBlogSectionModel,
@@ -908,6 +918,14 @@ export async function POST(request: Request) {
           create: { key, value: String(value) },
         });
       }
+    }
+
+    if (aiEmbeddingApiKey !== undefined && aiEmbeddingApiKey !== '••••••••••••••••' && aiEmbeddingApiKey !== '') {
+      await prisma.systemSetting.upsert({
+        where: { key: 'ai_embedding_api_key' },
+        update: { value: aiEmbeddingApiKey },
+        create: { key: 'ai_embedding_api_key', value: aiEmbeddingApiKey },
+      });
     }
 
     if (saasFeatures !== undefined) {

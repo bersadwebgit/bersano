@@ -24,6 +24,22 @@ export async function isRateLimited(shopId: string, limit = 20, windowMs = 60000
   }
 
   // 2. Fallback to In-Memory Rate Limiting
+  // Clean up expired entries if map gets too large to prevent memory leaks
+  if (rateLimitMap.size > 5000) {
+    for (const [k, v] of rateLimitMap.entries()) {
+      if (now > v.resetTime) {
+        rateLimitMap.delete(k);
+      }
+    }
+    // If still exceeds 5000, evict oldest entries
+    if (rateLimitMap.size > 5000) {
+      const keysToEvict = Array.from(rateLimitMap.keys()).slice(0, 1000);
+      for (const k of keysToEvict) {
+        rateLimitMap.delete(k);
+      }
+    }
+  }
+
   const record = rateLimitMap.get(shopId);
 
   if (!record || now > record.resetTime) {
