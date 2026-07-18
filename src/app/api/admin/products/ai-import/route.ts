@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/auth';
 import { getAiModel } from '@/lib/ai-model-resolver';
+import { callAiGateway } from '@/lib/ai-gateway';
 import * as XLSX from 'xlsx';
 
 const IMPORT_SYSTEM_PROMPT = `تو یک متخصص تحلیل و درون‌ریزی داده‌های فروشگاهی و هوش مصنوعی فوق‌پیشرفته هستی.
@@ -121,75 +122,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'محتوای ارسالی خالی است.' }, { status: 400 });
     }
 
-    // Fetch AI settings
-    const settings = await prisma.systemSetting.findMany({
-      where: {
-        key: {
-          in: ['ai_enabled', 'openrouter_api_key', 'openrouter_model', 'openrouter_control_model']
+    // Call Canonical AI Client
+    const result = await callAiGateway({
+      shopId: payload.shopId,
+      endpoint: 'ai-import',
+      slot: 'simple',
+      messages: [
+        {
+          role: 'system',
+          content: IMPORT_SYSTEM_PROMPT,
+        },
+        {
+          role: 'user',
+          content: `لطفاً اطلاعات زیر را تحلیل و به ساختار محصولات فروشگاه تبدیل کن:\n\n${textContent}`,
         }
-      }
+      ],
+      mode: 'json',
+      temperature: 0.1,
+      maxTokens: 3000,
+      skipQuotaCheck: false,
+      featureKey: 'aiAgentEnabled',
     });
 
-    const settingsMap = new Map(settings.map(s => [s.key, s.value]));
-
-    if (settingsMap.get('ai_enabled') === 'false') {
-      return NextResponse.json({ error: 'سرویس هوش مصنوعی در حال حاضر توسط مدیر سیستم غیرفعال شده است.' }, { status: 503 });
+    if (!result.success) {
+      return NextResponse.json({ error: result.error || 'خطا در ارتباط با هوش مصنوعی.' }, { status: 502 });
     }
 
-    const apiKey = settingsMap.get('openrouter_api_key') || '';
-    const openrouterModel = await getAiModel('simple', payload.shopId);
-
-    if (!apiKey) {
-      return NextResponse.json({ error: 'سرویس هوش مصنوعی پیکربندی نشده است. لطفا کلید API را در تنظیمات وارد کنید.' }, { status: 503 });
-    }
-
-    const apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
-    const apiHeaders = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-      'HTTP-Referer': 'http://localhost:3000',
-      'X-Title': 'SaaS Shop Builder Product AI Importer',
-      'Connection': 'close',
-    };
-
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: apiHeaders,
-      body: JSON.stringify({
-        model: openrouterModel,
-        response_format: { type: 'json_object' },
-        messages: [
-          {
-            role: 'system',
-            content: IMPORT_SYSTEM_PROMPT,
-          },
-          {
-            role: 'user',
-            content: `لطفاً اطلاعات زیر را تحلیل و به ساختار محصولات فروشگاه تبدیل کن:\n\n${textContent}`,
-          }
-        ],
-        temperature: 0.1,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      return NextResponse.json({ error: `خطا در ارتباط با هوش مصنوعی: ${errorText}` }, { status: 502 });
-    }
-
-    const responseData = await response.json();
-    const aiText = responseData.choices?.[0]?.message?.content;
-
-    if (!aiText) {
-      return NextResponse.json({ error: 'پاسخی از هوش مصنوعی دریافت نشد.' }, { status: 502 });
-    }
-
-    try {
-      const parsedData = JSON.parse(aiText);
-      return NextResponse.json(parsedData);
-    } catch (e) {
-      return NextResponse.json({ error: 'پاسخ هوش مصنوعی در قالب JSON معتبر نبود.', raw: aiText }, { status: 502 });
-    }
+    return NextResponse.json(result.data || {});
 
   } catch (error: any) {
     console.error('Error in AI Import:', error);

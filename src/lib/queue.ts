@@ -1,7 +1,7 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 import { executeImport } from './import-worker'
-import { openRouterFetch, parseOpenRouterJsonResponse } from './openrouter-fetch'
+import { executeChatCompletion } from './ai-provider/client'
 
 export interface Job {
   id: string
@@ -32,41 +32,51 @@ class QueueManager {
       const { prompt, systemPrompt, model, temperature } = job.data
       await updateProgress(10)
 
-      const apiKey = process.env.OPENROUTER_API_KEY
-      const apiUrl = 'https://openrouter.ai/api/v1/chat/completions'
-
-      const apiHeaders: Record<string, string> = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': 'http://localhost:3000',
-        'X-Title': 'SaaS Shop Builder Manager Agent',
-      }
+      const messages = [
+        ...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []),
+        { role: 'user' as const, content: prompt }
+      ]
 
       await updateProgress(30)
 
-      const response = await openRouterFetch(apiUrl, {
-        method: 'POST',
-        headers: apiHeaders,
-        body: JSON.stringify({
-          model: model || 'google/gemini-2.5-flash',
-          temperature: temperature ?? 0.1,
-          messages: [
-            ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
-            { role: 'user', content: prompt }
-          ]
-        })
+      const result = await executeChatCompletion({
+        model: model || '',
+        messages,
+        temperature: temperature ?? 0.1,
+      }, {
+        shopId: job.shopId || 'system',
+        endpoint: 'queue-ai-job',
+        slot: 'simple',
+        enableFallback: true,
+        skipQuotaCheck: true,
       })
 
       await updateProgress(70)
 
-      if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(`OpenRouter API error (status ${response.status}): ${errorText}`)
+      if (result instanceof Response) {
+        throw new Error('Streaming response received inside background queue worker');
       }
 
-      const json = await parseOpenRouterJsonResponse(response)
+      if (!result.success) {
+        throw new Error(result.error || 'خطای ارائه‌دهنده سرویس هوش مصنوعی در صف پس‌زمینه');
+      }
+
       await updateProgress(100)
-      return json
+      
+      return {
+        choices: [
+          {
+            message: {
+              content: result.text
+            }
+          }
+        ],
+        usage: {
+          prompt_tokens: result.tokensIn || 0,
+          completion_tokens: result.tokensOut || 0,
+          total_tokens: (result.tokensIn || 0) + (result.tokensOut || 0)
+        }
+      }
     })
   }
 

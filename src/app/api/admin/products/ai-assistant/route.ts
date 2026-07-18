@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/auth';
 import { promises as fs } from 'fs';
 import { getAiModel } from '@/lib/ai-model-resolver';
+import { callAiGateway } from '@/lib/ai-gateway';
 import { unlink } from 'fs/promises';
 import { Invalidate } from '@/lib/invalidate';
 import path from 'path';
@@ -387,38 +388,6 @@ export async function POST(request: Request) {
     if (execute && rawResult) {
       parsedResult = rawResult;
     } else {
-      // 2. Fetch all AI provider settings in a single parallel query
-      const settings = await prisma.systemSetting.findMany({
-        where: {
-          key: {
-            in: ['ai_enabled', 'openrouter_api_key', 'openrouter_model', 'openrouter_control_model']
-          }
-        }
-      });
-
-      const settingsMap = new Map(settings.map(s => [s.key, s.value]));
-
-      if (settingsMap.get('ai_enabled') === 'false') {
-        return NextResponse.json({ error: 'سرویس هوش مصنوعی در حال حاضر توسط مدیر سیستم غیرفعال شده است.' }, { status: 503 });
-      }
-
-      const apiKey = settingsMap.get('openrouter_api_key') || '';
-      const openrouterModel = await getAiModel('simple', shopId);
-
-      const aiModel = openrouterModel;
-      const apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
-      const apiHeaders = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': 'http://localhost:3000',
-        'X-Title': 'SaaS Shop Builder Product Assistant',
-        'Connection': 'close',
-      };
-
-      if (!apiKey) {
-        return NextResponse.json({ error: 'سرویس هوش مصنوعی دستیار هوشمند در حال حاضر پیکربندی نشده است. لطفاً به پشتیبانی سیستم اطلاع دهید.' }, { status: 503 });
-      }
-
       // Get relevant products (filtered if not manually selected, and stripped of bulky fields to save tokens)
       const relevantRawProducts = hasSelectedProducts 
         ? products 
@@ -444,83 +413,39 @@ export async function POST(request: Request) {
 ${JSON.stringify(lightProducts, null, 2)}
 `;
 
-      // 3. Request to AI service with Retry Logic
-      let attempts = 0;
-      const maxAttempts = 3;
-      let lastError: any = null;
-
-      while (attempts < maxAttempts) {
-        attempts++;
-        try {
-          const openRouterResponse = await fetch(apiUrl, {
-            method: 'POST',
-            headers: apiHeaders,
-            keepalive: false,
-            body: JSON.stringify({
-              model: aiModel,
-              response_format: { type: "json_object" },
-              messages: [
-                {
-                  role: 'system',
-                  content: SYSTEM_PROMPT,
-                },
-                {
-                  role: 'user',
-                  content: userMessageContent,
-                }
-              ],
-              temperature: 0.1,
-              max_tokens: 1500, // Optimized to prevent runaway generation
-            }),
-          });
-
-          if (!openRouterResponse.ok) {
-            const errorText = await openRouterResponse.text();
-            let errorMessage = `OpenRouter API error (status ${openRouterResponse.status}): ${errorText}`;
-            try {
-              const errorJson = JSON.parse(errorText);
-              if (errorJson?.error?.message) {
-                errorMessage = errorJson.error.message;
-              }
-            } catch (e) {}
-            throw new Error(errorMessage);
+      // Call Canonical AI Client
+      const result = await callAiGateway({
+        shopId,
+        endpoint: 'ai-assistant',
+        slot: 'simple',
+        messages: [
+          {
+            role: 'system',
+            content: SYSTEM_PROMPT,
+          },
+          {
+            role: 'user',
+            content: userMessageContent,
           }
+        ],
+        mode: 'json',
+        temperature: 0.1,
+        maxTokens: 1500,
+        skipQuotaCheck: false,
+        featureKey: 'aiAgentEnabled',
+      });
 
-          const responseData = await openRouterResponse.json();
-
-          if (responseData.error) {
-            const errMsg = typeof responseData.error === 'string' 
-              ? responseData.error 
-              : (responseData.error.message || JSON.stringify(responseData.error));
-            throw new Error(`OpenRouter Error: ${errMsg}`);
-          }
-
-          const aiText = responseData.choices?.[0]?.message?.content;
-
-          if (!aiText) {
-            throw new Error('No content returned from AI model');
-          }
-
-          parsedResult = cleanAndParseJson(aiText);
-          break; // Successfully completed and parsed!
-        } catch (err: any) {
-          console.error(`Attempt ${attempts} failed for AI Assistant:`, err);
-          lastError = err;
-          if (attempts < maxAttempts) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
-      }
-
-      if (!parsedResult) {
-        let friendlyMessage = `دستیار هوشمند پس از چند بار تلاش ناموفق بود: ${lastError?.message || 'خطای ناشناخته'}`;
-        if (lastError?.message?.includes('rate-limited') || lastError?.message?.includes('429')) {
+      if (!result.success) {
+        let friendlyMessage = result.error || 'دستیار هوشمند پس از چند بار تلاش ناموفق بود.';
+        if (result.error?.includes('rate-limited') || result.error?.includes('429')) {
           friendlyMessage = 'سرعت درخواست‌های شما بیش از حد مجاز است یا مدل انتخابی موقتاً با ترافیک بالا مواجه شده است. لطفاً چند لحظه دیگر دوباره تلاش کنید.';
-        } else if (lastError?.message?.includes('API key')) {
+        } else if (result.error?.includes('API key')) {
           friendlyMessage = 'کلید API هوش مصنوعی نامعتبر یا منقضی شده است. لطفاً تنظیمات سیستم را بررسی کنید.';
         }
         return NextResponse.json({ error: friendlyMessage }, { status: 502 });
       }
+
+      parsedResult = result.data || {};
     }
 
     if (!parsedResult || !parsedResult.success) {

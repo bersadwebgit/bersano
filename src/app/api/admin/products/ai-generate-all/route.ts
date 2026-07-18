@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/auth';
 import { modelSupportsVision } from '@/lib/ai-vision';
 import { getAiModel } from '@/lib/ai-model-resolver';
+import { callAiGateway } from '@/lib/ai-gateway';
 
 function parseInlineMarkdown(text: string): string {
   // Replace bold **text** with <strong>text</strong>
@@ -230,38 +231,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'قابلیت‌های هوش مصنوعی در پکیج فعلی شما فعال نیست. لطفاً پکیج خود را ارتقا دهید.' }, { status: 403 });
     }
 
-    // 2. Fetch the AI provider settings
-    const aiEnabledSetting = await prisma.systemSetting.findUnique({
-      where: { key: 'ai_enabled' },
-    });
-    if (aiEnabledSetting && aiEnabledSetting.value === 'false') {
-      return NextResponse.json({ error: 'سرویس هوش مصنوعی در حال حاضر توسط مدیر سیستم غیرفعال شده است.' }, { status: 503 });
-    }
-
-    let apiKey = '';
-    let aiModel = '';
-    let apiUrl = '';
-    let apiHeaders: Record<string, string> = {};
-
-    // Default openrouter
-    const openrouterApiKeySetting = await prisma.systemSetting.findUnique({
-      where: { key: 'openrouter_api_key' },
-    });
-    apiKey = openrouterApiKeySetting?.value || '';
-    let openrouterModel = await getAiModel('complex', shopId);
-
-    aiModel = openrouterModel;
-    apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
-    apiHeaders = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-      'HTTP-Referer': 'http://localhost:3000',
-      'X-Title': 'SaaS Shop Builder - Bulk Generator',
-    };
-
-    if (!apiKey) {
-      return NextResponse.json({ error: 'سرویس هوش مصنوعی تولید محصول در حال حاضر پیکربندی نشده است. لطفاً به پشتیبانی سیستم اطلاع دهید.' }, { status: 503 });
-    }
+    const aiModel = await getAiModel('complex', shopId);
 
     // 3. Resolve category name if categoryId is provided
     let categoryName = 'دسته‌بندی نشده';
@@ -446,55 +416,26 @@ export async function POST(request: Request) {
       ];
     }
 
-    // 5. Request to OpenRouter with Retry Logic
-    let attempts = 0;
-    const maxAttempts = 3;
-    let parsedData: any = null;
-    let lastError: any = null;
+    // 5. Request via Canonical AI Client
+    const result = await callAiGateway({
+      shopId,
+      endpoint: 'ai-generate-all',
+      slot: 'complex',
+      messages: messages,
+      mode: 'json',
+      temperature: 0.3,
+      maxTokens: 3000,
+      skipQuotaCheck: false,
+      featureKey: 'aiArticleEnabled', // Or any other general AI feature
+    });
 
-    while (attempts < maxAttempts) {
-      attempts++;
-      try {
-        const openRouterResponse = await fetch(apiUrl, {
-          method: 'POST',
-          headers: apiHeaders,
-          body: JSON.stringify({
-            model: aiModel,
-            response_format: { type: "json_object" },
-            messages: messages,
-            temperature: 0.3,
-            max_tokens: 3000,
-          }),
-        });
-
-        if (!openRouterResponse.ok) {
-          const errorText = await openRouterResponse.text();
-          throw new Error(`OpenRouter API error (status ${openRouterResponse.status}): ${errorText}`);
-        }
-
-        const responseData = await openRouterResponse.json();
-        const aiText = responseData.choices?.[0]?.message?.content;
-
-        if (!aiText) {
-          throw new Error('No content returned from AI model');
-        }
-
-        parsedData = cleanAndParseJson(aiText);
-        if (!parsedData.title || !parsedData.description || !parsedData.fullDescription) {
-          throw new Error('فیلدهای حیاتی (title, description, fullDescription) در پاسخ هوش مصنوعی یافت نشد.');
-        }
-        break; // Successfully generated and parsed!
-      } catch (err: any) {
-        console.error(`Attempt ${attempts} failed for AI Generate All:`, err);
-        lastError = err;
-        if (attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
+    if (!result.success) {
+      return NextResponse.json({ error: result.error || 'تولید محتوا پس از چند بار تلاش ناموفق بود.' }, { status: 502 });
     }
 
-    if (!parsedData) {
-      return NextResponse.json({ error: `تولید محتوا پس از چند بار تلاش ناموفق بود: ${lastError?.message || 'خطای ناشناخته'}` }, { status: 502 });
+    const parsedData = result.data;
+    if (!parsedData || !parsedData.title || !parsedData.description || !parsedData.fullDescription) {
+      return NextResponse.json({ error: 'فیلدهای حیاتی (title, description, fullDescription) در پاسخ هوش مصنوعی یافت نشد.' }, { status: 502 });
     }
 
     // Convert fullDescription Markdown to HTML

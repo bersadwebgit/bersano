@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/auth';
 import { getAiModel } from '@/lib/ai-model-resolver';
+import { callAiGateway } from '@/lib/ai-gateway';
 
 function cleanAndParseJson(text: string) {
   try {
@@ -117,42 +118,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'قابلیت تولید سوالات متداول با هوش مصنوعی در پکیج فعلی شما فعال نیست. لطفاً پکیج خود را ارتقا دهید.' }, { status: 403 });
     }
 
-    // 2. Fetch the AI provider settings
-    const aiEnabledSetting = await prisma.systemSetting.findUnique({
-      where: { key: 'ai_enabled' },
-    });
-    if (aiEnabledSetting && aiEnabledSetting.value === 'false') {
-      return NextResponse.json({ error: 'سرویس هوش مصنوعی در حال حاضر توسط مدیر سیستم غیرفعال شده است.' }, { status: 503 });
-    }
-
-    let apiKey = '';
-    let aiModel = '';
-    let apiUrl = '';
-    let apiHeaders: Record<string, string> = {};
-
-    // Default openrouter
-    const openrouterApiKeySetting = await prisma.systemSetting.findUnique({
-      where: { key: 'openrouter_api_key' },
-    });
-    apiKey = openrouterApiKeySetting?.value || '';
-    let openrouterModel = await getAiModel('simple', shopId);
-
-    aiModel = openrouterModel;
-    apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
-    apiHeaders = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-      'HTTP-Referer': 'http://localhost:3000',
-      'X-Title': 'SaaS Shop Builder',
-    };
-
     const openrouterFaqPromptSetting = await prisma.systemSetting.findUnique({
       where: { key: 'ai_seo_faq_prompt' },
     });
-
-    if (!apiKey) {
-      return NextResponse.json({ error: 'سرویس هوش مصنوعی تولید سوالات متداول در حال حاضر پیکربندی نشده است. لطفاً به پشتیبانی سیستم اطلاع دهید.' }, { status: 503 });
-    }
 
     // 3. Resolve category name if categoryId is provided
     let categoryName = '';
@@ -244,79 +212,29 @@ export async function POST(request: Request) {
       .replace(/{variants}/g, variantsText || 'ندارد')
       .replace(/{fullDescription}/g, cleanedFullDesc || 'ثبت نشده');
 
-    // 6. Request to OpenRouter with Retry Logic
-    let attempts = 0;
-    const maxAttempts = 3;
-    let parsedFaqs: any = null;
-    let lastError: any = null;
-    let isInfoNotFound = false;
+    // 6. Request via Canonical AI Client
+    const result = await callAiGateway({
+      shopId,
+      endpoint: 'ai-faqs',
+      slot: 'simple',
+      messages: [{ role: 'user', content: faqPrompt }],
+      mode: 'json',
+      temperature: 0.3,
+      maxTokens: 1000,
+      skipQuotaCheck: false,
+      featureKey: 'aiFaqsEnabled',
+    });
 
-    while (attempts < maxAttempts) {
-      attempts++;
-      try {
-        const openRouterResponse = await fetch(apiUrl, {
-          method: 'POST',
-          headers: apiHeaders,
-          body: JSON.stringify({
-            model: aiModel,
-            response_format: { type: "json_object" },
-            messages: [
-              {
-                role: 'user',
-                content: faqPrompt,
-              }
-            ],
-            temperature: 0.3,
-            max_tokens: 1000,
-          }),
-        });
-
-        if (!openRouterResponse.ok) {
-          const errorText = await openRouterResponse.text();
-          throw new Error(`OpenRouter API error (status ${openRouterResponse.status}): ${errorText}`);
-        }
-
-        const responseData = await openRouterResponse.json();
-        let aiText = responseData.choices?.[0]?.message?.content;
-
-        if (!aiText) {
-          throw new Error('No content returned from AI model');
-        }
-
-        // Clean markdown code blocks if the AI accidentally wrapped the output inside them
-        aiText = aiText.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```\s*$/, '').trim();
-
-        if (aiText.includes('اطلاعات کافی برای تکمیل از اینترنت یافت نشد.')) {
-          isInfoNotFound = true;
-          throw new Error('اطلاعات کافی برای تکمیل از اینترنت یافت نشد.');
-        }
-
-        parsedFaqs = cleanAndParseJson(aiText);
-        if (!Array.isArray(parsedFaqs)) {
-          throw new Error('AI response is not a JSON Array');
-        }
-
-        break; // Successfully generated and parsed JSON!
-      } catch (err: any) {
-        console.error(`Attempt ${attempts} failed for AI FAQ:`, err);
-        lastError = err;
-        if (err.message === 'اطلاعات کافی برای تکمیل از اینترنت یافت نشد.') {
-          isInfoNotFound = true;
-        } else {
-          isInfoNotFound = false;
-        }
-
-        if (attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
-    }
-
-    if (!parsedFaqs) {
-      if (isInfoNotFound) {
+    if (!result.success) {
+      if (result.error?.includes('اطلاعات کافی') || result.text?.includes('اطلاعات کافی')) {
         return NextResponse.json({ error: 'اطلاعات کافی برای تکمیل از اینترنت یافت نشد.' }, { status: 422 });
       }
-      return NextResponse.json({ error: `تولید سوالات متداول پس از چند بار تلاش ناموفق بود: ${lastError?.message || 'خطای ناشناخته'}` }, { status: 502 });
+      return NextResponse.json({ error: result.error || 'تولید سوالات متداول پس از چند بار تلاش ناموفق بود.' }, { status: 502 });
+    }
+
+    const parsedFaqs = result.data;
+    if (!Array.isArray(parsedFaqs)) {
+      return NextResponse.json({ error: 'پاسخ هوش مصنوعی در قالب آرایه معتبر نبود.' }, { status: 502 });
     }
 
     return NextResponse.json({

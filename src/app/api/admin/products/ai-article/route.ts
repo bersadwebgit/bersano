@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/auth';
 import { modelSupportsVision } from '@/lib/ai-vision';
 import { getAiModel } from '@/lib/ai-model-resolver';
+import { callAiGateway } from '@/lib/ai-gateway';
 
 const DEFAULT_PROMPTS = {
   ai_seo_article_prompt: `تو یک محقق و نویسنده محتوای سئو هستی که وظیفه‌ات تکمیل، بهبود و بهینه‌سازی توضیحات محصول با استفاده از اطلاعات معتبر است.
@@ -278,42 +279,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'قابلیت تولید مقاله با هوش مصنوعی در پکیج فعلی شما فعال نیست. لطفاً پکیج خود را ارتقا دهید.' }, { status: 403 });
     }
 
-    // 2. Fetch the AI provider settings
-    const aiEnabledSetting = await prisma.systemSetting.findUnique({
-      where: { key: 'ai_enabled' },
-    });
-    if (aiEnabledSetting && aiEnabledSetting.value === 'false') {
-      return NextResponse.json({ error: 'سرویس هوش مصنوعی در حال حاضر توسط مدیر سیستم غیرفعال شده است.' }, { status: 503 });
-    }
-
-    let apiKey = '';
-    let aiModel = '';
-    let apiUrl = '';
-    let apiHeaders: Record<string, string> = {};
-
-    // Default openrouter
-    const openrouterApiKeySetting = await prisma.systemSetting.findUnique({
-      where: { key: 'openrouter_api_key' },
-    });
-    apiKey = openrouterApiKeySetting?.value || '';
-    let openrouterModel = await getAiModel('content', shopId);
-
-    aiModel = openrouterModel;
-    apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
-    apiHeaders = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-      'HTTP-Referer': 'http://localhost:3000',
-      'X-Title': 'SaaS Shop Builder',
-    };
-
     const openrouterArticlePromptSetting = await prisma.systemSetting.findUnique({
       where: { key: 'ai_seo_article_prompt' },
     });
-
-    if (!apiKey) {
-      return NextResponse.json({ error: 'سرویس هوش مصنوعی تولید مقاله در حال حاضر پیکربندی نشده است. لطفاً به پشتیبانی سیستم اطلاع دهید.' }, { status: 503 });
-    }
+    const aiModel = await getAiModel('content', shopId);
 
     // 3. Resolve category name if categoryId is provided
     let categoryName = '';
@@ -474,51 +443,24 @@ export async function POST(request: Request) {
       ];
     }
 
-    // 6. Request to OpenRouter with Retry Logic
-    let attempts = 0;
-    const maxAttempts = 3;
-    let aiText = '';
-    let lastError: any = null;
+    // 6. Request via Canonical AI Client
+    const result = await callAiGateway({
+      shopId,
+      endpoint: 'ai-article',
+      slot: 'content',
+      messages: messages,
+      mode: 'text',
+      temperature: 0.2,
+      maxTokens: 1500,
+      skipQuotaCheck: false,
+      featureKey: 'aiArticleEnabled',
+    });
 
-    while (attempts < maxAttempts) {
-      attempts++;
-      try {
-        const openRouterResponse = await fetch(apiUrl, {
-          method: 'POST',
-          headers: apiHeaders,
-          body: JSON.stringify({
-            model: aiModel,
-            messages: messages,
-            temperature: 0.2, // Lower temperature to ensure strict adherence to instructions and no hallucinations
-            max_tokens: 1500,
-          }),
-        });
-
-        if (!openRouterResponse.ok) {
-          const errorText = await openRouterResponse.text();
-          throw new Error(`OpenRouter API error (status ${openRouterResponse.status}): ${errorText}`);
-        }
-
-        const responseData = await openRouterResponse.json();
-        aiText = responseData.choices?.[0]?.message?.content;
-
-        if (!aiText) {
-          throw new Error('No content returned from AI model');
-        }
-
-        break; // Success!
-      } catch (err: any) {
-        console.error(`Attempt ${attempts} failed for AI Article:`, err);
-        lastError = err;
-        if (attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
+    if (!result.success) {
+      return NextResponse.json({ error: result.error || 'تولید مقاله پس از چند بار تلاش ناموفق بود.' }, { status: 502 });
     }
 
-    if (!aiText) {
-      return NextResponse.json({ error: `تولید مقاله پس از چند بار تلاش ناموفق بود: ${lastError?.message || 'خطای ناشناخته'}` }, { status: 502 });
-    }
+    let aiText = result.text;
 
     // Clean markdown code blocks if the AI accidentally wrapped the output inside them
     aiText = aiText.replace(/^```markdown\s*/i, '').replace(/^```\s*/, '').replace(/```\s*$/, '').trim();

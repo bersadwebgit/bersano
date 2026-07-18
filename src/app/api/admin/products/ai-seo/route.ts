@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/auth';
 import { getAiModel } from '@/lib/ai-model-resolver';
+import { callAiGateway } from '@/lib/ai-gateway';
 
 const DEFAULT_PROMPTS = {
   ai_seo_prompt_base: `تو یک محقق محتوای سئو هستی که وظیفه‌ات تکمیل و بهبود توضیحات محصول، تولید عنوان سئو (SEO Title)، توضیحات سئو (SEO Description)، ساختار کامل اسکیما (Schema Markup JSON-LD) و یک گزارش مینیمال و حرفه‌ای از اسکیما مطابق با آخرین استانداردهای روز گوگل است. از آنجا که ممکن است به ابزار جستجوی زنده وب دسترسی نداشته باشی، باید از دانش داخلی بسیار دقیق، مستند و واقعی خود به عنوان مرجع رسمی و اینترنتی استفاده کنی.
@@ -241,23 +242,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'سرویس هوش مصنوعی در حال حاضر توسط مدیر سیستم غیرفعال شده است.' }, { status: 503 });
     }
 
-    const apiKey = settingsMap.get('openrouter_api_key') || '';
-    const openrouterModel = await getAiModel('simple', shopId);
-
-    const aiModel = openrouterModel;
-    const apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
-    const apiHeaders = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-      'HTTP-Referer': 'http://localhost:3000',
-      'X-Title': 'SaaS Shop Builder',
-      'Connection': 'close',
-    };
-
-    if (!apiKey) {
-      return NextResponse.json({ error: 'سرویس هوش مصنوعی سئو در حال حاضر پیکربندی نشده است. لطفاً به پشتیبانی سیستم اطلاع دهید.' }, { status: 503 });
-    }
-
     // 2. Resolve category name
     const categoryName = category?.name || '';
 
@@ -413,88 +397,28 @@ export async function POST(request: Request) {
 
     const prompt = promptSegments.join('\n\n');
 
-    // 5. Request to OpenRouter with Retry Logic
-    let attempts = 0;
-    const maxAttempts = 3;
-    let parsedSeo: any = null;
-    let lastError: any = null;
-    let isInfoNotFound = false;
+    // 5. Request via Canonical AI Client
+    const result = await callAiGateway({
+      shopId,
+      endpoint: 'ai-seo',
+      slot: 'content', // SEO content slot
+      messages: [{ role: 'user', content: prompt }],
+      mode: 'json',
+      temperature: 0.3,
+      maxTokens: 1000,
+      requiredFields: ['seoTitle', 'seoDescription'],
+      skipQuotaCheck: false,
+      featureKey: 'aiSeoEnabled',
+    });
 
-    while (attempts < maxAttempts) {
-      attempts++;
-      try {
-        const openRouterResponse = await fetch(apiUrl, {
-          method: 'POST',
-          headers: apiHeaders,
-          keepalive: false,
-          body: JSON.stringify({
-            model: aiModel,
-            response_format: { type: "json_object" },
-            messages: [
-              {
-                role: 'user',
-                content: prompt,
-              }
-            ],
-            temperature: 0.3,
-            max_tokens: 1000, // Optimized output token count for faster processing
-          }),
-        });
-
-        if (!openRouterResponse.ok) {
-          const errorText = await openRouterResponse.text();
-          throw new Error(`OpenRouter API error (status ${openRouterResponse.status}): ${errorText}`);
-        }
-
-        const responseData = await openRouterResponse.json();
-        
-        if (responseData.error) {
-          const errMsg = typeof responseData.error === 'string' 
-            ? responseData.error 
-            : (responseData.error.message || JSON.stringify(responseData.error));
-          throw new Error(`OpenRouter Error: ${errMsg}`);
-        }
-
-        const aiText = responseData.choices?.[0]?.message?.content;
-
-        if (!aiText) {
-          throw new Error('No content returned from AI model');
-        }
-
-        let cleanedAiText = aiText.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```\s*$/, '').trim();
-
-        if (cleanedAiText.includes('اطلاعات کافی برای تکمیل از اینترنت یافت نشد.')) {
-          isInfoNotFound = true;
-          throw new Error('اطلاعات کافی برای تکمیل از اینترنت یافت نشد.');
-        }
-
-        parsedSeo = cleanAndParseJson(cleanedAiText);
-        if (!parsedSeo.seoTitle || !parsedSeo.seoDescription) {
-          throw new Error('Missing fields in AI JSON response');
-        }
-
-        break; // Successfully got and parsed valid response!
-      } catch (err: any) {
-        console.error(`Attempt ${attempts} failed for AI SEO:`, err);
-        lastError = err;
-        if (err.message === 'اطلاعات کافی برای تکمیل از اینترنت یافت نشد.') {
-          isInfoNotFound = true;
-        } else {
-          isInfoNotFound = false; // Reset if we get a different error type
-        }
-        
-        if (attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
-    }
-
-    if (!parsedSeo) {
-      if (isInfoNotFound) {
+    if (!result.success) {
+      if (result.error?.includes('اطلاعات کافی') || result.text?.includes('اطلاعات کافی')) {
         return NextResponse.json({ error: 'اطلاعات کافی برای تکمیل از اینترنت یافت نشد.' }, { status: 422 });
       }
-      return NextResponse.json({ error: `تولید سئو پس از چند بار تلاش ناموفق بود: ${lastError?.message || 'خطای ناشناخته'}` }, { status: 502 });
+      return NextResponse.json({ error: result.error || 'تولید سئو پس از چند بار تلاش ناموفق بود.' }, { status: 502 });
     }
+
+    const parsedSeo = result.data || {};
 
     return NextResponse.json({
       success: true,

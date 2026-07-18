@@ -1,6 +1,8 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from './prisma';
 import { getAiModel } from './ai-model-resolver';
+import { executeEmbedding } from './ai-provider/client';
+import { resolveAiProviderConfig } from './ai-provider/config';
 
 export interface EmbeddingConfig {
   baseUrl: string;
@@ -61,10 +63,21 @@ export function buildProductText(product: {
 }
 
 /**
- * Fetches embedding configuration from SystemSetting.
+ * Fetches embedding configuration from SystemSetting or configuration resolver.
  */
 export async function getEmbeddingConfig(): Promise<EmbeddingConfig | null> {
   try {
+    const config = await resolveAiProviderConfig();
+    const model = await getAiModel('embedding');
+
+    if (config.mode === 'gateway') {
+      return {
+        baseUrl: config.gatewayUrl || '',
+        apiKey: '',
+        model,
+      };
+    }
+
     const settings = await prisma.systemSetting.findMany({
       where: {
         key: {
@@ -76,7 +89,6 @@ export async function getEmbeddingConfig(): Promise<EmbeddingConfig | null> {
 
     const baseUrl = map.get('ai_embedding_base_url') || '';
     const apiKey = map.get('ai_embedding_api_key') || '';
-    const model = await getAiModel('embedding');
 
     if (!baseUrl || !apiKey || !model || !baseUrl.startsWith('http')) {
       return null;
@@ -90,66 +102,29 @@ export async function getEmbeddingConfig(): Promise<EmbeddingConfig | null> {
 }
 
 /**
- * Fetches embedding vector from the configured embedding service with retry and timeout.
+ * Fetches embedding vector from the configured embedding service, routing through Gateway if active.
  */
 export async function fetchEmbedding(
   text: string,
-  config: EmbeddingConfig,
-  retries = 3,
-  delay = 1000
+  config: EmbeddingConfig
 ): Promise<number[]> {
-  const url = `${config.baseUrl.replace(/\/$/, '')}/embeddings`;
+  try {
+    const embedding = await executeEmbedding({
+      model: config.model,
+      input: text,
+    });
 
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
-
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${config.apiKey}`,
-        },
-        body: JSON.stringify({
-          model: config.model,
-          input: text,
-        }),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (response.status === 429) {
-        const backoff = delay * Math.pow(2, attempt);
-        console.warn(`[fetchEmbedding] Rate limited (429). Retrying in ${backoff}ms (attempt ${attempt}/${retries})...`);
-        await new Promise((resolve) => setTimeout(resolve, backoff));
-        continue;
-      }
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Embedding API error (${response.status}): ${errorText}`);
-      }
-
-      const data = await response.json();
-      const embedding = data.data?.[0]?.embedding;
-      if (!embedding || !Array.isArray(embedding)) {
-        throw new Error('Invalid embedding response format');
-      }
-
-      return embedding as number[];
-    } catch (error: any) {
-      clearTimeout(timeoutId);
-      if (attempt === retries) {
-        throw error;
-      }
-      const backoff = delay * Math.pow(2, attempt);
-      console.warn(`[fetchEmbedding] Attempt ${attempt} failed: ${error?.message || error}. Retrying in ${backoff}ms...`);
-      await new Promise((resolve) => setTimeout(resolve, backoff));
+    if (embedding.length !== 1536) {
+      throw new Error(
+        `ابعاد وکتور تولید شده (${embedding.length}) با ابعاد مورد نیاز دیتابیس (1536) همخوانی ندارد. لطفاً مدل Embedding خود را بررسی کنید.`
+      );
     }
+
+    return embedding;
+  } catch (error: any) {
+    console.error('[fetchEmbedding] Failed to fetch embedding:', error?.message || error);
+    throw error;
   }
-  throw new Error('Failed to fetch embedding after retries');
 }
 
 /**
