@@ -142,7 +142,8 @@ ${JSON.stringify(formattedCategories, null, 2)}
 
     // Fallback: If categoryId is null but we have suggestedCategoryName, check if it matches existing category names (case-insensitive)
     if (!finalCategoryId && finalSuggestedCategoryName) {
-      const matched = categories.find(c => c.name.toLowerCase().trim() === finalSuggestedCategoryName.toLowerCase().trim());
+      const searchName = finalSuggestedCategoryName.toLowerCase().trim();
+      const matched = categories.find(c => c.name.toLowerCase().trim() === searchName);
       if (matched) {
         finalCategoryId = matched.id;
         const parentName = matched.parent?.name;

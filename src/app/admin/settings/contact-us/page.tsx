@@ -867,7 +867,7 @@ export default function ContactUsSettingsPage() {
                         <input
                           type="checkbox"
                           checked={config.contactForm.enabled}
-                          onChange={(e) => setConfig(prev => ({ ...prev, contactForm: { ...prev.contactForm, enabled: e.checked } }))}
+                          onChange={(e) => setConfig(prev => ({ ...prev, contactForm: { ...prev.contactForm, enabled: e.target.checked } }))}
                           className="sr-only peer"
                         />
                         <div className="w-10 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:-left-1 after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-600 peer-checked:bg-primary-600" />
@@ -925,7 +925,7 @@ export default function ContactUsSettingsPage() {
                         <input
                           type="checkbox"
                           checked={config.map.enabled}
-                          onChange={(e) => setConfig(prev => ({ ...prev, map: { ...prev.map, enabled: e.checked } }))}
+                          onChange={(e) => setConfig(prev => ({ ...prev, map: { ...prev.map, enabled: e.target.checked } }))}
                           className="sr-only peer"
                         />
                         <div className="w-10 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:-left-1 after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-slate-600 peer-checked:bg-primary-600" />
@@ -1150,7 +1150,7 @@ export default function ContactUsSettingsPage() {
               <button onClick={() => setShowMediaPicker(null)} className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"><X className="w-5 h-5" /></button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 md:p-6">
-              <MediaPicker onSelect={handleSelectMedia} />
+              <MediaPicker onSelect={handleSelectMedia} onClose={() => setShowMediaPicker(null)} />
             </div>
           </div>
         </div>

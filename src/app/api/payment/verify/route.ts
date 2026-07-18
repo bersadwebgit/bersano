@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     }
 
     // Fetch the order
-    const order = await prisma.order.findUnique({
+    const order = (await prisma.order.findUnique({
       where: { id: orderId },
       include: {
         items: {
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
         user: true,
       },
       allowCrossTenant: true
-    } as any);
+    } as any)) as any;
 
     if (!order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
@@ -97,7 +97,7 @@ export async function GET(request: Request) {
       if (verifyRes && verifyRes.result && verifyRes.result.status === 0) {
         // 3. Deliver purchase if Credit/BNPL (type 5 or 13)
         if (type === 5 || type === 13) {
-          const productCodes = order.items.map(i => i.variantId || i.productId);
+          const productCodes = order.items.map((i: any) => i.variantId || i.productId);
           await deliverDigipayPurchase(
             token,
             order.id,
@@ -582,7 +582,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Order ID is required' }, { status: 400 });
       }
 
-      const order = await prisma.order.findUnique({
+      const order = (await prisma.order.findUnique({
         where: { id: orderId },
         include: {
           items: {
@@ -593,7 +593,7 @@ export async function POST(request: Request) {
           user: true,
         },
         allowCrossTenant: true
-      } as any);
+      } as any)) as any;
 
       if (!order) {
         return NextResponse.json({ error: 'Order not found' }, { status: 404 });
@@ -655,7 +655,7 @@ export async function POST(request: Request) {
       if (verifyRes && verifyRes.result && verifyRes.result.status === 0) {
         // 3. Deliver purchase if Credit/BNPL (type 5 or 13)
         if (type === 5 || type === 13) {
-          const productCodes = order.items.map(i => i.variantId || i.productId);
+          const productCodes = order.items.map((i: any) => i.variantId || i.productId);
           await deliverDigipayPurchase(
             token,
             order.id,

@@ -99,7 +99,7 @@ export default function ProductGallery({ mainImageUrl, galleryUrls, title, disco
         {/* Discount badge */}
         {(discount ?? 0) > 0 && (
           <div className="absolute top-4 left-4 bg-red-500 text-white text-xs font-black px-3 py-1.5 rounded-full shadow-lg shadow-red-500/25 z-10">
-            ٪{discount.toLocaleString('fa-IR')} تخفیف
+            ٪{discount?.toLocaleString('fa-IR')} تخفیف
           </div>
         )}
 

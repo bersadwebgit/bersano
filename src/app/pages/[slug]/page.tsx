@@ -2,7 +2,7 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import BottomNav from '@/components/layout/BottomNav';
 import { getTenantShop } from '@/lib/tenant';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronLeft, Home, FileText, ShieldAlert, Phone, Search } from 'lucide-react';
 import { prisma } from '@/lib/prisma';

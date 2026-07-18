@@ -8,6 +8,7 @@ import path from 'path';
 import { invalidateModelCache } from '@/lib/ai-model-resolver';
 import { invalidateGatewayCache } from '@/lib/openrouter-fetch';
 import { encrypt, decrypt } from '@/lib/crypto';
+import { shouldUpdateSecret } from '@/lib/validate-secret';
 
 function maskUrl(url: string | undefined): string {
   if (!url) return '';
@@ -858,7 +859,7 @@ export async function POST(request: Request) {
       });
     }
 
-    if (apiKey !== undefined && apiKey !== '••••••••••••••••' && apiKey !== '') {
+    if (shouldUpdateSecret(apiKey)) {
       await prisma.systemSetting.upsert({
         where: { key: 'poof_api_key' },
         update: { value: apiKey },
@@ -866,7 +867,7 @@ export async function POST(request: Request) {
       });
     }
 
-    if (openrouterApiKey !== undefined && openrouterApiKey !== '••••••••••••••••' && openrouterApiKey !== '') {
+    if (shouldUpdateSecret(openrouterApiKey)) {
       await prisma.systemSetting.upsert({
         where: { key: 'openrouter_api_key' },
         update: { value: openrouterApiKey },
@@ -959,7 +960,7 @@ export async function POST(request: Request) {
       }
     }
 
-    if (aiEmbeddingApiKey !== undefined && aiEmbeddingApiKey !== '••••••••••••••••' && aiEmbeddingApiKey !== '') {
+    if (shouldUpdateSecret(aiEmbeddingApiKey)) {
       await prisma.systemSetting.upsert({
         where: { key: 'ai_embedding_api_key' },
         update: { value: aiEmbeddingApiKey },

@@ -64,7 +64,7 @@ export default function CheckoutClient({ initialAddresses = [] }: { initialAddre
   const [buyerEmail, setBuyerEmail] = useState('');
   const [buyerPhone, setBuyerPhone] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('online'); // 'online' | 'wallet' | 'card_to_card'
-  const [onlineGateway, setOnlineGateway] = useState<'zarinpal' | 'zibal' | 'digipay'>('zarinpal');
+  const [onlineGateway, setOnlineGateway] = useState<'zarinpal' | 'zibal' | 'digipay' | 'snapppay'>('zarinpal');
   const [shippingCarrier, setShippingCarrier] = useState('post'); // 'post' | 'tipax'
   
   // Wholesaler States

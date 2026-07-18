@@ -24,7 +24,10 @@ async function verifyGatewayAuth(request: Request): Promise<boolean> {
     where: { key: 'central_telegram_bot_api_key' }
   });
 
-  const expectedKey = systemSetting?.value || process.env.CENTRAL_TELEGRAM_BOT_API_KEY || 'default-secret-telegram-key';
+  const expectedKey = systemSetting?.value || process.env.CENTRAL_TELEGRAM_BOT_API_KEY;
+  if (!expectedKey) {
+    return false;
+  }
   return token === expectedKey;
 }
 

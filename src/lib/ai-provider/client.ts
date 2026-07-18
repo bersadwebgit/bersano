@@ -17,6 +17,7 @@ export interface ExecuteOptions {
   skipQuotaCheck?: boolean;
   featureKey?: string;
   requestId?: string;
+  billingMode?: 'tenant' | 'platform';
 }
 
 export interface ChatCompletionResult<T = any> {
@@ -51,15 +52,18 @@ export async function executeChatCompletion<T = any>(
   request: ChatCompletionRequest,
   opts: ExecuteOptions
 ): Promise<Response | ChatCompletionResult<T>> {
+  if ((globalThis as any).mockChatCompletionGlobal) {
+    return (globalThis as any).mockChatCompletionGlobal(request, opts);
+  }
   const startTime = Date.now();
   const requestId = opts.requestId || Math.random().toString(36).substring(7);
-  const { shopId, endpoint, slot, enableFallback = true, skipQuotaCheck = false, featureKey = 'aiAgentEnabled' } = opts;
+  const { shopId, endpoint, slot, enableFallback = true, skipQuotaCheck = false, featureKey = 'aiAgentEnabled', billingMode = 'tenant' } = opts;
 
   let fallbackTriggered = false;
 
   // 1. Centralized Quota Checking (happens before execution)
-  if (!skipQuotaCheck && shopId !== 'N/A' && shopId !== 'system') {
-    const quota = await checkShopQuota(shopId, featureKey);
+  if (!skipQuotaCheck && shopId !== 'N/A' && shopId !== 'system' && billingMode !== 'platform') {
+    const quota = await checkShopQuota(shopId, featureKey, billingMode);
     if (!quota.allowed) {
       const err = new AiProviderError('AI_RATE_LIMIT_ERROR', quota.message);
       await logAiUsage({
@@ -81,7 +85,7 @@ export async function executeChatCompletion<T = any>(
   }
 
   const decrementQuotaOnFailure = async () => {
-    if (!skipQuotaCheck && shopId !== 'N/A' && shopId !== 'system') {
+    if (!skipQuotaCheck && shopId !== 'N/A' && shopId !== 'system' && billingMode !== 'platform') {
       await decrementShopQuota(shopId);
     }
   };

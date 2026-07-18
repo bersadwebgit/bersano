@@ -20,11 +20,7 @@ export default function AdminSystemTickets() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    fetchTickets();
-  }, [statusFilter]);
-
-  const fetchTickets = async () => {
+  async function fetchTickets() {
     setLoading(true);
     try {
       const res = await fetch(`/api/admin/system-tickets?status=${statusFilter === 'all' ? '' : statusFilter}`, { cache: 'no-store' });
@@ -35,7 +31,13 @@ export default function AdminSystemTickets() {
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    setTimeout(() => {
+      fetchTickets();
+    }, 0);
+  }, [statusFilter]);
 
   const filteredTickets = tickets.filter(t => 
     t.subject.toLowerCase().includes(searchQuery.toLowerCase()) || 

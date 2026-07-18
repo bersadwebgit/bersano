@@ -187,6 +187,7 @@ export async function POST(request: Request) {
       httpOnly: true,
       path: '/',
       secure: isSecure,
+      sameSite: 'lax',
       maxAge: maxAge,
     });
 

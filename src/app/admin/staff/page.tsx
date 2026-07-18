@@ -87,7 +87,7 @@ export default function StaffPage() {
     fetchData();
   }, []);
 
-  const fetchData = async () => {
+  async function fetchData() {
     setLoading(true);
     try {
       const [staffRes, profileRes] = await Promise.all([
@@ -110,7 +110,7 @@ export default function StaffPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();

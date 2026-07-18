@@ -716,7 +716,7 @@ ${productContext ? `\n=== محصولات مرتبط ===\n${productContext}` : ''
     }
 
     const { isValid, issues: validationIssues, sanitizedData } = validateAndSanitizeProductControl(parsedResult);
-    if (sanitizedData) {
+    if (sanitizedData && parsedResult) {
       sanitizedData.featuresList = parsedResult.featuresList !== undefined ? parsedResult.featuresList : (featuresList || []);
       sanitizedData.specsList = parsedResult.specsList !== undefined ? parsedResult.specsList : (specsList || []);
       sanitizedData.galleryUrls = parsedResult.galleryUrls !== undefined ? parsedResult.galleryUrls : (galleryUrls || []);
@@ -726,7 +726,7 @@ ${productContext ? `\n=== محصولات مرتبط ===\n${productContext}` : ''
     }
 
     // Category Verification
-    if (parsedResult.formData && parsedResult.formData.categoryId) {
+    if (parsedResult && parsedResult.formData && parsedResult.formData.categoryId) {
       const category = await prisma.category.findFirst({
         where: {
           id: parsedResult.formData.categoryId,
@@ -740,7 +740,9 @@ ${productContext ? `\n=== محصولات مرتبط ===\n${productContext}` : ''
       }
     }
 
-    parsedResult.warnings = [...parseWarnings, ...validationIssues, ...(parsedResult.warnings || [])];
+    if (parsedResult) {
+      parsedResult.warnings = [...parseWarnings, ...validationIssues, ...(parsedResult.warnings || [])];
+    }
     
     return NextResponse.json(parsedResult);
 

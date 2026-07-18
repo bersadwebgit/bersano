@@ -11,6 +11,7 @@ export interface AiLogContext {
   shopId?: string;
   slot?: string;
   model?: string;
+  billingMode?: 'tenant' | 'platform';
 }
 
 let gatewayEnabledCache: { value: boolean; exp: number } | null = null;
@@ -119,13 +120,15 @@ export async function openRouterFetch(
     user: parsedBody.user,
   };
 
+  const billingMode = logContext.billingMode || 'tenant';
   const executeOpts = {
     shopId,
     endpoint: 'legacy-openrouter-fetch',
     slot,
     enableFallback: true,
-    skipQuotaCheck: true, // Legacy compatibility calls usually bypass quota checks here or handle them in routes
+    skipQuotaCheck: billingMode === 'platform' || shopId === 'system' || shopId === 'N/A' ? true : false,
     requestId: logContext.requestId,
+    billingMode,
   };
 
   const result = await executeChatCompletion(requestPayload, executeOpts);

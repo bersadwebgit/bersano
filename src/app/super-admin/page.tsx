@@ -3527,7 +3527,7 @@ export default function SuperAdminDashboard() {
                             <RefreshCw className="w-4 h-4 animate-spin" />
                           ) : (
                             <>
-                              <CheckCircle2 className="w-4 h-4" />
+                              <CheckCircle className="w-4 h-4" />
                               <span>ذخیره نهایی محتوای پلتفرم (CMS)</span>
                             </>
                           )}

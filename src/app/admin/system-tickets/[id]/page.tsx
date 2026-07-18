@@ -45,9 +45,9 @@ export default function AdminSystemTicketDetail() {
     scrollToBottom();
   }, [ticket?.messages]);
 
-  const scrollToBottom = () => {
+  function scrollToBottom() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -75,7 +75,7 @@ export default function AdminSystemTicketDetail() {
     setFilePreview(null);
   };
 
-  const fetchTicket = async () => {
+  async function fetchTicket() {
     try {
       const res = await fetch(`/api/admin/system-tickets/${id}`, { cache: 'no-store' });
       if (res.ok) {
@@ -89,7 +89,7 @@ export default function AdminSystemTicketDetail() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const handleReply = async (e: React.FormEvent) => {
     e.preventDefault();

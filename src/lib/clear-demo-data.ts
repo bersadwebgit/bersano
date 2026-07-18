@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import type { Prisma } from '@prisma/client';
 
-type TransactionClient = Prisma.TransactionClient;
+type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 const demoWhere = (shopId: string) => ({ shopId, isDemo: true });
 

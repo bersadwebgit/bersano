@@ -7,8 +7,12 @@ import { calculateAiCost } from '../ai-pricing';
  */
 export async function checkShopQuota(
   shopId: string,
-  featureKey = 'aiAgentEnabled'
+  featureKey = 'aiAgentEnabled',
+  billingMode: 'tenant' | 'platform' = 'tenant'
 ): Promise<{ allowed: boolean; message?: string }> {
+  if (billingMode === 'platform' || shopId === 'system' || shopId === 'N/A') {
+    return { allowed: true };
+  }
   try {
     const shopSettings = await prisma.shopSettings.findUnique({
       where: { shopId },
@@ -115,8 +119,15 @@ export async function checkShopQuota(
 
     return { allowed: true };
   } catch (error) {
-    console.error('[checkShopQuota] Error checking quota, falling back to allowed=true:', error);
-    return { allowed: true };
+    console.error('[checkShopQuota] Error checking quota:', error);
+    // Fail closed for tenant-billable requests, fail open for platform-owned requests
+    if ((billingMode as string) === 'platform' || shopId === 'system' || shopId === 'N/A') {
+      return { allowed: true };
+    }
+    return {
+      allowed: false,
+      message: 'خطا در بررسی سهمیه هوش مصنوعی. لطفاً دوباره تلاش کنید یا با پشتیبانی تماس بگیرید.',
+    };
   }
 }
 

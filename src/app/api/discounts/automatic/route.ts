@@ -17,13 +17,19 @@ export async function GET(request: Request) {
         shopId: shop.shopId,
         isActive: true,
         minQuantity: { gt: 0 },
-        OR: [
-          { expiresAt: null },
-          { expiresAt: { gt: now } }
-        ],
-        OR: [
-          { startDate: null },
-          { startDate: { lt: now } }
+        AND: [
+          {
+            OR: [
+              { expiresAt: null },
+              { expiresAt: { gt: now } }
+            ]
+          },
+          {
+            OR: [
+              { startDate: null },
+              { startDate: { lt: now } }
+            ]
+          }
         ]
       },
       orderBy: {

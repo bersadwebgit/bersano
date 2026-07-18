@@ -70,8 +70,8 @@ export async function POST(req: NextRequest) {
       data.imageUrl = null;
     }
     if (data.galleryUrls && Array.isArray(data.galleryUrls)) {
-      const validations = await Promise.all(data.galleryUrls.map(url => validateUrl(url)));
-      data.galleryUrls = data.galleryUrls.filter((_, idx) => validations[idx]);
+      const validations = await Promise.all((data.galleryUrls as string[]).map((url: string) => validateUrl(url)));
+      data.galleryUrls = (data.galleryUrls as string[]).filter((_: string, idx: number) => validations[idx]);
     }
     if (data.fileUrl && !(await validateUrl(data.fileUrl))) {
       data.fileUrl = null;

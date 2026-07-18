@@ -79,15 +79,15 @@ export async function GET() {
     }
 
     // Get statistics of embedded vs non-embedded products
-    const totalProducts = await prisma.product.count({
+    const totalProducts = (await prisma.product.count({
       allowCrossTenant: true,
-    } as any);
-    const embeddedProducts = await prisma.product.count({
+    } as any)) as number;
+    const embeddedProducts = (await prisma.product.count({
       where: {
         embeddingUpdatedAt: { not: null },
       },
       allowCrossTenant: true,
-    } as any);
+    } as any)) as number;
 
     const pendingProducts = totalProducts - embeddedProducts;
     const progress = getEmbeddingProgress();

@@ -523,7 +523,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           { title: { contains: decodedSlug, mode: 'insensitive' } },
           { slug: { contains: decodedSlug, mode: 'insensitive' } },
           ...(keywords.map(keyword => ({
-            title: { contains: keyword, mode: 'insensitive' }
+            title: { contains: keyword, mode: 'insensitive' as const }
           })))
         ]
       },

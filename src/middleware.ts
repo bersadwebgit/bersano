@@ -9,8 +9,11 @@ import {
   isAdminRole,
 } from '@/lib/admin-roles';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-change-in-production';
-const key = new TextEncoder().encode(JWT_SECRET);
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET && process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE !== 'phase-production-build') {
+  throw new Error('JWT_SECRET environment variable is missing!');
+}
+const key = new TextEncoder().encode(JWT_SECRET || 'your-super-secret-key-change-in-production');
 
 export async function middleware(request: NextRequest) {
   const response = await handleMiddleware(request);

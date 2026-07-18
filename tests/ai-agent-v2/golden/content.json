@@ -1,0 +1,13 @@
+[
+  {
+    "id": "cont-001",
+    "input": "یک مقاله بلاگ جدید به صورت پیش نویس با عنوان راهنمای خرید کفش نایک بنویس",
+    "expectedIntent": "blog.create_draft",
+    "expectedCapability": "manage_products",
+    "requiresClarification": false,
+    "riskLevel": "medium",
+    "mustChangeFields": ["title", "slug", "content"],
+    "mustNotChangeFields": [],
+    "expectedPermission": "blog.create"
+  }
+]

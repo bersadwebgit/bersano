@@ -1,7 +1,7 @@
 import { isRateLimited } from '../src/lib/rate-limiter';
 import { validateAndSanitizeProductControl } from '../src/lib/validate-ai-output';
 import { openRouterFetch } from '../src/lib/openrouter-fetch';
-import crypto from 'crypto';
+import { shouldUpdateSecret } from '../src/lib/validate-secret';
 
 // Setup Mock Environment
 const mockRedisStore = new Map<string, number>();
@@ -343,7 +343,7 @@ async function main() {
     const originalValueInDb = 'sk-or-secret-key-123456';
     let finalValueToSave = originalValueInDb;
 
-    if (submittedValue !== undefined && submittedValue !== '••••••••••••••••' && submittedValue !== '') {
+    if (shouldUpdateSecret(submittedValue)) {
       finalValueToSave = submittedValue;
     }
 
@@ -352,7 +352,7 @@ async function main() {
     }
 
     const newSubmittedValue = 'sk-or-new-secret-key-789';
-    if (newSubmittedValue !== undefined && newSubmittedValue !== '••••••••••••••••' && newSubmittedValue !== '') {
+    if (shouldUpdateSecret(newSubmittedValue)) {
       finalValueToSave = newSubmittedValue;
     }
 

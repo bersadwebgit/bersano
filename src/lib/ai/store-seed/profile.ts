@@ -12,10 +12,10 @@ export async function getOrCreateSeedProfile(shopId: string, initialData?: any) 
         data: {
           businessType: initialData.businessType || existing.businessType,
           niche: initialData.niche || existing.niche,
-          targetAudience: initialData.targetAudience ? JSON.stringify(initialData.targetAudience) : existing.targetAudience,
+          targetAudience: initialData.targetAudience ? JSON.stringify(initialData.targetAudience) : (existing.targetAudience as any),
           priceLevel: initialData.priceLevel || existing.priceLevel,
           brandTone: initialData.brandTone || existing.brandTone,
-          mainCategories: initialData.mainCategories ? JSON.stringify(initialData.mainCategories) : existing.mainCategories,
+          mainCategories: initialData.mainCategories ? JSON.stringify(initialData.mainCategories) : (existing.mainCategories as any),
           source: initialData.source || existing.source,
         }
       });

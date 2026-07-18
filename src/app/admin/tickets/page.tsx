@@ -26,8 +26,23 @@ export default function AdminTickets() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'support' | 'contact'>('support');
 
+  async function fetchTickets() {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/tickets?status=${statusFilter === 'all' ? '' : statusFilter}`, { cache: 'no-store' });
+      const data = await res.json();
+      if (data.tickets) setTickets(data.tickets);
+    } catch (error) {
+      console.error('[ERROR] [Tickets]: Error fetching tickets:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
-    fetchTickets();
+    setTimeout(() => {
+      fetchTickets();
+    }, 0);
 
     const intervalId = setInterval(() => {
       if (!document.hidden) {
@@ -42,19 +57,6 @@ export default function AdminTickets() {
 
     return () => clearInterval(intervalId);
   }, [statusFilter]);
-
-  const fetchTickets = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/admin/tickets?status=${statusFilter === 'all' ? '' : statusFilter}`, { cache: 'no-store' });
-      const data = await res.json();
-      if (data.tickets) setTickets(data.tickets);
-    } catch (error) {
-      console.error('[ERROR] [Tickets]: Error fetching tickets:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const filteredTickets = tickets.filter(t => {
     // 1. Separate by Tab

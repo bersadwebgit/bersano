@@ -90,7 +90,7 @@ export const Invalidate = {
         where: { shopId },
         select: { subdomain: true, customDomain: true },
       })
-      if (settings) {
+      if (redis && settings) {
         if (settings.subdomain) {
           await redis.del(CacheKeys.shopSettings(settings.subdomain))
         }
