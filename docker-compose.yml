@@ -64,6 +64,10 @@ services:
       UPSTASH_REDIS_REST_TOKEN: "${SRH_TOKEN}"
       DISABLE_AUTO_BALE_BOT: "true"
       DISABLE_AUTO_TELEGRAM_BOT: "true"
+      AI_GATEWAY_URL: "${AI_GATEWAY_URL}"
+      AI_GATEWAY_TOKEN: "${AI_GATEWAY_TOKEN}"
+      AI_GATEWAY_TIMEOUT_MS: "${AI_GATEWAY_TIMEOUT_MS}"
+      AI_ALLOW_DIRECT_OPENROUTER: "${AI_ALLOW_DIRECT_OPENROUTER}"
     depends_on:
       postgres:
         condition: service_healthy

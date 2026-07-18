@@ -22,8 +22,13 @@ export function validateAiRequest(prompt: string, context?: {
   if (context && !context.aiEnabled)
     return { valid: false, reason: 'سیستم هوش مصنوعی غیرفعال است. از تنظیمات پلتفرم فعال کنید.' };
 
-  if (context && !context.hasApiKey)
-    return { valid: false, reason: 'کلید API هوش مصنوعی تنظیم نشده است.' };
+  if (context && !context.hasApiKey) {
+    // Bypass direct API key validation if the server-side Gateway credentials are configured
+    const isGatewayConfigured = !!(process.env.AI_GATEWAY_URL && process.env.AI_GATEWAY_TOKEN);
+    if (!isGatewayConfigured) {
+      return { valid: false, reason: 'کلید API هوش مصنوعی تنظیم نشده است.' };
+    }
+  }
 
   return { valid: true };
 }

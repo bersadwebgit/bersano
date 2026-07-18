@@ -235,6 +235,43 @@ export default function SuperAdminDashboard() {
   const [blogAiAutoContinue, setBlogAiAutoContinue] = useState(true);
   const [aiProvider, setAiProvider] = useState<'openrouter'>('openrouter');
   const [aiEnabled, setAiEnabled] = useState(true);
+  const [aiGatewayEnabled, setAiGatewayEnabled] = useState(false);
+  const [aiGatewayLastStatus, setAiGatewayLastStatus] = useState('تنظیم نشده');
+  const [aiGatewayLastCheckedAt, setAiGatewayLastCheckedAt] = useState('');
+  const [aiGatewayUrl, setAiGatewayUrl] = useState('');
+  const [testingGateway, setTestingGateway] = useState(false);
+  const [testingGatewayModel, setTestingGatewayModel] = useState(false);
+
+  const handleTestGateway = async (withModel = false) => {
+    if (withModel) {
+      setTestingGatewayModel(true);
+    } else {
+      setTestingGateway(true);
+    }
+    try {
+      const res = await fetch('/api/super-admin/settings/test-gateway', {
+        method: withModel ? 'POST' : 'GET',
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setAiGatewayLastStatus(data.status);
+        setAiGatewayLastCheckedAt(data.checkedAt);
+        alert(`اتصال برقرار است!\nوضعیت: متصل\nآخرین بررسی: ${data.checkedAt}`);
+      } else {
+        setAiGatewayLastStatus(data.status || 'disconnected');
+        if (data.checkedAt) {
+          setAiGatewayLastCheckedAt(data.checkedAt);
+        }
+        const errorMsg = data.safeErrorCategory || data.error || 'خطا در برقراری ارتباط';
+        alert(`اتصال ناموفق بود.\nجزئیات خطا: ${errorMsg}`);
+      }
+    } catch (err: any) {
+      alert(`خطای شبکه یا سرور: ${err.message || err}`);
+    } finally {
+      setTestingGateway(false);
+      setTestingGatewayModel(false);
+    }
+  };
   const [centralBaleBotToken, setCentralBaleBotToken] = useState('');
   const [centralBaleBotApiKey, setCentralBaleBotApiKey] = useState('');
   const [centralTelegramBotToken, setCentralTelegramBotToken] = useState('');
@@ -385,6 +422,10 @@ export default function SuperAdminDashboard() {
         setBlogAiAutoContinue(data.blogAiAutoContinue !== undefined ? data.blogAiAutoContinue : true);
         setAiProvider('openrouter');
         setAiEnabled(data.aiEnabled !== undefined ? data.aiEnabled : true);
+        setAiGatewayEnabled(data.aiGatewayEnabled !== undefined ? data.aiGatewayEnabled : false);
+        setAiGatewayLastStatus(data.aiGatewayLastStatus || 'تنظیم نشده');
+        setAiGatewayLastCheckedAt(data.aiGatewayLastCheckedAt || '');
+        setAiGatewayUrl(data.aiGatewayUrl || '');
         setCentralBaleBotToken(data.centralBaleBotToken || '');
         setCentralBaleBotApiKey(data.centralBaleBotApiKey || '');
         setCentralTelegramBotToken(data.centralTelegramBotToken || '');
@@ -484,6 +525,7 @@ export default function SuperAdminDashboard() {
           blogAiAutoContinue,
           aiProvider: 'openrouter',
           aiEnabled,
+          aiGatewayEnabled,
           prompts,
           centralBaleBotToken,
           centralBaleBotApiKey,
@@ -2394,6 +2436,119 @@ export default function SuperAdminDashboard() {
                                 <div className={`w-2.5 h-2.5 rounded-full ${aiEnabled ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
                               </button>
                             </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <hr className="border-gray-100" />
+
+                      <div className="space-y-4">
+                        <h4 className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                          <Sparkles className="w-4 h-4 text-emerald-600" />
+                          اتصال API واسط هوش مصنوعی (AI Gateway)
+                        </h4>
+
+                        <div className="bg-gray-50/50 rounded-2xl p-4 border border-gray-100 space-y-4">
+                          <p className="text-[11px] text-gray-500 font-bold leading-relaxed">
+                            در صورت فعال بودن، درخواست‌های هوش مصنوعی از طریق سرور واسط خارجی ارسال می‌شوند.
+                          </p>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="block text-xs font-bold text-gray-700 mb-1">استفاده از API واسط</label>
+                              <div className="flex items-center gap-3 h-[42px]">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (aiGatewayEnabled) {
+                                      const confirmDisable = window.confirm(
+                                        'با غیرفعال‌کردن API واسط، ممکن است سرویس هوش مصنوعی روی سرور ایران متوقف شود. آیا از غیرفعال‌سازی اطمینان دارید؟'
+                                      );
+                                      if (!confirmDisable) return;
+                                    }
+                                    setAiGatewayEnabled(!aiGatewayEnabled);
+                                  }}
+                                  className={`flex items-center justify-between px-4 py-2.5 w-full rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                                    aiGatewayEnabled
+                                      ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                                      : 'bg-gray-100 border-gray-200 text-gray-600'
+                                  }`}
+                                >
+                                  <span>{aiGatewayEnabled ? 'فعال (ارسال از واسط خارجی)' : 'غیرفعال (ارسال مستقیم)'}</span>
+                                  <div className={`w-2.5 h-2.5 rounded-full ${aiGatewayEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="block text-xs font-bold text-gray-700 mb-1">وضعیت اتصال</label>
+                              <div className="flex items-center gap-2 h-[42px]">
+                                {aiGatewayLastStatus === 'connected' && (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-green-50 text-green-700 border border-green-200">
+                                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                                    متصل
+                                  </span>
+                                )}
+                                {aiGatewayLastStatus === 'disconnected' && (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-red-50 text-red-700 border border-red-200">
+                                    <span className="w-2 h-2 rounded-full bg-red-500" />
+                                    قطع
+                                  </span>
+                                )}
+                                {aiGatewayLastStatus !== 'connected' && aiGatewayLastStatus !== 'disconnected' && (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-700 border border-gray-200">
+                                    <span className="w-2 h-2 rounded-full bg-gray-400" />
+                                    {aiGatewayLastStatus}
+                                  </span>
+                                )}
+                                {aiGatewayLastCheckedAt && (
+                                  <span className="text-[10px] text-gray-400 font-bold">
+                                    آخرین بررسی: {aiGatewayLastCheckedAt}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="block text-xs font-bold text-gray-700 mb-1">آدرس سرویس واسط (Gateway URL)</label>
+                            <input
+                              type="text"
+                              value={aiGatewayUrl || 'تنظیم نشده در متغیرهای محیطی'}
+                              disabled
+                              readOnly
+                              className="w-full px-3 py-2.5 bg-gray-100 border border-gray-200 rounded-xl focus:outline-none text-xs font-mono text-gray-500 transition-all text-left cursor-not-allowed"
+                              dir="ltr"
+                            />
+                            <p className="text-[9px] text-gray-400 font-bold leading-relaxed pt-1">
+                              این مقدار از متغیر محیطی AI_GATEWAY_URL بر روی سرور خوانده می‌شود و غیرقابل ویرایش مستقیم است.
+                            </p>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2 pt-2">
+                            <button
+                              type="button"
+                              onClick={() => handleTestGateway(false)}
+                              disabled={testingGateway || testingGatewayModel}
+                              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm shadow-blue-500/10"
+                            >
+                              {testingGateway ? 'در حال بررسی...' : 'بررسی اتصال'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const confirmModelTest = window.confirm(
+                                  'تست کامل مدل هوش مصنوعی ممکن است مقدار بسیار ناچیزی از اعتبار حساب کاربری شما را مصرف کند. آیا مایل به ادامه هستید؟'
+                                );
+                                if (confirmModelTest) {
+                                  handleTestGateway(true);
+                                }
+                              }}
+                              disabled={testingGateway || testingGatewayModel}
+                              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm shadow-purple-500/10"
+                            >
+                              {testingGatewayModel ? 'در حال تست...' : 'تست کامل مدل'}
+                            </button>
                           </div>
                         </div>
                       </div>

@@ -6,7 +6,20 @@ import { exec, spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { invalidateModelCache } from '@/lib/ai-model-resolver';
+import { invalidateGatewayCache } from '@/lib/openrouter-fetch';
 import { encrypt, decrypt } from '@/lib/crypto';
+
+function maskUrl(url: string | undefined): string {
+  if (!url) return '';
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname;
+    const maskedHost = host.length > 7 ? host.slice(0, 3) + '••••••••' + host.slice(-4) : '••••••••';
+    return `${parsed.protocol}//${maskedHost}${parsed.pathname}`;
+  } catch (e) {
+    return 'https://••••••••/••••••••';
+  }
+}
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-change-in-production';
 const key = new TextEncoder().encode(JWT_SECRET);
@@ -412,6 +425,10 @@ export async function GET() {
       where: { key: 'ai_enabled' },
     });
 
+    const aiGatewayEnabledSetting = await prisma.systemSetting.findUnique({ where: { key: 'ai_gateway_enabled' } });
+    const aiGatewayLastStatusSetting = await prisma.systemSetting.findUnique({ where: { key: 'ai_gateway_last_status' } });
+    const aiGatewayLastCheckedAtSetting = await prisma.systemSetting.findUnique({ where: { key: 'ai_gateway_last_checked_at' } });
+
     const aiModelRouterSetting = await prisma.systemSetting.findUnique({ where: { key: 'ai_model_router' } });
     const aiModelSimpleSetting = await prisma.systemSetting.findUnique({ where: { key: 'ai_model_simple' } });
     const aiModelComplexSetting = await prisma.systemSetting.findUnique({ where: { key: 'ai_model_complex' } });
@@ -518,6 +535,11 @@ export async function GET() {
     const openrouterControlModel = openrouterControlModelSetting?.value || '';
     const aiProvider = 'openrouter';
     const aiEnabled = aiEnabledSetting ? aiEnabledSetting.value === 'true' : true;
+
+    const aiGatewayEnabled = aiGatewayEnabledSetting ? aiGatewayEnabledSetting.value === 'true' : false;
+    const aiGatewayLastStatus = aiGatewayLastStatusSetting?.value || 'تنظیم نشده';
+    const aiGatewayLastCheckedAt = aiGatewayLastCheckedAtSetting?.value || '';
+    const aiGatewayUrl = process.env.AI_GATEWAY_URL || '';
     let accountInfo = null;
 
     if (apiKey) {
@@ -605,6 +627,10 @@ export async function GET() {
       blogAiAutoContinue,
       aiProvider,
       aiEnabled,
+      aiGatewayEnabled,
+      aiGatewayLastStatus,
+      aiGatewayLastCheckedAt,
+      aiGatewayUrl: maskUrl(aiGatewayUrl),
       prompts, 
       accountInfo,
       centralBaleBotToken,
@@ -675,6 +701,7 @@ export async function POST(request: Request) {
       blogAiMaxChunks,
       blogAiAutoContinue,
       aiEnabled,
+      aiGatewayEnabled,
       prompts,
       centralBaleBotToken,
       centralBaleBotApiKey,
@@ -879,6 +906,18 @@ export async function POST(request: Request) {
       });
     }
 
+    if (aiGatewayEnabled !== undefined) {
+      if (typeof aiGatewayEnabled !== 'boolean') {
+        return NextResponse.json({ error: 'مقدار فعال‌سازی واسط هوش مصنوعی نامعتبر است' }, { status: 400 });
+      }
+      await prisma.systemSetting.upsert({
+        where: { key: 'ai_gateway_enabled' },
+        update: { value: aiGatewayEnabled ? 'true' : 'false' },
+        create: { key: 'ai_gateway_enabled', value: aiGatewayEnabled ? 'true' : 'false' },
+      });
+      invalidateGatewayCache();
+    }
+
     if (prompts && typeof prompts === 'object') {
       for (const [key, val] of Object.entries(prompts)) {
         if (key.startsWith('ai_') && typeof val === 'string') {
@@ -961,6 +1000,7 @@ export async function POST(request: Request) {
     }
 
     invalidateModelCache();
+    invalidateGatewayCache();
 
     // Automatically trigger starting or restarting the Bale Bot Runner process on the server
     if (centralBaleBotToken && process.env.DISABLE_AUTO_BALE_BOT !== 'true') {

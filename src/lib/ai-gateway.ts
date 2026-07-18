@@ -1,6 +1,6 @@
 import { prisma } from './prisma';
 import { getAiModel, AiModelSlot } from './ai-model-resolver';
-import { openRouterFetch, parseOpenRouterJsonResponse } from './openrouter-fetch';
+import { openRouterFetch, parseOpenRouterJsonResponse, getAiGatewayEnabled } from './openrouter-fetch';
 import { parseAiJson } from './parse-ai-json';
 import { calculateAiCost } from './ai-pricing';
 import { redis } from './redis';
@@ -206,7 +206,7 @@ export async function callAiGateway<T = any>(options: AiGatewayOptions): Promise
   };
 
   try {
-    // 1. Validate AI System Settings & API Key (No fallback allowed for these)
+    // 1. Validate AI System Settings
     const settings = await prisma.systemSetting.findMany({
       where: {
         key: {
@@ -224,8 +224,10 @@ export async function callAiGateway<T = any>(options: AiGatewayOptions): Promise
       };
     }
 
+    const isGatewayEnabled = await getAiGatewayEnabled();
     const apiKey = settingsMap.get('openrouter_api_key');
-    if (!apiKey) {
+
+    if (!apiKey && !isGatewayEnabled) {
       return {
         success: false,
         text: '',
@@ -250,12 +252,14 @@ export async function callAiGateway<T = any>(options: AiGatewayOptions): Promise
     
     // Prepare API headers and body
     const apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
-    const apiHeaders = {
+    const apiHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
       'HTTP-Referer': 'https://shop-builder.ir',
       'X-Title': 'SaaS Shop Builder',
     };
+    if (apiKey) {
+      apiHeaders['Authorization'] = `Bearer ${apiKey}`;
+    }
 
     const requestBody = {
       model: primaryModel,
@@ -276,7 +280,12 @@ export async function callAiGateway<T = any>(options: AiGatewayOptions): Promise
         method: 'POST',
         headers: apiHeaders,
         body: JSON.stringify(requestBody),
-      });
+        logContext: {
+          shopId,
+          slot,
+          model: primaryModel,
+        }
+      } as any);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -291,7 +300,7 @@ export async function callAiGateway<T = any>(options: AiGatewayOptions): Promise
       }
 
       primaryModelSuccess = true;
-    } catch (primaryError) {
+    } catch (primaryError: any) {
       console.warn(`[AiGateway] Primary model (${primaryModel}) failed:`, primaryError);
       
       if (!enableFallback) {
@@ -299,7 +308,7 @@ export async function callAiGateway<T = any>(options: AiGatewayOptions): Promise
         return {
           success: false,
           text: '',
-          error: 'ارتباط با سرویس هوش مصنوعی موقتاً برقرار نشد. لطفاً چند دقیقه بعد دوباره تلاش کنید.',
+          error: primaryError.message || 'ارتباط با سرویس هوش مصنوعی موقتاً برقرار نشد. لطفاً چند دقیقه بعد دوباره تلاش کنید.',
         };
       }
     }
@@ -376,7 +385,12 @@ export async function callAiGateway<T = any>(options: AiGatewayOptions): Promise
           method: 'POST',
           headers: apiHeaders,
           body: JSON.stringify(fallbackRequestBody),
-        });
+          logContext: {
+            shopId,
+            slot: 'fallback',
+            model: fallbackModel,
+          }
+        } as any);
 
         if (!fallbackResponse.ok) {
           const errorText = await fallbackResponse.text();
@@ -440,8 +454,14 @@ export async function callAiGateway<T = any>(options: AiGatewayOptions): Promise
             latencyMs,
           };
         }
-      } catch (fallbackError) {
+      } catch (fallbackError: any) {
         console.error('[AiGateway] Fallback model also failed:', fallbackError);
+        await decrementQuota();
+        return {
+          success: false,
+          text: '',
+          error: fallbackError.message || 'ارتباط با سرویس هوش مصنوعی موقتاً برقرار نشد. لطفاً چند دقیقه بعد دوباره تلاش کنید.',
+        };
       }
     }
 
@@ -457,7 +477,7 @@ export async function callAiGateway<T = any>(options: AiGatewayOptions): Promise
     return {
       success: false,
       text: '',
-      error: 'ارتباط با سرویس هوش مصنوعی موقتاً برقرار نشد. لطفاً چند دقیقه بعد دوباره تلاش کنید.',
+      error: globalError.message || 'ارتباط با سرویس هوش مصنوعی موقتاً برقرار نشد. لطفاً چند دقیقه بعد دوباره تلاش کنید.',
     };
   }
 }
