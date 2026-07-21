@@ -88,6 +88,72 @@ export function validateModelName(model: unknown): string | null {
   return trimmed;
 }
 
+export async function isModelAllowed(model: string, slot: AiModelSlot): Promise<boolean> {
+  // 1. Hardcoded fallbacks are always allowed
+  if (HARDCODED_FALLBACK[slot] === model) {
+    return true;
+  }
+  if (Object.values(HARDCODED_FALLBACK).includes(model)) {
+    return true;
+  }
+
+  // 2. Models in the pricing registries are allowed
+  const lower = model.toLowerCase();
+  if (
+    lower.includes('gemini-2.5-flash') ||
+    lower.includes('gemini-2.5-flash-lite') ||
+    lower.includes('claude-3-5-sonnet') ||
+    lower.includes('claude-sonnet-4.6') ||
+    lower.includes('claude-sonnet-4-6') ||
+    lower.includes('claude-3.5-sonnet') ||
+    lower.includes('claude-3-5-haiku') ||
+    lower.includes('claude-3.5-haiku') ||
+    lower.includes('claude-3-haiku') ||
+    lower.includes('gpt-4o-mini') ||
+    lower.includes('gpt-4o') ||
+    lower.includes('gemini-2.5-pro') ||
+    lower.includes('gemini-1.5-pro') ||
+    lower.includes('llama-3-8b') ||
+    lower.includes('llama-3.1-8b') ||
+    lower.includes('text-embedding-3-small') ||
+    lower.includes('text-embedding-3-large') ||
+    lower.includes('text-embedding-ada-002')
+  ) {
+    return true;
+  }
+
+  // 3. Query all configured models in system settings
+  try {
+    const rows = await prisma.systemSetting.findMany({
+      where: {
+        key: {
+          in: [
+            'ai_model_router',
+            'ai_model_simple',
+            'ai_model_complex',
+            'ai_model_content',
+            'ai_model_chat',
+            'ai_model_embedding',
+            'ai_model_fallback',
+            'ai_model_wholesale',
+            'openrouter_control_model',
+            'openrouter_model',
+            'openrouter_blog_model',
+          ],
+        },
+      },
+    });
+    const configuredModels = rows.map((r) => r.value);
+    if (configuredModels.includes(model)) {
+      return true;
+    }
+  } catch {
+    // DB failure -> fallback to safe check
+  }
+
+  return false;
+}
+
 /**
  * Resolves which AI model to use for each slot.
  * Precedence:
@@ -110,6 +176,16 @@ export async function resolveAiModel(
   // values (e.g. '', 'undefined', missing) fall through to the slot-based resolution below.
   const explicitModel = validateModelName(requestedModel);
   if (explicitModel) {
+    const allowed = await isModelAllowed(explicitModel, slot);
+    if (!allowed) {
+      console.warn(`[resolveAiModel] [SECURITY WARNING] Rejected unauthorized/malicious model request: ${explicitModel} for slot ${slot}`);
+      throw new AiProviderError(
+        'AI_CONFIGURATION_ERROR',
+        `مدل درخواستی غیرمجاز است.`,
+        400
+      );
+    }
+
     if (slot === 'embedding' && !isEmbeddingCapableModel(explicitModel)) {
       throw new AiProviderError(
         'AI_INVALID_EMBEDDING_MODEL',

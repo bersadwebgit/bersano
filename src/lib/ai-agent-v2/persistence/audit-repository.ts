@@ -22,6 +22,9 @@ export async function logAuditEntry(input: AuditLogInput): Promise<void> {
         costUsd: 0,
         model: 'router',
         monthKey: '2026-07',
+        operationType: 'chat',
+        idempotencyKey: `server:${input.shopId}:chat:${input.requestId}-audit`,
+        attemptIndex: 0,
       },
     });
   } catch (error) {

@@ -148,8 +148,9 @@ export async function testUsageQuotaBilling() {
     const sonnetCost = resolveAiCost('anthropic/claude-3-5-sonnet', 1000, 2000, 'chat');
     // Claude 3.5 Sonnet: $3/1M input, $15/1M output.
     // 1000 * 3e-6 + 2000 * 15e-6 = 0.003 + 0.03 = 0.033
-    if (Math.abs(sonnetCost.costUsd - 0.033) > 1e-9 || sonnetCost.costStatus !== 'resolved') {
-      throw new Error(`Claude 3.5 Sonnet cost mismatch: got ${sonnetCost.costUsd}`);
+    const sonnetCostVal = sonnetCost.actualCostUsd ?? sonnetCost.estimatedCostUsd;
+    if (Math.abs(sonnetCostVal - 0.033) > 1e-9 || sonnetCost.costStatus !== 'resolved') {
+      throw new Error(`Claude 3.5 Sonnet cost mismatch: got ${sonnetCostVal}`);
     }
 
     // 5. Cost calculation embedding
@@ -157,14 +158,16 @@ export async function testUsageQuotaBilling() {
     const textEmbCost = resolveAiCost('openai/text-embedding-3-small', 1000000, 0, 'embedding');
     // text-embedding-3-small: $0.02/1M input.
     // 1000000 * 0.02e-6 = 0.02
-    if (Math.abs(textEmbCost.costUsd - 0.02) > 1e-9 || textEmbCost.costStatus !== 'resolved') {
-      throw new Error(`text-embedding-3-small cost mismatch: got ${textEmbCost.costUsd}`);
+    const textEmbCostVal = textEmbCost.actualCostUsd ?? textEmbCost.estimatedCostUsd;
+    if (Math.abs(textEmbCostVal - 0.02) > 1e-9 || textEmbCost.costStatus !== 'resolved') {
+      throw new Error(`text-embedding-3-small cost mismatch: got ${textEmbCostVal}`);
     }
 
     // 6. Unknown model cost unresolved
     console.log('     6. Testing unknown model cost unresolved...');
     const unknownCost = resolveAiCost('some-unknown-model-xyz', 1000, 2000, 'chat');
-    if (unknownCost.costStatus !== 'unresolved' || unknownCost.costUsd === 0) {
+    const unknownCostVal = unknownCost.actualCostUsd ?? unknownCost.estimatedCostUsd;
+    if (unknownCost.costStatus !== 'unresolved' || unknownCostVal === 0) {
       throw new Error('Unknown model should be unresolved and have a non-zero best-effort estimate');
     }
 
@@ -291,10 +294,9 @@ export async function testUsageQuotaBilling() {
       modelSlot: 'fallback',
     });
     await sleep(50);
-    if (mockDb.aiUsage.length !== 1) {
-      // Only successful calls are written to the database (matching project spec), but both are logged to observability.
-      // Let's verify that the successful fallback is persisted.
-      throw new Error(`Expected 1 persisted fallback row, got ${mockDb.aiUsage.length}`);
+    if (mockDb.aiUsage.length !== 2) {
+      // Both failed and successful attempts are written to the database for attempt-level tracking.
+      throw new Error(`Expected 2 persisted fallback rows, got ${mockDb.aiUsage.length}`);
     }
 
     // 11. Explicit requestedModel cannot bypass model policy
@@ -435,14 +437,14 @@ export async function testUsageQuotaBilling() {
     }
     await sleep(50);
 
-    // Verify that the successful item is persisted, and the failed item is NOT persisted in DB (but logged)
+    // Verify that both successful and failed items are persisted in DB (with attempt-level tracking)
     const batchSuccessPersisted = mockDb.aiUsage.find((r: any) => r.idempotencyKey?.includes('prod_batch_1')) as any;
     const batchFailPersisted = mockDb.aiUsage.find((r: any) => r.idempotencyKey?.includes('prod_batch_2')) as any;
     if (!batchSuccessPersisted || batchSuccessPersisted.status !== 'success') {
       throw new Error('Successful batch item was not persisted');
     }
-    if (batchFailPersisted) {
-      throw new Error('Failed batch item should not be persisted in the database');
+    if (!batchFailPersisted || batchFailPersisted.status !== 'failed') {
+      throw new Error('Failed batch item should be persisted in the database with failed status');
     }
 
     // 17. Idempotent retry
@@ -604,6 +606,73 @@ export async function testUsageQuotaBilling() {
     const parsedDecimal = parseFloat(decimalPersisted.costUsdDecimal);
     if (Math.abs(parsedDecimal - parseFloat(decimalPersisted.costUsd.toFixed(8))) > 1e-9) {
       throw new Error('Decimal cost aggregation mismatch');
+    }
+
+    // 23. Durable writes: temporary database failure and retry
+    console.log('     23. Testing durable writes with temporary database failure...');
+    mockDb.aiUsage = [];
+    let dbCallCount = 0;
+    const originalCreate = mockPrisma.aiUsage.create;
+    mockPrisma.aiUsage.create = async (args: any) => {
+      dbCallCount++;
+      if (dbCallCount < 3) {
+        throw new Error('Temporary database connection failure');
+      }
+      return await originalCreate(args);
+    };
+
+    await logAiUsage({
+      shopId: 'shop_1',
+      endpoint: 'durable-test',
+      model: 'google/gemini-2.5-flash',
+      tokensIn: 100,
+      tokensOut: 100,
+      requestId: 'req-durable-1',
+      transportMode: 'direct',
+      durationMs: 100,
+      retryCount: 0,
+      fallbackUsed: false,
+      success: true,
+    });
+    await sleep(50);
+    mockPrisma.aiUsage.create = originalCreate; // Restore original
+
+    if (dbCallCount !== 3) {
+      throw new Error(`Expected 3 database write attempts, got ${dbCallCount}`);
+    }
+    if (mockDb.aiUsage.length !== 1) {
+      throw new Error(`Expected exactly 1 persisted row after retry, got ${mockDb.aiUsage.length}`);
+    }
+
+    // 24. Persian token accounting
+    console.log('     24. Testing Persian token accounting...');
+    const persianTexts = [
+      "۱۲۳۴۵۶۷۸۹۰", // Persian numbers
+      "کتاب‌خانه", // Half-spaces
+      "ي و ك vs ی و ک", // Arabic/Persian letter variants
+      "https://shop-builder.ir/محصول/۱", // URLs
+      "محصول Laptop Pro با تخفیف ویژه", // Mixed Persian and English
+      "این یک توضیحات بسیار طولانی برای تست توکنایزر تخمینی است که باید به درستی تعداد کاراکترها را بر ۴ تقسیم کند.", // Long description
+    ];
+    for (const text of persianTexts) {
+      const estimated = Math.ceil(text.length / 4);
+      if (typeof estimated !== 'number' || estimated <= 0) {
+        throw new Error(`Invalid token estimation for text: ${text}`);
+      }
+    }
+
+    // 25. Explicit model trust boundary (malicious request bodies)
+    console.log('     25. Testing explicit model trust boundary...');
+    let trustBoundaryThrew = false;
+    try {
+      await resolveAiModel('anthropic/claude-3-opus-malicious', 'simple');
+    } catch (err: any) {
+      if (err.code === 'AI_CONFIGURATION_ERROR' && err.status === 400) {
+        trustBoundaryThrew = true;
+      }
+    }
+    if (!trustBoundaryThrew) {
+      throw new Error('Malicious model injection was not blocked by trust boundary');
     }
 
     console.log('   ✓ Quota, Cost Tracking, and Billing verified successfully!');

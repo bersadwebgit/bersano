@@ -894,7 +894,7 @@ model AiUsage {
 
   // AI-008 (Phase C): durable usage/billing enrichment. All nullable + additive so legacy rows
   // (operationType=null) keep counting toward the chat quota exactly as before.
-  operationType  String?  @map("operation_type") // 'chat' | 'embedding'
+  operationType  String   @map("operation_type") // 'chat' | 'embedding'
   resolvedModel  String?  @map("resolved_model") // the model actually sent to the provider (AI-004)
   status         String?  // 'success' | 'failed' | 'quota_exceeded'
   costStatus     String?  @map("cost_status") // 'resolved' | 'unresolved' | 'unknown'
@@ -902,11 +902,11 @@ model AiUsage {
   requestId      String?  @map("request_id")
   durationMs     Int?     @map("duration_ms")
   inputCount     Int?     @map("input_count") // embedding: number of inputs in the (batch) request
-  idempotencyKey String?  @map("idempotency_key") // prevents duplicate usage on retry/resume
+  idempotencyKey String   @map("idempotency_key") // prevents duplicate usage on retry/resume
 
   // Attempt-level tracking additions
   rootRequestId     String?  @map("root_request_id")
-  attemptIndex      Int?     @default(0) @map("attempt_index")
+  attemptIndex      Int      @default(0) @map("attempt_index")
   providerRequestId String?  @map("provider_request_id")
   usageKnown        Boolean? @default(true) @map("usage_known")
   actualCost        Decimal? @map("actual_cost") @db.Decimal(14, 8)

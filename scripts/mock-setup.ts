@@ -27,6 +27,34 @@ export const mockRedis = {
     }
     return count;
   },
+  exists: async (key: string) => {
+    return mockRedisStore.has(key) ? 1 : 0;
+  },
+  eval: async (script: string, keys: string[], args: string[]) => {
+    const key = keys[0];
+    const dbCount = parseInt(args[0]);
+    const ttl = parseInt(args[1]);
+    const limit = parseInt(args[2]);
+
+    const exists = mockRedisStore.has(key);
+    if (!exists) {
+      if (dbCount >= limit) {
+        return -2;
+      }
+      const initVal = dbCount + 1;
+      mockRedisStore.set(key, String(initVal));
+      return initVal;
+    } else {
+      const current = parseInt(mockRedisStore.get(key) || '0');
+      if (current >= limit) {
+        return -2;
+      } else {
+        const newVal = current + 1;
+        mockRedisStore.set(key, String(newVal));
+        return newVal;
+      }
+    }
+  },
 };
 
 // Mock Database State

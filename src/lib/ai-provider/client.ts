@@ -22,6 +22,7 @@ export interface ExecuteOptions {
   // AI-008 (Phase C): usage enrichment / traceability.
   capability?: string;
   rootRequestId?: string;
+  idempotencyKey?: string;
 }
 
 export interface ChatCompletionResult<T = any> {
@@ -154,7 +155,18 @@ export async function executeChatCompletion<T = any>(
   }
   const startTime = Date.now();
   const requestId = opts.requestId || Math.random().toString(36).substring(7);
-  const { shopId, endpoint, slot, enableFallback = true, skipQuotaCheck = false, featureKey = 'aiAgentEnabled', billingMode = 'tenant', capability, rootRequestId } = opts;
+  const {
+    shopId,
+    endpoint,
+    slot,
+    enableFallback = true,
+    skipQuotaCheck = false,
+    featureKey = 'aiAgentEnabled',
+    billingMode = 'tenant',
+    capability,
+    rootRequestId,
+    idempotencyKey,
+  } = opts;
 
   let fallbackTriggered = false;
 
@@ -183,6 +195,7 @@ export async function executeChatCompletion<T = any>(
         rootRequestId,
         modelSlot: slot,
         errorCode: 'AI_QUOTA_EXCEEDED',
+        idempotencyKey,
       });
       return { success: false, text: '', error: err.persianMessage, errorCode: 'AI_QUOTA_EXCEEDED', status: 429 };
     }
@@ -240,6 +253,7 @@ export async function executeChatCompletion<T = any>(
       let finalError: any = null;
 
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        const attemptStartTime = Date.now();
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), config.timeoutMs);
 
@@ -259,8 +273,9 @@ export async function executeChatCompletion<T = any>(
                 tokensOut: 0,
                 requestId,
                 transportMode: config.mode === 'gateway' ? 'gateway' : 'direct',
-                durationMs: Date.now() - startTime,
+                durationMs: Date.now() - attemptStartTime,
                 retryCount: attempt - 1,
+                attemptIndex: attempt - 1,
                 fallbackUsed: false,
                 success: true,
                 operationType: 'chat',
@@ -269,6 +284,8 @@ export async function executeChatCompletion<T = any>(
                 modelSource: resolution.source,
                 capability,
                 rootRequestId,
+                idempotencyKey,
+                tokenCountSource: 'estimated',
               });
               return response;
             }
@@ -284,7 +301,31 @@ export async function executeChatCompletion<T = any>(
 
             if (responseData.error) {
               const msg = responseData.error.message || JSON.stringify(responseData.error);
-              throw new AiProviderError('AI_PROVIDER_ERROR', msg, response.status || 502);
+              const errObj = new AiProviderError('AI_PROVIDER_ERROR', msg, response.status || 502);
+              await logAiUsage({
+                shopId,
+                endpoint,
+                model: resolvedModel,
+                tokensIn: 0,
+                tokensOut: 0,
+                requestId,
+                transportMode: config.mode === 'gateway' ? 'gateway' : 'direct',
+                durationMs: Date.now() - attemptStartTime,
+                retryCount: attempt - 1,
+                attemptIndex: attempt - 1,
+                fallbackUsed: false,
+                success: false,
+                operationType: 'chat',
+                resolvedModel,
+                modelSlot: slot,
+                modelSource: resolution.source,
+                capability,
+                rootRequestId,
+                idempotencyKey,
+                errorCode: errObj.code,
+                error: errObj.message,
+              });
+              throw errObj;
             }
 
             const text = responseData.choices?.[0]?.message?.content || '';
@@ -294,7 +335,10 @@ export async function executeChatCompletion<T = any>(
 
             const tokensIn = responseData.usage?.prompt_tokens || Math.ceil(JSON.stringify(request.messages).length / 4);
             const tokensOut = responseData.usage?.completion_tokens || Math.ceil(text.length / 4);
-            const { costUsd, costStatus } = resolveAiCost(resolvedModel, tokensIn, tokensOut, 'chat');
+            const tokenCountSource = responseData.usage ? 'provider' : 'estimated';
+            const resolvedCost = resolveAiCost(resolvedModel, tokensIn, tokensOut, 'chat');
+            const costUsd = resolvedCost.actualCostUsd ?? resolvedCost.estimatedCostUsd;
+            const costStatus = resolvedCost.costStatus;
 
             await logAiUsage({
               shopId,
@@ -306,8 +350,9 @@ export async function executeChatCompletion<T = any>(
               costStatus,
               requestId,
               transportMode: config.mode === 'gateway' ? 'gateway' : 'direct',
-              durationMs: Date.now() - startTime,
+              durationMs: Date.now() - attemptStartTime,
               retryCount: attempt - 1,
+              attemptIndex: attempt - 1,
               fallbackUsed: false,
               success: true,
               operationType: 'chat',
@@ -316,6 +361,8 @@ export async function executeChatCompletion<T = any>(
               modelSource: resolution.source,
               capability,
               rootRequestId,
+              idempotencyKey,
+              tokenCountSource,
             });
 
             return {
@@ -341,6 +388,31 @@ export async function executeChatCompletion<T = any>(
             }
           } catch (e) {}
 
+          const errObj = new AiProviderError(errCode, errMsg, status);
+          await logAiUsage({
+            shopId,
+            endpoint,
+            model: resolvedModel,
+            tokensIn: 0,
+            tokensOut: 0,
+            requestId,
+            transportMode: config.mode === 'gateway' ? 'gateway' : 'direct',
+            durationMs: Date.now() - attemptStartTime,
+            retryCount: attempt - 1,
+            attemptIndex: attempt - 1,
+            fallbackUsed: false,
+            success: false,
+            operationType: 'chat',
+            resolvedModel,
+            modelSlot: slot,
+            modelSource: resolution.source,
+            capability,
+            rootRequestId,
+            idempotencyKey,
+            errorCode: errObj.code,
+            error: errObj.message,
+          });
+
           const isRetryable = status === 429 || (status >= 500 && status < 600);
           if (isRetryable && attempt < maxAttempts) {
             const jitter = Math.random() * 200;
@@ -349,15 +421,44 @@ export async function executeChatCompletion<T = any>(
             continue;
           }
 
-          throw new AiProviderError(errCode, errMsg, status);
+          throw errObj;
         } catch (err: any) {
           clearTimeout(timeoutId);
           const isTimeout = err.name === 'AbortError' || err.message?.includes('aborted') || err.message?.includes('Timeout');
-          finalError = isTimeout ? new AiProviderError('AI_TIMEOUT', 'زمان انتظار به پایان رسید.', 408) : err;
+          const errObj = isTimeout ? new AiProviderError('AI_TIMEOUT', 'زمان انتظار به پایان رسید.', 408) : err;
+
+          const isProviderErrorLogged = err instanceof AiProviderError;
+          if (!isProviderErrorLogged) {
+            await logAiUsage({
+              shopId,
+              endpoint,
+              model: resolvedModel,
+              tokensIn: 0,
+              tokensOut: 0,
+              requestId,
+              transportMode: config.mode === 'gateway' ? 'gateway' : 'direct',
+              durationMs: Date.now() - attemptStartTime,
+              retryCount: attempt - 1,
+              attemptIndex: attempt - 1,
+              fallbackUsed: false,
+              success: false,
+              operationType: 'chat',
+              resolvedModel,
+              modelSlot: slot,
+              modelSource: resolution.source,
+              capability,
+              rootRequestId,
+              idempotencyKey,
+              errorCode: isTimeout ? 'AI_TIMEOUT' : 'AI_PROVIDER_ERROR',
+              error: errObj.message || String(errObj),
+              usageKnown: false,
+              costStatus: isTimeout ? 'unknown' : 'unresolved',
+            });
+          }
 
           // Do not retry on 400, 401, 403, 404, 422
-          if (err instanceof AiProviderError && err.status && [400, 401, 403, 404, 422].includes(err.status)) {
-            throw finalError;
+          if (errObj instanceof AiProviderError && errObj.status && [400, 401, 403, 404, 422].includes(errObj.status)) {
+            throw errObj;
           }
 
           if (attempt < maxAttempts) {
@@ -365,7 +466,7 @@ export async function executeChatCompletion<T = any>(
             await new Promise((resolve) => setTimeout(resolve, delays[attempt - 1] + jitter));
             continue;
           }
-          throw finalError;
+          throw errObj;
         }
       }
 
@@ -406,6 +507,7 @@ export async function executeChatCompletion<T = any>(
           skipQuotaCheck: true, // Do not double-deduct quota during fallback
           // AI-008: fallback is a separate attempt recorded under the SAME root request as the primary.
           rootRequestId: rootRequestId || requestId,
+          requestId: `${requestId}-fallback`,
         });
 
         if ('success' in result && result.success) {
@@ -422,25 +524,6 @@ export async function executeChatCompletion<T = any>(
     await decrementQuotaOnFailure();
 
     const finalErrObj = err instanceof AiProviderError ? err : new AiProviderError('AI_PROVIDER_ERROR', err?.message || String(err), 502);
-    await logAiUsage({
-      shopId,
-      endpoint,
-      model: request.model,
-      tokensIn: 0,
-      tokensOut: 0,
-      requestId,
-      transportMode: 'direct',
-      durationMs: Date.now() - startTime,
-      retryCount: 0,
-      fallbackUsed: fallbackTriggered,
-      success: false,
-      error: finalErrObj.message,
-      operationType: 'chat',
-      capability,
-      rootRequestId,
-      modelSlot: slot,
-      errorCode: finalErrObj.code,
-    });
 
     return {
       success: false,
@@ -536,6 +619,9 @@ export interface EmbeddingUsageContext {
   inputCount?: number;
   /** Skip the pre-call authorization gate (used by RAG sub-calls already metered by the parent chat). */
   skipQuota?: boolean;
+  quotaExempt?: boolean;
+  billingBucket?: 'merchant' | 'platform' | 'system' | 'promotional';
+  sourceCapability?: string;
 }
 
 /**
@@ -627,10 +713,12 @@ export async function executeEmbedding(
 
   const maxAttempts = 3;
   const delays = [1000, 2000, 4000];
+  const logTransport: 'gateway' | 'direct' = transportMode === 'gateway' ? 'gateway' : 'direct';
 
   const executeRequest = async (): Promise<number[]> => {
     let lastError: any = null;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const attemptStartTime = Date.now();
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
 
@@ -651,9 +739,38 @@ export async function executeEmbedding(
             }
           } catch (e) {}
 
+          const errObj = new AiProviderError(errCode, errMsg, status);
+          if (usage) {
+            await logAiUsage({
+              shopId: usage.shopId,
+              endpoint: usage.endpoint,
+              model: resolvedModel,
+              resolvedModel,
+              tokensIn: 0,
+              tokensOut: 0,
+              requestId,
+              transportMode: logTransport,
+              durationMs: Date.now() - attemptStartTime,
+              retryCount: attempt - 1,
+              attemptIndex: attempt - 1,
+              fallbackUsed: false,
+              success: false,
+              operationType: 'embedding',
+              capability: usage.capability,
+              rootRequestId: usage.rootRequestId,
+              inputCount,
+              errorCode: errObj.code,
+              error: errObj.message,
+              idempotencyKey: usage.idempotencyKey,
+              billingBucket: usage.billingBucket,
+              quotaExempt: usage.quotaExempt || usage.skipQuota,
+              sourceCapability: usage.sourceCapability || usage.capability,
+            });
+          }
+
           // Do not retry on 400, 401, 403, 404, 422
           if (status && [400, 401, 403, 404, 422].includes(status)) {
-            throw new AiProviderError(errCode, errMsg, status);
+            throw errObj;
           }
 
           if (attempt < maxAttempts) {
@@ -662,7 +779,7 @@ export async function executeEmbedding(
             continue;
           }
 
-          throw new AiProviderError(errCode, errMsg, status);
+          throw errObj;
         }
 
         const data = await response.json();
@@ -670,13 +787,78 @@ export async function executeEmbedding(
         if (!embedding || !Array.isArray(embedding)) {
           throw new AiProviderError('AI_INVALID_RESPONSE', 'فرمت پاسخ وکتور معتبر نبود.', 502);
         }
+
+        if (usage) {
+          await logAiUsage({
+            shopId: usage.shopId,
+            endpoint: usage.endpoint,
+            model: resolvedModel,
+            resolvedModel,
+            tokensIn: estimatedTokens,
+            tokensOut: 0,
+            requestId,
+            transportMode: logTransport,
+            durationMs: Date.now() - attemptStartTime,
+            retryCount: attempt - 1,
+            attemptIndex: attempt - 1,
+            fallbackUsed: false,
+            success: true,
+            operationType: 'embedding',
+            modelSlot: 'embedding',
+            modelSource: resolvedResult.source,
+            capability: usage.capability,
+            rootRequestId: usage.rootRequestId,
+            inputCount,
+            vectorDimensions: embedding.length,
+            idempotencyKey: usage.idempotencyKey,
+            tokenCountSource: 'estimated',
+            billingBucket: usage.billingBucket,
+            quotaExempt: usage.quotaExempt || usage.skipQuota,
+            sourceCapability: usage.sourceCapability || usage.capability,
+          });
+        }
+
         return embedding as number[];
       } catch (err: any) {
         clearTimeout(timeoutId);
         lastError = err;
 
-        if (err instanceof AiProviderError && err.status && [400, 401, 403, 404, 422].includes(err.status)) {
-          throw lastError;
+        const isTimeout = err.name === 'AbortError' || err.message?.includes('aborted') || err.message?.includes('Timeout');
+        const errObj = isTimeout ? new AiProviderError('AI_TIMEOUT', 'زمان انتظار به پایان رسید.', 408) : err;
+
+        const isLogged = err instanceof AiProviderError;
+        if (!isLogged && usage) {
+          await logAiUsage({
+            shopId: usage.shopId,
+            endpoint: usage.endpoint,
+            model: resolvedModel,
+            resolvedModel,
+            tokensIn: 0,
+            tokensOut: 0,
+            requestId,
+            transportMode: logTransport,
+            durationMs: Date.now() - attemptStartTime,
+            retryCount: attempt - 1,
+            attemptIndex: attempt - 1,
+            fallbackUsed: false,
+            success: false,
+            operationType: 'embedding',
+            capability: usage.capability,
+            rootRequestId: usage.rootRequestId,
+            inputCount,
+            errorCode: isTimeout ? 'AI_TIMEOUT' : 'AI_PROVIDER_ERROR',
+            error: errObj.message || String(errObj),
+            idempotencyKey: usage.idempotencyKey,
+            usageKnown: false,
+            costStatus: isTimeout ? 'unknown' : 'unresolved',
+            billingBucket: usage.billingBucket,
+            quotaExempt: usage.quotaExempt || usage.skipQuota,
+            sourceCapability: usage.sourceCapability || usage.capability,
+          });
+        }
+
+        if (errObj instanceof AiProviderError && errObj.status && [400, 401, 403, 404, 422].includes(errObj.status)) {
+          throw errObj;
         }
 
         if (attempt < maxAttempts) {
@@ -684,65 +866,12 @@ export async function executeEmbedding(
           await new Promise((resolve) => setTimeout(resolve, delays[attempt - 1] + jitter));
           continue;
         }
-        throw lastError;
+        throw errObj;
       }
     }
 
     throw lastError instanceof AiProviderError ? lastError : new AiProviderError('AI_PROVIDER_ERROR', lastError?.message || String(lastError), 502);
   };
 
-  const logTransport: 'gateway' | 'direct' = transportMode === 'gateway' ? 'gateway' : 'direct';
-
-  try {
-    const embedding = await executeRequest();
-    if (usage) {
-      await logAiUsage({
-        shopId: usage.shopId,
-        endpoint: usage.endpoint,
-        model: resolvedModel,
-        resolvedModel,
-        tokensIn: estimatedTokens,
-        tokensOut: 0,
-        requestId,
-        transportMode: logTransport,
-        durationMs: Date.now() - embedStart,
-        retryCount: 0,
-        fallbackUsed: false,
-        success: true,
-        operationType: 'embedding',
-        modelSlot: 'embedding',
-        modelSource: resolvedResult.source,
-        capability: usage.capability,
-        rootRequestId: usage.rootRequestId,
-        inputCount,
-        vectorDimensions: embedding.length,
-        idempotencyKey: usage.idempotencyKey,
-      });
-    }
-    return embedding;
-  } catch (err: any) {
-    if (usage) {
-      await logAiUsage({
-        shopId: usage.shopId,
-        endpoint: usage.endpoint,
-        model: resolvedModel,
-        resolvedModel,
-        tokensIn: 0,
-        tokensOut: 0,
-        requestId,
-        transportMode: logTransport,
-        durationMs: Date.now() - embedStart,
-        retryCount: 0,
-        fallbackUsed: false,
-        success: false,
-        operationType: 'embedding',
-        capability: usage.capability,
-        rootRequestId: usage.rootRequestId,
-        inputCount,
-        errorCode: err instanceof AiProviderError ? err.code : 'AI_PROVIDER_ERROR',
-        error: err?.message,
-      });
-    }
-    throw err;
-  }
+  return await executeRequest();
 }

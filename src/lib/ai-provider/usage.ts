@@ -1,6 +1,7 @@
 import { prisma } from '../prisma';
 import { redis } from '../redis';
 import { resolveAiCost, AiOperationType, CostStatus } from '../ai-pricing';
+import { AiProviderError } from './errors';
 
 const FEATURE_NAMES: Record<string, string> = {
   aiAgentEnabled: 'دستیار هوشمند ادمین',
@@ -78,10 +79,37 @@ export async function hasActiveAiAccess(
   return { allowed: true, aiRequestsLimit };
 }
 
+export function getSecondsUntilEndOfMonth(): number {
+  const now = new Date();
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0, 0);
+  const diffMs = nextMonth.getTime() - now.getTime();
+  return Math.max(1, Math.ceil(diffMs / 1000));
+}
+
 /**
  * Checks if the shop has exceeded its monthly AI requests quota.
  * NOTE: embedding usage (operationType='embedding') is intentionally EXCLUDED from this counter —
  * embeddings are metered/cost-tracked separately and must not consume the chat request quota.
+ *
+ * =================================================================================================
+ * REDIS QUOTA CONCURRENCY & CONSISTENCY ARCHITECTURE:
+ * =================================================================================================
+ * 1. MEANING OF REDIS KEY:
+ *    The Redis key `quota:${shopId}:${monthKey}` acts as a CACHE of committed database usage plus
+ *    active soft reservations for in-flight requests.
+ *
+ * 2. ATOMIC CHECK-AND-INCREMENT (PREVENT OVERSPENDING):
+ *    We use an atomic Lua script to check the quota limit and increment the counter in Redis
+ *    in a single atomic operation.
+ *
+ * 3. CRASH RECOVERY & RECONCILIATION:
+ *    - If the Redis key does not exist, the Lua script atomically initializes it with `dbCount + 1`
+ *      using the exact end-of-month TTL.
+ *    - If a request fails, `decrementShopQuota` is called to release the reservation (decrementing the key),
+ *      ensuring no permanent quota loss or leakage occurs.
+ *    - Process restarts or Redis crashes naturally reconcile on the next request using the Lua script's
+ *      atomic EXISTS check.
+ * =================================================================================================
  */
 export async function checkShopQuota(
   shopId: string,
@@ -106,29 +134,63 @@ export async function checkShopQuota(
 
     let monthlyRequestsCount = 0;
     const redisKey = `quota:${shopId}:${monthKey}`;
+    let allowed = true;
 
     if (redis) {
       try {
-        const currentIncr = await redis.incr(redisKey);
-        if (currentIncr === 1) {
-          const dbCount = await prisma.aiUsage.count({ where: countWhere });
-          await redis.set(redisKey, String(dbCount + 1), { ex: 30 * 24 * 3600 }); // 30 days TTL
-          monthlyRequestsCount = dbCount;
+        const ttl = getSecondsUntilEndOfMonth();
+        const exists = await redis.exists(redisKey);
+        let dbCount = 0;
+        if (!exists) {
+          dbCount = await prisma.aiUsage.count({ where: countWhere });
+        }
+
+        const script = `
+          local exists = redis.call('EXISTS', KEYS[1])
+          if exists == 0 then
+              local dbCount = tonumber(ARGV[1])
+              local limit = tonumber(ARGV[3])
+              if dbCount >= limit then
+                  return -2
+              end
+              local initVal = dbCount + 1
+              local ttl = tonumber(ARGV[2])
+              redis.call('SET', KEYS[1], tostring(initVal), 'EX', ttl)
+              return initVal
+          else
+              local limit = tonumber(ARGV[3])
+              local current = tonumber(redis.call('GET', KEYS[1]))
+              if current >= limit then
+                  return -2
+              else
+                  return redis.call('INCR', KEYS[1])
+              end
+          end
+        `;
+
+        const result = await redis.eval(script, [redisKey], [String(dbCount), String(ttl), String(aiRequestsLimit)]);
+        const count = Number(result);
+        if (count === -2) {
+          allowed = false;
+          monthlyRequestsCount = aiRequestsLimit;
         } else {
-          monthlyRequestsCount = currentIncr - 1;
+          monthlyRequestsCount = count - 1;
         }
       } catch (redisErr) {
         console.error('[checkShopQuota] Redis quota check error, falling back to DB:', redisErr);
         monthlyRequestsCount = await prisma.aiUsage.count({ where: countWhere });
+        if (monthlyRequestsCount >= aiRequestsLimit) {
+          allowed = false;
+        }
       }
     } else {
       monthlyRequestsCount = await prisma.aiUsage.count({ where: countWhere });
+      if (monthlyRequestsCount >= aiRequestsLimit) {
+        allowed = false;
+      }
     }
 
-    if (monthlyRequestsCount >= aiRequestsLimit) {
-      if (redis) {
-        await redis.decr(redisKey).catch(() => {});
-      }
+    if (!allowed) {
       return {
         allowed: false,
         message:
@@ -193,11 +255,68 @@ export interface AiUsageInfo {
   costStatus?: CostStatus;
   errorCode?: string;
   idempotencyKey?: string;
+
+  // Hardening additions
+  attemptIndex?: number;
+  providerRequestId?: string;
+  usageKnown?: boolean;
+  actualCost?: number;
+  estimatedCost?: number;
+  billingBucket?: 'merchant' | 'platform' | 'system' | 'promotional';
+  quotaExempt?: boolean;
+  sourceCapability?: string;
+  tokenCountSource?: 'provider' | 'tokenizer' | 'estimated';
+}
+
+/**
+ * Executes an async function with exponential backoff retry.
+ * Used to guarantee durable database persistence for billing/usage records.
+ */
+async function executeWithRetry<T>(fn: () => Promise<T>, retries = 3, delay = 500): Promise<T> {
+  let lastErr: any;
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      lastErr = err;
+      if (err?.code === 'P2002') {
+        // Unique constraint violation - do not retry, propagate immediately
+        throw err;
+      }
+      console.error(`[executeWithRetry] Attempt ${attempt} failed to write to database:`, err.message || err);
+      if (attempt < retries) {
+        await new Promise((resolve) => setTimeout(resolve, delay * Math.pow(2, attempt - 1)));
+      }
+    }
+  }
+  throw lastErr;
+}
+
+/**
+ * Validates, sanitizes, and namespaces a client-provided idempotency key,
+ * or generates a secure server-side key if none is provided.
+ */
+export function getOrGenerateIdempotencyKey(
+  clientKey: string | null | undefined,
+  shopId: string,
+  operationType: string,
+  requestId: string
+): string {
+  const sanitizedClientKey = clientKey
+    ? clientKey.replace(/[^a-zA-Z0-9-_]/g, '').slice(0, 100)
+    : null;
+
+  if (sanitizedClientKey && sanitizedClientKey.length > 0) {
+    return `client:${shopId}:${operationType}:${sanitizedClientKey}`;
+  }
+
+  return `server:${shopId}:${operationType}:${requestId}`;
 }
 
 /**
  * Logs AI usage to the database (durable billing row) and to structured secure console logs.
- * Fire-and-forget: a persistence failure never blocks or crashes the caller's main flow.
+ * Awaited & Durable: uses a retry policy with backoff to guarantee that billing/quota records
+ * are never lost due to temporary DB failures or network drops.
  */
 export async function logAiUsage(info: AiUsageInfo): Promise<void> {
   const {
@@ -226,64 +345,108 @@ export async function logAiUsage(info: AiUsageInfo): Promise<void> {
     costStatus: costStatusIn,
     errorCode,
     idempotencyKey,
+    attemptIndex = 0,
+    providerRequestId,
+    usageKnown = true,
+    actualCost: actualCostIn,
+    estimatedCost: estimatedCostIn,
+    billingBucket = 'merchant',
+    quotaExempt = false,
+    sourceCapability,
+    tokenCountSource = 'provider',
   } = info;
 
   const now = new Date();
   const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-  // Cache hits never incur a provider charge, regardless of any passed-in cost.
-  let finalCostUsd: number;
-  let finalCostStatus: CostStatus;
+  // Cost calculation
+  let finalCostUsd = 0;
+  let finalCostStatus: CostStatus = 'resolved';
+  let actualCost: number | null = null;
+  let estimatedCost = 0;
+
   if (cacheHit) {
     finalCostUsd = 0;
     finalCostStatus = 'resolved';
-  } else if (typeof costUsd === 'number' && costStatusIn) {
-    finalCostUsd = costUsd;
-    finalCostStatus = costStatusIn;
+    actualCost = 0;
+    estimatedCost = 0;
   } else {
     const resolved = resolveAiCost(resolvedModel || model, tokensIn, tokensOut, operationType);
-    finalCostUsd = typeof costUsd === 'number' ? costUsd : resolved.costUsd;
+    actualCost = resolved.actualCostUsd;
+    estimatedCost = resolved.estimatedCostUsd;
     finalCostStatus = costStatusIn || resolved.costStatus;
+    finalCostUsd = actualCost ?? estimatedCost;
   }
 
   const status = success ? 'success' : 'failed';
 
-  // 1. Durable DB row (fire-and-forget). Only successful, tenant-billable calls are persisted —
-  // pre-provider failures (quota/config) must record no usage, matching existing behavior.
-  if (success && shopId !== 'N/A' && shopId !== 'system') {
-    void (async () => {
-      try {
-        // Idempotency guard: a resumed/retried batch item with the same key must not double-count.
-        if (idempotencyKey) {
-          const existing = await prisma.aiUsage.findFirst({ where: { idempotencyKey } });
-          if (existing) return;
-        }
-        await prisma.aiUsage.create({
-          data: {
-            shopId,
-            endpoint,
-            tokensIn,
-            tokensOut,
-            costUsd: finalCostUsd,
-            costUsdDecimal: finalCostUsd.toFixed(8),
-            model: resolvedModel || model,
-            resolvedModel: resolvedModel || model,
-            operationType,
-            status,
-            costStatus: finalCostStatus,
-            requestId,
-            durationMs,
-            inputCount: inputCount ?? null,
-            idempotencyKey: idempotencyKey ?? null,
-            monthKey,
-          },
-        });
-      } catch (err: any) {
-        // Unique-violation on idempotencyKey (P2002) means a duplicate — safe to ignore.
-        if (err?.code === 'P2002') return;
-        console.error('[logAiUsage] Failed to write AiUsage row to database:', err);
+  const finalIdempotencyKey = getOrGenerateIdempotencyKey(
+    idempotencyKey,
+    shopId,
+    operationType,
+    requestId
+  );
+
+  // 1. Durable DB row (awaited with retry).
+  // Failed and timed-out provider attempts are also persisted because they can still be billable.
+  if (shopId !== 'N/A' && shopId !== 'system') {
+    const writeToDb = async () => {
+      // Idempotency guard: a resumed/retried batch item with the same key and attempt index must not double-count.
+      const existing = await prisma.aiUsage.findFirst({
+        where: {
+          shopId,
+          idempotencyKey: finalIdempotencyKey,
+          operationType,
+          attemptIndex,
+        },
+      });
+      if (existing) {
+        console.log(`[logAiUsage] Duplicate attempt detected, skipping write: shopId=${shopId}, idempotencyKey=${finalIdempotencyKey}, attemptIndex=${attemptIndex}`);
+        return;
       }
-    })();
+
+      await prisma.aiUsage.create({
+        data: {
+          shopId,
+          endpoint,
+          tokensIn,
+          tokensOut,
+          costUsd: finalCostUsd,
+          costUsdDecimal: finalCostUsd.toFixed(8),
+          model: resolvedModel || model,
+          resolvedModel: resolvedModel || model,
+          operationType,
+          status,
+          costStatus: finalCostStatus,
+          requestId,
+          durationMs,
+          inputCount: inputCount ?? null,
+          idempotencyKey: finalIdempotencyKey,
+          monthKey,
+          rootRequestId: rootRequestId ?? null,
+          attemptIndex,
+          providerRequestId: providerRequestId ?? null,
+          usageKnown,
+          actualCost: actualCost !== null ? actualCost.toFixed(8) : null,
+          estimatedCost: estimatedCost.toFixed(8),
+          errorCode: errorCode ?? null,
+          transportMode,
+          tokenCountSource,
+        },
+      });
+    };
+
+    try {
+      await executeWithRetry(writeToDb, 3, 500);
+    } catch (err: any) {
+      if (err?.code === 'P2002') {
+        console.log('[logAiUsage] Unique constraint violation on idempotency key, ignoring duplicate.');
+        return;
+      }
+      console.error('[logAiUsage] Critical: Failed to write AiUsage row after retries:', err);
+      // Throw error to fail the user request on permanent DB failure, preventing unmetered usage
+      throw new AiProviderError('AI_DATABASE_ERROR', err.message || String(err), 500);
+    }
   }
 
   // 2. Structured, secret-safe observability line (the project's log-based observability channel).
@@ -308,8 +471,13 @@ export async function logAiUsage(info: AiUsageInfo): Promise<void> {
       `cacheHit: ${cacheHit} | ` +
       `durationMs: ${durationMs}ms | ` +
       `retryCount: ${retryCount} | ` +
+      `attemptIndex: ${attemptIndex} | ` +
       `fallbackUsed: ${fallbackUsed} | ` +
       `status: ${status}` +
+      (billingBucket ? ` | billingBucket: ${billingBucket}` : '') +
+      (quotaExempt ? ` | quotaExempt: ${quotaExempt}` : '') +
+      (sourceCapability ? ` | sourceCapability: ${sourceCapability}` : '') +
+      (tokenCountSource ? ` | tokenCountSource: ${tokenCountSource}` : '') +
       (errorCode ? ` | errorCode: ${errorCode}` : '') +
       (error ? ` | error: ${error.replace(/bearer\s+[a-z0-9-_.]+/gi, 'Bearer ••••••••')}` : '')
   );
