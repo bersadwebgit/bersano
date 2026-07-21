@@ -56,6 +56,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
         '/checkout/',
         '/cart',
         '/api/',
+        '/preview/',
       ],
     },
     // Only include sitemap if sitemap is enabled

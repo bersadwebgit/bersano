@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import BottomNav from '@/components/layout/BottomNav';
@@ -7,10 +8,20 @@ import Link from 'next/link';
 import { ChevronLeft, Home, HelpCircle, ChevronDown, ShieldAlert } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { parseFooterConfig } from '@/types/footer';
+import MarketingShell from '@/components/marketing/MarketingShell';
+import PlatformFaq from '@/components/marketing/faq/PlatformFaq';
+import { buildMarketingMetadata } from '@/lib/marketing-seo';
 
-export async function generateMetadata() {
+export async function generateMetadata(): Promise<Metadata> {
   const shop = await getTenantShop(undefined, true);
-  if (!shop) return { title: 'صفحه پیدا نشد' };
+  if (!shop) {
+    return buildMarketingMetadata({
+      title: 'سوالات متداول درباره فروشگاه‌ساز برسانا',
+      description:
+        'پاسخ پرسش‌های رایج درباره ساخت فروشگاه اینترنتی، هوش مصنوعی و RAG، تعرفه‌ها، دامنه اختصاصی، پرداخت و پشتیبانی در برسانا.',
+      path: '/faq',
+    });
+  }
 
   return {
     title: `پاسخ به پرسش‌های متداول - ${shop.shopName}`,
@@ -27,7 +38,11 @@ export default async function FaqPage() {
   const shop = await getTenantShop(undefined, true);
 
   if (!shop) {
-    return notFound();
+    return (
+      <MarketingShell>
+        <PlatformFaq />
+      </MarketingShell>
+    );
   }
 
   // Parse FAQs from shop settings

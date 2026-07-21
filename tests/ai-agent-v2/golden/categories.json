@@ -1,0 +1,13 @@
+[
+  {
+    "id": "cat-001",
+    "input": "یک دسته‌بندی جدید به نام پوشاک زمستانی ایجاد کن",
+    "expectedIntent": "category.create",
+    "expectedCapability": "manage_categories",
+    "requiresClarification": false,
+    "riskLevel": "medium",
+    "mustChangeFields": ["name", "slug"],
+    "mustNotChangeFields": [],
+    "expectedPermission": "categories.create"
+  }
+]

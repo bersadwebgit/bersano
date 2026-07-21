@@ -251,7 +251,8 @@ export default function InvoiceClient({ order, shop, userRole }: { order: Invoic
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        if (event.target?.result) {
+        const result = event.target?.result;
+        if (result) {
           const img = new window.Image();
           img.onload = () => {
             const tempCanvas = document.createElement('canvas');
@@ -263,10 +264,10 @@ export default function InvoiceClient({ order, shop, userRole }: { order: Invoic
               const pngDataUrl = tempCanvas.toDataURL('image/png');
               setSignatureImage(pngDataUrl);
             } else {
-              setSignatureImage(event.target.result as string);
+              setSignatureImage(result as string);
             }
           };
-          img.src = event.target.result as string;
+          img.src = result as string;
         }
       };
       reader.readAsDataURL(file);

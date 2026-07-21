@@ -129,6 +129,88 @@ export function repairJson(raw: string): string {
   return repaired;
 }
 
+export function extractBalancedJson(text: string): string | null {
+  const firstBrace = text.indexOf('{');
+  const firstBracket = text.indexOf('[');
+  let startIndex = -1;
+  if (firstBrace !== -1 && firstBracket !== -1) {
+    startIndex = Math.min(firstBrace, firstBracket);
+  } else if (firstBrace !== -1) {
+    startIndex = firstBrace;
+  } else if (firstBracket !== -1) {
+    startIndex = firstBracket;
+  }
+
+  if (startIndex === -1) return null;
+
+  const startChar = text[startIndex];
+  const endChar = startChar === '{' ? '}' : ']';
+  
+  let braceCount = 0;
+  let inString = false;
+  let isEscaped = false;
+
+  for (let i = startIndex; i < text.length; i++) {
+    const char = text[i];
+    if (inString) {
+      if (isEscaped) {
+        isEscaped = false;
+      } else if (char === '\\') {
+        isEscaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+    } else {
+      if (char === '"') {
+        inString = true;
+      } else if (char === startChar) {
+        braceCount++;
+      } else if (char === endChar) {
+        braceCount--;
+        if (braceCount === 0) {
+          return text.substring(startIndex, i + 1);
+        }
+      }
+    }
+  }
+
+  return text.substring(startIndex);
+}
+
+export function isTruncatedJson(text: string): boolean {
+  let braceCount = 0;
+  let bracketCount = 0;
+  let inString = false;
+  let isEscaped = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (inString) {
+      if (isEscaped) {
+        isEscaped = false;
+      } else if (char === '\\') {
+        isEscaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+    } else {
+      if (char === '"') {
+        inString = true;
+      } else if (char === '{') {
+        braceCount++;
+      } else if (char === '}') {
+        braceCount--;
+      } else if (char === '[') {
+        bracketCount++;
+      } else if (char === ']') {
+        bracketCount--;
+      }
+    }
+  }
+
+  return inString || braceCount > 0 || bracketCount > 0;
+}
+
 export function parseAiJson<T>(
   raw: string,
   requiredFields: (keyof T)[] = [],
@@ -141,30 +223,67 @@ export function parseAiJson<T>(
     return { data: fallback as T, warnings };
   }
 
-  // 1. Repair the JSON string (handles truncation, unescaped newlines, trailing commas, etc.)
-  const repaired = repairJson(raw);
+  let cleaned = raw.trim();
 
-  // 2. Parse the repaired JSON
-  let parsed: any;
+  // 1. Try plain JSON parsing first
   try {
-    parsed = JSON.parse(repaired);
-  } catch (parseError: any) {
-    // 3. Fallback to extracting first JSON object if there was text around it (just in case)
-    const jsonMatch = repaired.match(/\{[\s\S]*\}/) || repaired.match(/\[[\s\S]*\]/);
-    if (jsonMatch) {
-      try {
-        parsed = JSON.parse(jsonMatch[0]);
-      } catch {
-        warnings.push('پاسخ AI قابل پردازش نبود. مقادیر پیش‌فرض اعمال شد.');
-        return { data: fallback as T, warnings };
-      }
-    } else {
-      warnings.push('پاسخ AI قابل پردازش نبود. مقادیر پیش‌فرض اعمال شد.');
-      return { data: fallback as T, warnings };
+    const parsed = JSON.parse(cleaned);
+    return validateSchema(parsed, requiredFields, fallback, warnings);
+  } catch {
+    // Ignore and proceed to extraction
+  }
+
+  // 2. Try extracting from one markdown JSON fence
+  const fenceMatch = cleaned.match(/```json\s*([\s\S]*?)\s*```/i) || cleaned.match(/```\s*([\s\S]*?)\s*```/i);
+  if (fenceMatch) {
+    const fenceContent = fenceMatch[1].trim();
+    try {
+      const parsed = JSON.parse(fenceContent);
+      return validateSchema(parsed, requiredFields, fallback, warnings);
+    } catch {
+      cleaned = fenceContent; // Use fence content for further repair
     }
   }
 
-  // 4. Check required fields, fill missing with fallback
+  // 3. Try extracting one balanced JSON object
+  const balanced = extractBalancedJson(cleaned);
+  if (balanced) {
+    try {
+      const parsed = JSON.parse(balanced);
+      return validateSchema(parsed, requiredFields, fallback, warnings);
+    } catch {
+      cleaned = balanced; // Use balanced substring for repair
+    }
+  }
+
+  // 4. Truncation detection and at most one deterministic repair attempt
+  if (isTruncatedJson(cleaned)) {
+    warnings.push('پاسخ AI ناقص (truncated) تشخیص داده شد و بازسازی شد.');
+  }
+
+  // Exactly one deterministic repair attempt
+  const repaired = repairJson(cleaned);
+  try {
+    const parsed = JSON.parse(repaired);
+    return validateSchema(parsed, requiredFields, fallback, warnings);
+  } catch (err) {
+    warnings.push('تلاش برای بازسازی ساختار JSON ناموفق بود.');
+  }
+
+  // Final fallback
+  return { data: fallback as T, warnings };
+}
+
+function validateSchema<T>(
+  parsed: any,
+  requiredFields: (keyof T)[] = [],
+  fallback: Partial<T> = {},
+  warnings: string[]
+): { data: T; warnings: string[] } {
+  if (!parsed || typeof parsed !== 'object') {
+    return { data: fallback as T, warnings };
+  }
+
   for (const field of requiredFields) {
     if (parsed[field] === undefined) {
       if (fallback[field] !== undefined) {

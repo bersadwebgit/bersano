@@ -1,0 +1,13 @@
+[
+  {
+    "id": "ord-001",
+    "input": "وضعیت سفارش خرید ord_1001 را به در حال پردازش تغییر بده",
+    "expectedIntent": "order.update_status",
+    "expectedCapability": "manage_orders",
+    "requiresClarification": false,
+    "riskLevel": "high",
+    "mustChangeFields": ["status"],
+    "mustNotChangeFields": [],
+    "expectedPermission": "orders.update"
+  }
+]

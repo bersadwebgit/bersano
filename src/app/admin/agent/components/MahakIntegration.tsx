@@ -288,7 +288,7 @@ export default function MahakIntegration() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 space-y-4">
-        <Loader2 size={36} className="animate-spin text-amber-500" />
+        <Loader2 size={36} className="animate-spin text-primary-500" />
         <span className="text-xs font-black text-slate-500 dark:text-slate-400">در حال بارگذاری سیستم حسابداری محک...</span>
       </div>
     );
@@ -297,7 +297,7 @@ export default function MahakIntegration() {
   return (
     <div className="space-y-6 animate-fadeIn" dir="rtl">
       {/* Top Banner / Header */}
-      <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/15 rounded-2xl p-5 md:p-6 flex flex-col md:flex-row items-center justify-between gap-5 shadow-xs">
+      <div className="bg-gradient-to-r from-primary-500/10 via-primary-500/5 to-transparent border border-primary-500/15 rounded-2xl p-5 md:p-6 flex flex-col md:flex-row items-center justify-between gap-5 shadow-xs">
         <div className="flex items-center gap-4 text-right">
           <div className="relative w-16 h-16 md:w-20 md:h-20 bg-black rounded-2xl p-2 flex items-center justify-center shadow-md border border-slate-800 shrink-0">
             <Image 
@@ -339,7 +339,7 @@ export default function MahakIntegration() {
           <button
             onClick={handleGlobalSync}
             disabled={globalSyncing || !isConnected}
-            className="h-10 px-5 bg-amber-500 hover:bg-amber-600 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 text-white rounded-xl text-[10px] font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-sm shadow-amber-500/10"
+            className="h-10 px-5 bg-primary-500 hover:bg-primary-600 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 text-white rounded-xl text-[10px] font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-sm shadow-primary-500/10"
           >
             {globalSyncing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
             <span>همگام‌سازی کلی دستی</span>
@@ -357,7 +357,7 @@ export default function MahakIntegration() {
               onClick={() => setActiveTab('settings')}
               className={`flex-1 py-3 px-4 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 ${
                 activeTab === 'settings'
-                  ? 'bg-amber-500 text-white shadow-md shadow-amber-500/10'
+                  ? 'bg-primary-500 text-white shadow-md shadow-primary-500/10'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/40'
               }`}
             >
@@ -368,7 +368,7 @@ export default function MahakIntegration() {
               onClick={() => setActiveTab('products')}
               className={`flex-1 py-3 px-4 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 ${
                 activeTab === 'products'
-                  ? 'bg-amber-500 text-white shadow-md shadow-amber-500/10'
+                  ? 'bg-primary-500 text-white shadow-md shadow-primary-500/10'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/40'
               }`}
             >
@@ -379,7 +379,7 @@ export default function MahakIntegration() {
               onClick={() => setActiveTab('orders')}
               className={`flex-1 py-3 px-4 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 ${
                 activeTab === 'orders'
-                  ? 'bg-amber-500 text-white shadow-md shadow-amber-500/10'
+                  ? 'bg-primary-500 text-white shadow-md shadow-primary-500/10'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/40'
               }`}
             >
@@ -390,7 +390,7 @@ export default function MahakIntegration() {
               onClick={() => setActiveTab('customers')}
               className={`flex-1 py-3 px-4 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 ${
                 activeTab === 'customers'
-                  ? 'bg-amber-500 text-white shadow-md shadow-amber-500/10'
+                  ? 'bg-primary-500 text-white shadow-md shadow-primary-500/10'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/40'
               }`}
             >
@@ -406,7 +406,7 @@ export default function MahakIntegration() {
               <form onSubmit={handleSaveSettings} className="space-y-6">
                 <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/60 pb-4">
                   <div className="flex items-center gap-2">
-                    <Database className="text-amber-500 w-4 h-4" />
+                    <Database className="text-primary-500 w-4 h-4" />
                     <span className="text-xs font-black text-slate-800 dark:text-white">پیکربندی اتصال به وب‌سرویس محک</span>
                   </div>
                   <label className="relative inline-flex inline-flex items-center cursor-pointer select-none">
@@ -416,45 +416,45 @@ export default function MahakIntegration() {
                       onChange={(e) => setMahakEnabled(e.target.checked)}
                       className="sr-only peer" 
                     />
-                    <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-800 peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-amber-500" />
+                    <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-800 peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-primary-500" />
                     <span className="mr-2 text-[10px] font-black text-slate-600 dark:text-slate-400">فعالسازی کلی اتصال</span>
                   </label>
                 </div>
 
                 {/* Step-by-Step Guide */}
-                <div className="bg-amber-500/5 border border-amber-500/15 rounded-2xl p-4 space-y-3">
-                  <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                <div className="bg-primary-500/5 border border-primary-500/15 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-primary-600 dark:text-primary-400">
                     <Info size={14} className="shrink-0" />
                     <span className="text-xs font-black">راهنمای گام‌به‌گام راه‌اندازی و اتصال به حسابداری محک:</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-[10px] font-bold text-slate-600 dark:text-slate-400">
                     <div className="bg-white dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800/60 space-y-1">
-                      <div className="flex items-center gap-1.5 text-amber-500 font-black">
-                        <span className="w-5 h-5 rounded-full bg-amber-500/10 flex items-center justify-center text-[9px]">۱</span>
+                      <div className="flex items-center gap-1.5 text-primary-500 font-black">
+                        <span className="w-5 h-5 rounded-full bg-primary-500/10 flex items-center justify-center text-[9px]">۱</span>
                         <span>فعال‌سازی کلی</span>
                       </div>
                       <p className="text-[9px] text-slate-400 leading-relaxed">سوییچ «فعالسازی کلی اتصال» را در بالا روشن کنید.</p>
                     </div>
 
                     <div className="bg-white dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800/60 space-y-1">
-                      <div className="flex items-center gap-1.5 text-amber-500 font-black">
-                        <span className="w-5 h-5 rounded-full bg-amber-500/10 flex items-center justify-center text-[9px]">۲</span>
+                      <div className="flex items-center gap-1.5 text-primary-500 font-black">
+                        <span className="w-5 h-5 rounded-full bg-primary-500/10 flex items-center justify-center text-[9px]">۲</span>
                         <span>دریافت اطلاعات API</span>
                       </div>
                       <p className="text-[9px] text-slate-400 leading-relaxed">آدرس سرور و کلید امنیتی (API Key) را از پشتیبانی محک دریافت و وارد کنید.</p>
                     </div>
 
                     <div className="bg-white dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800/60 space-y-1">
-                      <div className="flex items-center gap-1.5 text-amber-500 font-black">
-                        <span className="w-5 h-5 rounded-full bg-amber-500/10 flex items-center justify-center text-[9px]">۳</span>
+                      <div className="flex items-center gap-1.5 text-primary-500 font-black">
+                        <span className="w-5 h-5 rounded-full bg-primary-500/10 flex items-center justify-center text-[9px]">۳</span>
                         <span>تست اتصال زنده</span>
                       </div>
                       <p className="text-[9px] text-slate-400 leading-relaxed">روی دکمه «تست اتصال» در بالای صفحه کلیک کنید تا ارتباط تایید شود.</p>
                     </div>
 
                     <div className="bg-white dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800/60 space-y-1">
-                      <div className="flex items-center gap-1.5 text-amber-500 font-black">
-                        <span className="w-5 h-5 rounded-full bg-amber-500/10 flex items-center justify-center text-[9px]">۴</span>
+                      <div className="flex items-center gap-1.5 text-primary-500 font-black">
+                        <span className="w-5 h-5 rounded-full bg-primary-500/10 flex items-center justify-center text-[9px]">۴</span>
                         <span>همگام‌سازی خودکار</span>
                       </div>
                       <p className="text-[9px] text-slate-400 leading-relaxed">گزینه‌های همگام‌سازی خودکار را فعال کرده و تنظیمات را ذخیره کنید.</p>
@@ -475,7 +475,7 @@ export default function MahakIntegration() {
                       onChange={(e) => setMahakServerUrl(e.target.value)}
                       placeholder="e.g. http://127.0.0.1:8080/mahak-api"
                       dir="ltr"
-                      className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-xs font-bold focus:outline-none focus:border-amber-500 transition-colors"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-xs font-bold focus:outline-none focus:border-primary-500 transition-colors"
                     />
                   </div>
 
@@ -490,7 +490,7 @@ export default function MahakIntegration() {
                       onChange={(e) => setMahakApiKey(e.target.value)}
                       placeholder="وارد کردن توکن امنیتی وب‌سرویس"
                       dir="ltr"
-                      className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-xs font-bold focus:outline-none focus:border-amber-500 transition-colors"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-xs font-bold focus:outline-none focus:border-primary-500 transition-colors"
                     />
                   </div>
 
@@ -505,7 +505,7 @@ export default function MahakIntegration() {
                       onChange={(e) => setMahakUsername(e.target.value)}
                       placeholder="نام کاربری وب‌سرویس محک"
                       dir="ltr"
-                      className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-xs font-bold focus:outline-none focus:border-amber-500 transition-colors"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-xs font-bold focus:outline-none focus:border-primary-500 transition-colors"
                     />
                   </div>
 
@@ -520,7 +520,7 @@ export default function MahakIntegration() {
                       onChange={(e) => setMahakPassword(e.target.value)}
                       placeholder="رمز عبور وب‌سرویس محک"
                       dir="ltr"
-                      className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-xs font-bold focus:outline-none focus:border-amber-500 transition-colors"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-xs font-bold focus:outline-none focus:border-primary-500 transition-colors"
                     />
                   </div>
                 </div>
@@ -539,7 +539,7 @@ export default function MahakIntegration() {
                 {/* Sync Configuration */}
                 <div className="border-t border-slate-100 dark:border-slate-800/60 pt-5 space-y-4">
                   <div className="flex items-center gap-2">
-                    <Sliders className="text-amber-500 w-4 h-4" />
+                    <Sliders className="text-primary-500 w-4 h-4" />
                     <span className="text-xs font-black text-slate-800 dark:text-white">تنظیمات همگام‌سازی خودکار</span>
                   </div>
 
@@ -553,7 +553,7 @@ export default function MahakIntegration() {
                         type="checkbox" 
                         checked={mahakSyncProducts} 
                         onChange={(e) => setMahakSyncProducts(e.target.checked)}
-                        className="rounded border-slate-300 text-amber-500 focus:ring-amber-500 h-4 w-4" 
+                        className="rounded border-slate-300 text-primary-500 focus:ring-primary-500 h-4 w-4" 
                       />
                     </label>
 
@@ -566,7 +566,7 @@ export default function MahakIntegration() {
                         type="checkbox" 
                         checked={mahakSyncOrders} 
                         onChange={(e) => setMahakSyncOrders(e.target.checked)}
-                        className="rounded border-slate-300 text-amber-500 focus:ring-amber-500 h-4 w-4" 
+                        className="rounded border-slate-300 text-primary-500 focus:ring-primary-500 h-4 w-4" 
                       />
                     </label>
 
@@ -579,12 +579,12 @@ export default function MahakIntegration() {
                         type="checkbox" 
                         checked={mahakSyncCustomers} 
                         onChange={(e) => setMahakSyncCustomers(e.target.checked)}
-                        className="rounded border-slate-300 text-amber-500 focus:ring-amber-500 h-4 w-4" 
+                        className="rounded border-slate-300 text-primary-500 focus:ring-primary-500 h-4 w-4" 
                       />
                     </label>
 
                     {mahakSyncCustomers && (
-                      <label className="p-4 bg-amber-500/5 dark:bg-amber-500/10 border-r-2 border-amber-500 rounded-xl flex items-center justify-between cursor-pointer hover:bg-amber-500/10 transition-all md:col-span-2">
+                      <label className="p-4 bg-primary-500/5 dark:bg-primary-500/10 border-r-2 border-primary-500 rounded-xl flex items-center justify-between cursor-pointer hover:bg-primary-500/10 transition-all md:col-span-2">
                         <div className="flex flex-col gap-0.5">
                           <span className="text-[10px] font-black text-slate-700 dark:text-slate-300">همگام‌سازی فقط با شماره تماس</span>
                           <span className="text-[9px] font-bold text-slate-400">نام و اطلاعات خرید اجباری نباشد (فقط تطبیق شماره تلفن خریدار)</span>
@@ -593,7 +593,7 @@ export default function MahakIntegration() {
                           type="checkbox" 
                           checked={mahakSyncCustomersPhoneOnly} 
                           onChange={(e) => setMahakSyncCustomersPhoneOnly(e.target.checked)}
-                          className="rounded border-slate-300 text-amber-500 focus:ring-amber-500 h-4 w-4" 
+                          className="rounded border-slate-300 text-primary-500 focus:ring-primary-500 h-4 w-4" 
                         />
                       </label>
                     )}
@@ -603,7 +603,7 @@ export default function MahakIntegration() {
                   <div className="space-y-2 max-w-md bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/50 p-4 rounded-xl">
                     <div className="flex justify-between text-[10px] font-black text-slate-600 dark:text-slate-400">
                       <span>بازه زمانی همگام‌سازی خودکار</span>
-                      <span className="text-amber-500">{mahakSyncInterval.toLocaleString('fa-IR')} دقیقه</span>
+                      <span className="text-primary-500">{mahakSyncInterval.toLocaleString('fa-IR')} دقیقه</span>
                     </div>
                     <input
                       type="range"
@@ -612,7 +612,7 @@ export default function MahakIntegration() {
                       step="15"
                       value={mahakSyncInterval}
                       onChange={(e) => setMahakSyncInterval(parseInt(e.target.value))}
-                      className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                      className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-primary-500"
                     />
                     <div className="flex justify-between text-[8px] text-slate-400 font-bold">
                       <span>۱۵ دقیقه (سریع)</span>
@@ -627,7 +627,7 @@ export default function MahakIntegration() {
                   <button
                     type="submit"
                     disabled={isSaving}
-                    className="h-11 px-6 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black shadow-md shadow-amber-500/10 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                    className="h-11 px-6 bg-primary-500 hover:bg-primary-600 text-white rounded-xl text-xs font-black shadow-md shadow-primary-500/10 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
                   >
                     {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
                     <span>ذخیره تنظیمات اتصال</span>
@@ -686,7 +686,7 @@ export default function MahakIntegration() {
                                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black ${
                                   isSynced 
                                     ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
-                                    : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                    : 'bg-primary-500/10 text-primary-600 dark:text-primary-400'
                                 }`}>
                                   {isSynced ? <Check size={10} /> : <Clock size={10} />}
                                   {isSynced ? 'همگام شده' : 'در انتظار همگام‌سازی'}
@@ -696,7 +696,7 @@ export default function MahakIntegration() {
                                 <button
                                   onClick={() => handleSyncItem('product', p.id, p.title)}
                                   disabled={isItemSyncing}
-                                  className="p-1.5 bg-slate-100 hover:bg-amber-50 dark:bg-slate-800 dark:hover:bg-amber-950/20 text-slate-600 dark:text-slate-300 hover:text-amber-500 dark:hover:text-amber-400 rounded-lg transition-all cursor-pointer inline-flex items-center gap-1 text-[9px] font-black disabled:opacity-50"
+                                  className="p-1.5 bg-slate-100 hover:bg-primary-50 dark:bg-slate-800 dark:hover:bg-primary-950/20 text-slate-600 dark:text-slate-300 hover:text-primary-500 dark:hover:text-primary-400 rounded-lg transition-all cursor-pointer inline-flex items-center gap-1 text-[9px] font-black disabled:opacity-50"
                                 >
                                   {isItemSyncing ? <Loader2 size={10} className="animate-spin" /> : <RefreshCw size={10} />}
                                   <span>همگام‌سازی</span>
@@ -753,7 +753,7 @@ export default function MahakIntegration() {
                                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black ${
                                   isSynced 
                                     ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
-                                    : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                    : 'bg-primary-500/10 text-primary-600 dark:text-primary-400'
                                 }`}>
                                   {isSynced ? <Check size={10} /> : <Clock size={10} />}
                                   {isSynced ? 'فاکتور صادر شد' : 'در انتظار صدور فاکتور'}
@@ -763,7 +763,7 @@ export default function MahakIntegration() {
                                 <button
                                   onClick={() => handleSyncItem('order', o.id, orderNum)}
                                   disabled={isItemSyncing}
-                                  className="p-1.5 bg-slate-100 hover:bg-amber-50 dark:bg-slate-800 dark:hover:bg-amber-950/20 text-slate-600 dark:text-slate-300 hover:text-amber-500 dark:hover:text-amber-400 rounded-lg transition-all cursor-pointer inline-flex items-center gap-1 text-[9px] font-black disabled:opacity-50"
+                                  className="p-1.5 bg-slate-100 hover:bg-primary-50 dark:bg-slate-800 dark:hover:bg-primary-950/20 text-slate-600 dark:text-slate-300 hover:text-primary-500 dark:hover:text-primary-400 rounded-lg transition-all cursor-pointer inline-flex items-center gap-1 text-[9px] font-black disabled:opacity-50"
                                 >
                                   {isItemSyncing ? <Loader2 size={10} className="animate-spin" /> : <FileText size={10} />}
                                   <span>صدور فاکتور</span>
@@ -788,7 +788,7 @@ export default function MahakIntegration() {
                 </div>
 
                 {mahakSyncCustomersPhoneOnly && (
-                  <div className="bg-amber-500/10 border-r-4 border-amber-500 p-3 rounded-xl text-amber-800 dark:text-amber-400 text-[10px] font-bold">
+                  <div className="bg-primary-500/10 border-r-4 border-primary-500 p-3 rounded-xl text-primary-800 dark:text-primary-400 text-[10px] font-bold">
                     همگام‌سازی بر اساس شماره تلفن فعال است. نام و اطلاعات خرید برای مشتریان اختیاری بوده و تطبیق حساب‌ها صرفاً از طریق تطبیق شماره تماس خریدار با تفصیلی‌های محک انجام می‌شود.
                   </div>
                 )}
@@ -834,7 +834,7 @@ export default function MahakIntegration() {
                                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black ${
                                   isSynced 
                                     ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
-                                    : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                    : 'bg-primary-500/10 text-primary-600 dark:text-primary-400'
                                 }`}>
                                   {isSynced ? <Check size={10} /> : <Clock size={10} />}
                                   {isSynced ? 'همگام شده' : 'در انتظار همگام‌سازی'}
@@ -844,7 +844,7 @@ export default function MahakIntegration() {
                                 <button
                                   onClick={() => handleSyncItem('customer', c.id, displayName)}
                                   disabled={isItemSyncing}
-                                  className="p-1.5 bg-slate-100 hover:bg-amber-50 dark:bg-slate-800 dark:hover:bg-amber-950/20 text-slate-600 dark:text-slate-300 hover:text-amber-500 dark:hover:text-amber-400 rounded-lg transition-all cursor-pointer inline-flex items-center gap-1 text-[9px] font-black disabled:opacity-50"
+                                  className="p-1.5 bg-slate-100 hover:bg-primary-50 dark:bg-slate-800 dark:hover:bg-primary-950/20 text-slate-600 dark:text-slate-300 hover:text-primary-500 dark:hover:text-primary-400 rounded-lg transition-all cursor-pointer inline-flex items-center gap-1 text-[9px] font-black disabled:opacity-50"
                                 >
                                   {isItemSyncing ? <Loader2 size={10} className="animate-spin" /> : <User size={10} />}
                                   <span>همگام‌سازی</span>
@@ -867,7 +867,7 @@ export default function MahakIntegration() {
           {/* Status & Stats Card */}
           <div className="bg-white dark:bg-[#0d1527] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs text-right space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800/60 pb-3">
-              <TrendingUp className="text-amber-500 w-4 h-4" />
+              <TrendingUp className="text-primary-500 w-4 h-4" />
               <span className="text-xs font-black text-slate-800 dark:text-white">وضعیت و آمار همگام‌سازی</span>
             </div>
 
@@ -892,14 +892,14 @@ export default function MahakIntegration() {
 
               {/* Progress Bar during Global Sync */}
               {globalSyncing && (
-                <div className="space-y-1.5 bg-amber-500/5 border border-amber-500/10 p-3 rounded-xl">
-                  <div className="flex justify-between text-[9px] font-black text-amber-600 dark:text-amber-400">
+                <div className="space-y-1.5 bg-primary-500/5 border border-primary-500/10 p-3 rounded-xl">
+                  <div className="flex justify-between text-[9px] font-black text-primary-600 dark:text-primary-400">
                     <span>در حال همگام‌سازی اطلاعات...</span>
                     <span>{syncProgress.toLocaleString('fa-IR')}٪</span>
                   </div>
                   <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-amber-500 transition-all duration-300"
+                      className="h-full bg-primary-500 transition-all duration-300"
                       style={{ width: `${syncProgress}%` }}
                     />
                   </div>
@@ -928,7 +928,7 @@ export default function MahakIntegration() {
           <div className="bg-white dark:bg-[#0d1527] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs text-right space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/60 pb-3">
               <div className="flex items-center gap-2">
-                <History className="text-amber-500 w-4 h-4" />
+                <History className="text-primary-500 w-4 h-4" />
                 <span className="text-xs font-black text-slate-800 dark:text-white">لاگ‌های همگام‌سازی اخیر</span>
               </div>
               <button 

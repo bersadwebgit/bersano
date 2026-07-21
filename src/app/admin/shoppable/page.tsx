@@ -95,7 +95,7 @@ export default function ShoppableImagesAdminPage() {
     fetchInitialData();
   }, []);
 
-  const fetchInitialData = async () => {
+  async function fetchInitialData() {
     setIsLoading(true);
     try {
       // 1. Fetch Global Settings
@@ -123,7 +123,7 @@ export default function ShoppableImagesAdminPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
   const handleToggleGlobal = async () => {
     setIsUpdatingGlobal(true);

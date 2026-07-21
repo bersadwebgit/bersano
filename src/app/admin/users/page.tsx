@@ -104,7 +104,7 @@ export default function UsersPage() {
     fetchRequests();
   }, []);
 
-  const fetchSettings = async () => {
+  async function fetchSettings() {
     try {
       const res = await fetch('/api/settings');
       if (res.ok) {
@@ -124,7 +124,7 @@ export default function UsersPage() {
     } catch (error) {
       console.error('[ERROR] [Users]: Error fetching settings:', error);
     }
-  };
+  }
 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -365,7 +365,7 @@ export default function UsersPage() {
     }
   };
 
-  const fetchUsers = async () => {
+  async function fetchUsers() {
     try {
       const res = await fetch('/api/admin/users');
       if (res.ok) {
@@ -377,9 +377,9 @@ export default function UsersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const fetchRequests = async () => {
+  async function fetchRequests() {
     setLoadingRequests(true);
     try {
       const res = await fetch('/api/admin/wholesale/requests');
@@ -392,7 +392,7 @@ export default function UsersPage() {
     } finally {
       setLoadingRequests(false);
     }
-  };
+  }
 
   const handleApproveRequest = async (request: any) => {
     if (!confirm(`آیا از تایید درخواست همکاری ${request.companyName} اطمینان دارید؟`)) return;

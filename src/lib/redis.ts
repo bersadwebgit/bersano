@@ -2,12 +2,12 @@ import { Redis } from '@upstash/redis'
 
 const hasRedis = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN)
 
-export const redis = hasRedis
+export const redis: Redis | null = (globalThis as any).mockRedisGlobal || (hasRedis
   ? new Redis({
       url: process.env.UPSTASH_REDIS_REST_URL!,
       token: process.env.UPSTASH_REDIS_REST_TOKEN!,
     })
-  : null
+  : null)
 
 const ISO_DATE_REGEXP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?$/
 
@@ -64,7 +64,7 @@ export async function cached<T>(
         } catch (deserializationError) {
           console.error(`[CRITICAL] Cache deserialization failed for key: ${key}. Deleting corrupt cache key.`, deserializationError)
           // Delete the corrupt key to prevent future failures
-          await redis.del(key).catch(delErr => console.error('Failed to delete corrupt key:', delErr))
+          await redis.del(key).catch((delErr: unknown) => console.error('Failed to delete corrupt key:', delErr))
           // Fallback to fetcher
         }
       } else {

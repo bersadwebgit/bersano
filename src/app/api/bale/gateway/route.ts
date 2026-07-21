@@ -29,7 +29,10 @@ async function verifyGatewayAuth(request: Request): Promise<boolean> {
     where: { key: 'central_bale_bot_api_key' }
   });
 
-  const expectedKey = systemSetting?.value || process.env.CENTRAL_BALE_BOT_API_KEY || 'default-secret-bale-key';
+  const expectedKey = systemSetting?.value || process.env.CENTRAL_BALE_BOT_API_KEY;
+  if (!expectedKey) {
+    return false;
+  }
   return token === expectedKey;
 }
 

@@ -42,13 +42,13 @@ export default function AdminTicketDetail() {
   const [replyError, setReplyError] = useState('');
 
   useEffect(() => {
-    setLoading(true);
-    setTicket(null);
-    setReplyMessage('');
     fetchTicket();
   }, [id]);
 
-  const fetchTicket = async () => {
+  async function fetchTicket() {
+    setLoading(true);
+    setTicket(null);
+    setReplyMessage('');
     try {
       const res = await fetch(`/api/admin/tickets/${id}`, { cache: 'no-store' });
       if (res.ok) {
@@ -60,7 +60,7 @@ export default function AdminTicketDetail() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const handleReply = async (e: React.FormEvent) => {
     e.preventDefault();

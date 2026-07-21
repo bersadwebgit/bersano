@@ -1,0 +1,24 @@
+[
+  {
+    "id": "prod-001",
+    "input": "قیمت کفش ورزشی نایک را ده درصد افزایش بده",
+    "expectedIntent": "product.update_price",
+    "expectedCapability": "manage_products",
+    "requiresClarification": false,
+    "riskLevel": "medium",
+    "mustChangeFields": ["price"],
+    "mustNotChangeFields": ["title", "stock"],
+    "expectedPermission": "products.update"
+  },
+  {
+    "id": "prod-002",
+    "input": "موجودی آیفون ۱۳ را در انبار به ۵۰ تغییر بده",
+    "expectedIntent": "product.update_stock",
+    "expectedCapability": "manage_products",
+    "requiresClarification": false,
+    "riskLevel": "medium",
+    "mustChangeFields": ["stock"],
+    "mustNotChangeFields": ["price"],
+    "expectedPermission": "products.update"
+  }
+]

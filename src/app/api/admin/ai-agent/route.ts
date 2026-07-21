@@ -718,7 +718,7 @@ async function updateShopMemory(shopId: string, update: any) {
       data: {
         aiMemory: JSON.stringify(currentMemory)
       }
-    });
+  });
   }
 
   return currentMemory;
@@ -1298,6 +1298,18 @@ Your output must be a valid JSON object matching the ManagerResponse interface, 
             temperature: currentTemperature,
             max_tokens: currentMaxTokens,
           }),
+          // AI-008: route V1 through the central quota + usage system (shopId activates it). This
+          // replaces the removed inline prisma.aiUsage.create / hardcoded cost formula below.
+          logContext: {
+            shopId,
+            slot: 'complex',
+            model: currentModel,
+            // Keep endpoint 'ai-agent' so V1's own monthly pre-check counter stays continuous with
+            // historical rows; the central quota/usage now also covers this call.
+            endpoint: 'ai-agent',
+            capability: 'ai-agent-v1',
+            featureKey: 'aiAgentEnabled',
+          },
         });
 
         if (!response.ok) {
@@ -1379,43 +1391,10 @@ Your output must be a valid JSON object matching the ManagerResponse interface, 
             }
           }
 
-          // Record usage asynchronously (non-blocking)
-          const usage = responseData.usage || {};
-          const promptTokens = usage.prompt_tokens || 0;
-          const completionTokens = usage.completion_tokens || 0;
-
-          const calculateCost = (model: string, tokensIn: number, tokensOut: number): number => {
-            const m = model.toLowerCase();
-            let rateIn = 0.15 / 1000000;  // Default rate per token (0.15 USD per 1M)
-            let rateOut = 0.60 / 1000000; // Default rate per token (0.60 USD per 1M)
-
-            if (m.includes('gemini-2.5-flash-lite')) {
-              rateIn = 0.075 / 1000000;
-              rateOut = 0.30 / 1000000;
-            } else if (m.includes('gemini-2.5-flash')) {
-              rateIn = 0.075 / 1000000;
-              rateOut = 0.30 / 1000000;
-            } else if (m.includes('claude-3-5-sonnet') || m.includes('claude-sonnet-4.6') || m.includes('claude-3.5-sonnet')) {
-              rateIn = 3.00 / 1000000;
-              rateOut = 15.00 / 1000000;
-            }
-
-            return (tokensIn * rateIn) + (tokensOut * rateOut);
-          };
-
-          const costUsd = calculateCost(currentModel, promptTokens, completionTokens);
-          prisma.aiUsage.create({
-            data: {
-              shopId,
-              endpoint: 'ai-agent',
-              tokensIn: promptTokens,
-              tokensOut: completionTokens,
-              costUsd,
-              model: currentModel,
-              monthKey,
-            }
-          }).catch(err => console.error('[AI-AGENT] Failed to record AI usage:', err));
-
+          // AI-008: usage/cost is now recorded by the central system inside openRouterFetch →
+          // executeChatCompletion → logAiUsage (single durable AiUsage row, central pricing registry,
+          // quota-aware). The previous inline prisma.aiUsage.create + hardcoded cost formula was
+          // removed to eliminate the parallel usage write and duplicated pricing logic.
           console.log(`[AI-AGENT] Plan generation succeeded on attempt ${attempt}/${maxAttempts}. Retries needed: ${attempt - 1}`);
           if (attempt > 1) {
             if (!parsedResult.warnings) parsedResult.warnings = [];

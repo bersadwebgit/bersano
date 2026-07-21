@@ -3,8 +3,13 @@ import { getTenantShop } from './tenant';
 import { prisma } from './prisma';
 import { isAdminRole, hasPermission, type AdminPermission } from './admin-roles';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-change-in-production';
-const key = new TextEncoder().encode(JWT_SECRET);
+function getJwtKey() {
+  const JWT_SECRET = process.env.JWT_SECRET;
+  if (!JWT_SECRET && process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE !== 'phase-production-build') {
+    throw new Error('JWT_SECRET environment variable is missing!');
+  }
+  return new TextEncoder().encode(JWT_SECRET || 'your-super-secret-key-change-in-production');
+}
 
 export async function verifyAuth(request: Request, requiredRole?: 'admin' | 'customer' | 'superadmin') {
   // Extract token from cookies based on requiredRole
@@ -28,10 +33,10 @@ export async function verifyAuth(request: Request, requiredRole?: 'admin' | 'cus
     }
   }
 
-  console.log(`verifyAuth token extracted for role ${requiredRole || 'any'}:`, token ? "FOUND" : "NOT FOUND");
   if (!token) return null;
 
   try {
+    const key = getJwtKey();
     const { payload } = await jwtVerify(token, key);
     
     // Super admins have access everywhere
@@ -39,12 +44,10 @@ export async function verifyAuth(request: Request, requiredRole?: 'admin' | 'cus
       // Check shop context matching
       const host = request.headers.get('host') || '';
       const shop = await getTenantShop(host, true);
-      console.log("verifyAuth check: host =", host, "shopId =", shop?.shopId, "payload.shopId =", payload.shopId);
       
       // If there's no shop found for the current domain,
       // or if the user's token belongs to a different shop
       if (!shop || payload.shopId !== shop.shopId) {
-        console.log("verifyAuth check FAILED! shop =", !!shop, "mismatch =", payload.shopId !== shop?.shopId);
         return null;
       }
     }
@@ -52,15 +55,12 @@ export async function verifyAuth(request: Request, requiredRole?: 'admin' | 'cus
     // Role check verification
     if (requiredRole) {
       if (requiredRole === 'admin' && !isAdminRole(payload.role as string) && payload.role !== 'superadmin') {
-        console.log("verifyAuth check FAILED! Required admin but got", payload.role);
         return null;
       }
       if (requiredRole === 'customer' && payload.role !== 'customer') {
-        console.log("verifyAuth check FAILED! Required customer but got", payload.role);
         return null;
       }
       if (requiredRole === 'superadmin' && payload.role !== 'superadmin') {
-        console.log("verifyAuth check FAILED! Required superadmin but got", payload.role);
         return null;
       }
     }
@@ -75,7 +75,6 @@ export async function verifyAuth(request: Request, requiredRole?: 'admin' | 'cus
         select: { isBlocked: true }
       });
       if (!dbUser || dbUser.isBlocked) {
-        console.log(`verifyAuth check FAILED! User with role ${payload.role} is blocked or not found in DB.`);
         return null;
       }
     }

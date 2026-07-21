@@ -645,6 +645,8 @@ export async function POST(request: Request) {
       finalPhone
     } = result;
 
+    const finalAmount = order.finalAmount;
+
     // Check if Zibal or ZarinPal Payment Gateway is enabled (and if payment method is online or deposit)
     const isOnlinePayment = paymentMethod === 'online' || paymentMethod === 'deposit';
     const useZibal = isOnlinePayment && settings?.zibalEnabled && settings?.zibalMerchantId && (onlineGateway === 'zibal' || !settings.zarinpalEnabled);

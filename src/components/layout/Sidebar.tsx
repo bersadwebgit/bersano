@@ -255,7 +255,7 @@ export default function Sidebar({
                     {hasChildren && (
                       <div className={`transition-all duration-300 overflow-hidden ${isExpanded ? 'max-h-[300px] opacity-100' : 'max-h-0 opacity-0'}`}>
                         <ul className="mt-1 mr-3 pr-3 space-y-1 border-r border-gray-200 dark:border-gray-800">
-                          {category.children.map(child => {
+                          {category.children?.map(child => {
                             const isChildSelected = selectedCategory === child.id;
                             return (
                               <li key={child.id}>

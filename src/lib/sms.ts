@@ -6,8 +6,11 @@ import crypto from 'crypto';
  * Hashes an OTP code securely using HMAC-SHA256 with a server-side pepper/salt
  */
 export function hashOtp(code: string): string {
-  const secret = process.env.OTP_HASH_SECRET || 'fallback-secure-otp-hash-pepper-2026';
-  return crypto.createHmac('sha256', secret).update(code.trim()).digest('hex');
+  const secret = process.env.OTP_HASH_SECRET;
+  if (!secret && process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE !== 'phase-production-build') {
+    throw new Error('OTP_HASH_SECRET environment variable is missing!');
+  }
+  return crypto.createHmac('sha256', secret || 'fallback-secure-otp-hash-pepper-2026').update(code.trim()).digest('hex');
 }
 
 /**

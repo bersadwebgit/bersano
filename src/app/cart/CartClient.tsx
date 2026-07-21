@@ -413,7 +413,7 @@ export default function CartClient() {
         });
 
         // Sort by amount descending to find the best one
-        discountsWithAmounts.sort((a, b) => b.amount - a.amount);
+        discountsWithAmounts.sort((a: any, b: any) => b.amount - a.amount);
         const bestDiscount = discountsWithAmounts[0].discount;
 
         // If there is already a manual discount code applied, check if it's better than the automatic one

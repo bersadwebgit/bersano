@@ -1,0 +1,15 @@
+src/app/api/admin/blog/comments/ai-control/route.ts
+src/app/api/admin/blog/generate-chunk/route.ts
+src/app/api/admin/brands/ai-clean/route.ts
+src/app/api/admin/categories/ai-seo/route.ts
+src/app/api/admin/dashboard/ai-analyst/route.ts
+src/app/api/admin/products/ai-article/route.ts
+src/app/api/admin/products/ai-assistant/route.ts
+src/app/api/admin/products/ai-export/route.ts
+src/app/api/admin/products/ai-faqs/route.ts
+src/app/api/admin/products/ai-generate-all/route.ts
+src/app/api/admin/products/ai-import/route.ts
+src/app/api/admin/products/ai-seo/route.ts
+src/app/api/admin/products/ai-suggest-meta/route.ts
+src/app/api/chat/message/route.ts
+src/app/api/super-admin/settings/test-gateway/route.ts

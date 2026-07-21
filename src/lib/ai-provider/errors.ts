@@ -7,7 +7,9 @@ export type AiErrorCode =
   | 'AI_INVALID_RESPONSE'
   | 'AI_MODEL_UNAVAILABLE'
   | 'AI_EMBEDDING_DIMENSION_ERROR'
-  | 'AI_GATEWAY_UNAVAILABLE';
+  | 'AI_INVALID_EMBEDDING_MODEL'
+  | 'AI_GATEWAY_UNAVAILABLE'
+  | 'AI_QUOTA_EXCEEDED';
 
 const PERSIAN_MESSAGES: Record<AiErrorCode, string> = {
   AI_CONFIGURATION_ERROR: 'تنظیمات سیستم هوش مصنوعی ناقص یا نامعتبر است.',
@@ -18,7 +20,9 @@ const PERSIAN_MESSAGES: Record<AiErrorCode, string> = {
   AI_INVALID_RESPONSE: 'پاسخ دریافتی از هوش مصنوعی معتبر یا کامل نبود.',
   AI_MODEL_UNAVAILABLE: 'مدل هوش مصنوعی درخواست شده موقتاً در دسترس نیست.',
   AI_EMBEDDING_DIMENSION_ERROR: 'ابعاد وکتور تولید شده با دیتابیس همخوانی ندارد.',
+  AI_INVALID_EMBEDDING_MODEL: 'مدل انتخاب شده برای Embedding قابلیت تولید وکتور را ندارد.',
   AI_GATEWAY_UNAVAILABLE: 'درگاه واسط هوش مصنوعی موقتاً در دسترس نیست.',
+  AI_QUOTA_EXCEEDED: 'سقف مصرف هوش مصنوعی شما به پایان رسیده است. لطفاً پلن خود را ارتقا دهید.',
 };
 
 export class AiProviderError extends Error {

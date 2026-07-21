@@ -1,11 +1,17 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Sparkles, Check, Store, Heart, AlertCircle, ShoppingCart, Percent, Share2, Globe, ShieldCheck, Download } from 'lucide-react';
+import { buildMarketingMetadata } from '@/lib/marketing-seo';
+import StructuredData from '@/components/marketing/StructuredData';
+import { breadcrumbSchema } from '@/lib/marketing-schema';
+import RelatedLinks from '@/components/marketing/sections/RelatedLinks';
 
-export const metadata: Metadata = {
-  title: 'فروش محصول دیجیتال با برسانا | فروش فایل، دوره و دانلود امن',
-  description: 'با برسانا فایل، دوره، PDF، قالب و محصولات دیجیتال را با پرداخت آنلاین، دانلود امن، محدودیت دانلود و گزارش فروش بفروشید.',
-};
+export const metadata: Metadata = buildMarketingMetadata({
+  title: 'فروش محصولات دیجیتال، فایل و دوره',
+  description:
+    'با برسانا فایل، دوره، PDF، قالب و محصولات دیجیتال را با پرداخت آنلاین، تحویل و دانلود امن، محدودیت دانلود و گزارش فروش بفروشید.',
+  path: '/digital-products',
+});
 
 export default function DigitalProductsPage() {
   const useCases = [
@@ -23,7 +29,13 @@ export default function DigitalProductsPage() {
 
   return (
     <div className="text-right font-sans min-h-screen bg-slate-50 dark:bg-slate-950 pb-20">
-      
+      <StructuredData
+        data={breadcrumbSchema([
+          { name: 'خانه', path: '/' },
+          { name: 'محصولات دیجیتال', path: '/digital-products' },
+        ])}
+      />
+
       {/* Hero Section */}
       <section className="relative pt-16 pb-20 overflow-hidden text-center space-y-6">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-4">
@@ -103,6 +115,14 @@ export default function DigitalProductsPage() {
           </p>
         </div>
       </section>
+
+      <RelatedLinks
+        links={[
+          { title: 'سئو و تولید محتوا', desc: 'برای دوره‌ها و فایل‌ها صفحه فرود سئوشده بسازید.', href: '/seo-content' },
+          { title: 'ابزارهای بازاریابی', desc: 'کد تخفیف، کمپین و باشگاه مشتریان برای فروش بیشتر.', href: '/marketing-tools' },
+          { title: 'پرداخت و ارسال', desc: 'درگاه بومی و تحویل آنی لینک دانلود پس از پرداخت.', href: '/payments-shipping' },
+        ]}
+      />
 
       {/* CTA */}
       <section className="py-16 text-center">

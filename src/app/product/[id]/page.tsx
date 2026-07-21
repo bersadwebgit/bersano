@@ -304,7 +304,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             OR: [
               { title: { contains: decodedId, mode: 'insensitive' } },
               ...(keywords.map(keyword => ({
-                title: { contains: keyword, mode: 'insensitive' }
+                title: { contains: keyword, mode: 'insensitive' as const }
               })))
             ]
           },

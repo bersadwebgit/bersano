@@ -29,12 +29,20 @@ export interface ProductSearchResult {
 /**
  * Gets query embedding from the configured embedding service.
  */
-async function getQueryEmbedding(query: string): Promise<number[]> {
+async function getQueryEmbedding(query: string, shopId: string): Promise<number[]> {
   const config = await getEmbeddingConfig();
   if (!config) {
     throw new Error('Embedding config is incomplete');
   }
-  return await fetchEmbedding(query, config);
+  // AI-008: RAG query embedding is a sub-call of an already-quota'd chat request, so it skips the
+  // quota gate but is still cost-tracked/observed under the central system for this tenant.
+  return await fetchEmbedding(query, config, {
+    shopId,
+    endpoint: 'embedding:rag',
+    capability: 'embedding:rag',
+    skipQuota: true,
+    inputCount: 1,
+  });
 }
 
 /**
@@ -58,9 +66,12 @@ export async function searchProducts(opts: SearchOptions): Promise<ProductSearch
 
   let results: ProductSearchResult[] = [];
 
+  let vectorSearchUsed = false;
+  let vectorSearchFallback = false;
+
   // 1. Try vector-based hybrid search
   try {
-    const embedding = await getQueryEmbedding(query);
+    const embedding = await getQueryEmbedding(query, shopId);
     const vectorStr = `[${embedding.join(',')}]`;
 
     // Conditional columns for wholesale data using Prisma.sql
@@ -95,10 +106,18 @@ export async function searchProducts(opts: SearchOptions): Promise<ProductSearch
       ORDER BY score DESC
       LIMIT ${maxResults}
     `);
+    vectorSearchUsed = true;
   } catch (error: any) {
-    console.error('[searchProducts] Error during hybrid vector search:', error?.message || error);
+    console.warn('[searchProducts] Warning: Hybrid vector search failed, falling back to keyword search:', error?.message || error);
+    vectorSearchUsed = false;
+    vectorSearchFallback = true;
     results = [];
   }
+
+  console.log('[searchProducts] Observability metadata:', JSON.stringify({
+    vectorSearchUsed,
+    vectorSearchFallback,
+  }));
 
   // 2. Perform highly robust keyword fallback/complement
   try {

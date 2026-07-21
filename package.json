@@ -8,7 +8,12 @@
     "start": "next start",
     "lint": "eslint",
     "bale-bot": "node scripts/bale-bot.js",
-    "telegram-bot": "node scripts/telegram-bot.js"
+    "telegram-bot": "node scripts/telegram-bot.js",
+    "superadmin:manage": "node scripts/manage-superadmin.mjs",
+    "test:superadmin": "node tests/super-admin-management.test.mjs",
+    "test": "npm run test:ai",
+    "test:ai": "npx tsx scripts/run-ai-agent-v2-tests.ts",
+    "ai:diagnose": "node scripts/ai-diagnose.mjs"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

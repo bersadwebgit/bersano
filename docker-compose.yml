@@ -62,12 +62,18 @@ services:
       DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/shop_final?schema=public"
       UPSTASH_REDIS_REST_URL: "http://serverless-redis-http:80"
       UPSTASH_REDIS_REST_TOKEN: "${SRH_TOKEN}"
+      JWT_SECRET: "${JWT_SECRET}"
       DISABLE_AUTO_BALE_BOT: "true"
       DISABLE_AUTO_TELEGRAM_BOT: "true"
       AI_GATEWAY_URL: "${AI_GATEWAY_URL}"
       AI_GATEWAY_TOKEN: "${AI_GATEWAY_TOKEN}"
-      AI_GATEWAY_TIMEOUT_MS: "${AI_GATEWAY_TIMEOUT_MS}"
-      AI_ALLOW_DIRECT_OPENROUTER: "${AI_ALLOW_DIRECT_OPENROUTER}"
+      AI_GATEWAY_TIMEOUT_MS: "${AI_GATEWAY_TIMEOUT_MS:-180000}"
+      AI_ALLOW_DIRECT_OPENROUTER: "${AI_ALLOW_DIRECT_OPENROUTER:-false}"
+      AI_TRANSPORT_MODE: "${AI_TRANSPORT_MODE:-gateway}"
+      AI_CHAT_MODEL_DEFAULT: "${AI_CHAT_MODEL_DEFAULT:-google/gemini-2.5-flash-lite}"
+      AI_CHAT_MODEL_SIMPLE: "${AI_CHAT_MODEL_SIMPLE:-google/gemini-2.5-flash-lite}"
+      AI_CHAT_MODEL_COMPLEX: "${AI_CHAT_MODEL_COMPLEX:-google/gemini-2.5-flash-lite}"
+      AI_EMBEDDING_MODEL: "${AI_EMBEDDING_MODEL:-openai/text-embedding-3-small}"
     depends_on:
       postgres:
         condition: service_healthy
@@ -105,6 +111,19 @@ services:
         condition: service_healthy
       web:
         condition: service_started
+    networks:
+      - internal
+
+  superadmin-tool:
+    image: shop-web:latest
+    container_name: shop-superadmin-tool
+    profiles:
+      - tools
+    environment:
+      DATABASE_URL: "postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/shop_final?schema=public"
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - internal
 

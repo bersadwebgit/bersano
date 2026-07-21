@@ -52,33 +52,6 @@ export async function POST(request: Request) {
     }
 
     if (!userRole) {
-      // For testing purposes, if no superadmin exists and they use admin@admin.com / admin123
-      if (email === 'admin@admin.com' && password === 'admin123') {
-        const token = await new SignJWT({ 
-          id: 'superadmin-id', 
-          email: 'admin@admin.com', 
-          role: 'superadmin',
-          name: 'مدیر اصلی سیستم'
-        })
-          .setProtectedHeader({ alg: 'HS256' })
-          .setExpirationTime('1d')
-          .sign(key);
-
-        const response = NextResponse.json({ success: true, role: 'superadmin', name: 'مدیر اصلی سیستم' });
-        
-        const isSecure = request.url.startsWith('https://') || request.headers.get('x-forwarded-proto') === 'https';
-
-        response.cookies.set({
-          name: 'super_admin_token',
-          value: token,
-          httpOnly: true,
-          path: '/',
-          secure: isSecure,
-          maxAge: 60 * 60 * 24, // 1 day
-        });
-        return response;
-      }
-
       return NextResponse.json(
         { error: 'ایمیل یا رمز عبور اشتباه است یا دسترسی ندارید' },
         { status: 401 }
@@ -118,6 +91,7 @@ export async function POST(request: Request) {
       httpOnly: true,
       path: '/',
       secure: isSecure,
+      sameSite: 'lax',
       maxAge: 60 * 60 * 24, // 1 day
     });
 

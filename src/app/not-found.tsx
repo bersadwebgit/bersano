@@ -15,6 +15,44 @@ export const metadata = {
 
 export default async function NotFound() {
   const shop = await getTenantShop();
+
+  // --- Platform (marketing) 404 — links point to real marketing routes ---
+  if (!shop) {
+    const links = [
+      { href: '/', label: 'صفحه اصلی', icon: Home },
+      { href: '/features', label: 'امکانات', icon: Compass },
+      { href: '/pricing', label: 'تعرفه‌ها', icon: FileText },
+      { href: '/blog', label: 'وبلاگ', icon: FileText },
+      { href: '/contact', label: 'ارتباط با ما', icon: Phone },
+      { href: '/register', label: 'ساخت فروشگاه رایگان', icon: ShoppingBag },
+    ];
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 py-16 text-center dark:bg-slate-950" dir="rtl">
+        <div className="w-full max-w-lg space-y-8">
+          <div className="space-y-3">
+            <p className="text-7xl font-black text-blue-600 sm:text-8xl">۴۰۴</p>
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white">این صفحه پیدا نشد</h1>
+            <p className="mx-auto max-w-md text-sm font-medium leading-relaxed text-slate-500 dark:text-slate-400">
+              ممکن است آدرس تغییر کرده یا صفحه حذف شده باشد. از میان‌برهای زیر مسیر خود را ادامه دهید.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {links.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-xs font-black text-slate-700 transition-all hover:border-blue-500/40 hover:text-blue-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+              >
+                <link.icon className="h-4 w-4" aria-hidden="true" />
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const shopName = shop?.shopName || 'فروشگاه';
   const themeColor = shop?.themeColor || '#2563eb';
   const logoUrl = shop?.logoUrl;

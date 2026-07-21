@@ -1,0 +1,13 @@
+[
+  {
+    "id": "disc-001",
+    "input": "یک کد تخفیف به نام OFF50 با ۲۰ درصد تخفیف بساز",
+    "expectedIntent": "discount.create",
+    "expectedCapability": "manage_products",
+    "requiresClarification": false,
+    "riskLevel": "medium",
+    "mustChangeFields": ["code", "discount"],
+    "mustNotChangeFields": [],
+    "expectedPermission": "discounts.create"
+  }
+]

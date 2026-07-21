@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from './prisma';
 import { getAiModel } from './ai-model-resolver';
-import { executeEmbedding } from './ai-provider/client';
+import { executeEmbedding, EmbeddingUsageContext } from './ai-provider/client';
 import { resolveAiProviderConfig } from './ai-provider/config';
 
 export interface EmbeddingConfig {
@@ -68,7 +68,12 @@ export function buildProductText(product: {
 export async function getEmbeddingConfig(): Promise<EmbeddingConfig | null> {
   try {
     const config = await resolveAiProviderConfig();
-    const model = await getAiModel('embedding');
+    const model = process.env.AI_EMBEDDING_MODEL || await getAiModel('embedding');
+
+    if (!model) {
+      console.warn('[getEmbeddingConfig] Embedding model is not configured.');
+      return null;
+    }
 
     if (config.mode === 'gateway') {
       return {
@@ -90,7 +95,7 @@ export async function getEmbeddingConfig(): Promise<EmbeddingConfig | null> {
     const baseUrl = map.get('ai_embedding_base_url') || '';
     const apiKey = map.get('ai_embedding_api_key') || '';
 
-    if (!baseUrl || !apiKey || !model || !baseUrl.startsWith('http')) {
+    if (!baseUrl || !apiKey || !baseUrl.startsWith('http')) {
       return null;
     }
 
@@ -106,13 +111,17 @@ export async function getEmbeddingConfig(): Promise<EmbeddingConfig | null> {
  */
 export async function fetchEmbedding(
   text: string,
-  config: EmbeddingConfig
+  config: EmbeddingConfig,
+  usage?: EmbeddingUsageContext
 ): Promise<number[]> {
   try {
-    const embedding = await executeEmbedding({
-      model: config.model,
-      input: text,
-    });
+    const embedding = await executeEmbedding(
+      {
+        model: config.model,
+        input: text,
+      },
+      usage
+    );
 
     if (embedding.length !== 1536) {
       throw new Error(
@@ -131,7 +140,11 @@ export async function fetchEmbedding(
  * Generates and stores embedding for a single product.
  * Runs asynchronously and fails silently on error to avoid blocking the main flow.
  */
-export async function embedProduct(productId: string, shopId: string): Promise<void> {
+export async function embedProduct(
+  productId: string,
+  shopId: string,
+  source: 'product' | 'batch' = 'product'
+): Promise<void> {
   try {
     const product = await prisma.product.findFirst({
       where: { id: productId, shopId },
@@ -156,7 +169,17 @@ export async function embedProduct(productId: string, shopId: string): Promise<v
     }
 
     const text = buildProductText(product);
-    const embedding = await fetchEmbedding(text, config);
+    // AI-008: record embedding usage/cost through the central system. The hour-bucketed idempotency
+    // key dedups accidental double-calls (e.g. rapid retries) while still allowing legitimate later
+    // re-embeds (after a product edit) to be recorded as new paid calls.
+    const usage: EmbeddingUsageContext = {
+      shopId,
+      endpoint: `embedding:${source}`,
+      capability: `embedding:${source}`,
+      idempotencyKey: `emb:${shopId}:${productId}:${new Date().toISOString().slice(0, 13)}`,
+      inputCount: 1,
+    };
+    const embedding = await fetchEmbedding(text, config, usage);
 
     // Store as pgvector using raw SQL
     const vectorStr = `[${embedding.join(',')}]`;
@@ -207,7 +230,7 @@ export async function batchEmbedShopProducts(
     await Promise.allSettled(
       batch.map(async (p) => {
         try {
-          await embedProduct(p.id, shopId);
+          await embedProduct(p.id, shopId, 'batch');
           embedded++;
         } catch {
           failed++;
@@ -295,7 +318,7 @@ export async function startBackgroundEmbedding(shopId?: string, batchSize = 20):
         await Promise.allSettled(
           batch.map(async (p) => {
             try {
-              await embedProduct(p.id, p.shopId);
+              await embedProduct(p.id, p.shopId, 'batch');
               embeddingProgress.processedCount++;
             } catch (err: any) {
               embeddingProgress.failedCount++;

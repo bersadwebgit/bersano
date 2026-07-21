@@ -34,26 +34,87 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // --- CASE A: MAIN SAAS PLATFORM SITEMAP ---
   if (!shop) {
-    return [
-      {
-        url: baseUrl,
-        lastModified: new Date(),
-        changeFrequency: 'weekly',
-        priority: 1.0,
-      },
-      {
-        url: `${baseUrl}/login`,
-        lastModified: new Date(),
-        changeFrequency: 'monthly',
-        priority: 0.5,
-      },
-      {
-        url: `${baseUrl}/register`,
-        lastModified: new Date(),
-        changeFrequency: 'monthly',
-        priority: 0.5,
-      },
+    const now = new Date();
+    const items: MetadataRoute.Sitemap = [];
+
+    // Static, high-value marketing routes with tuned priorities/frequencies.
+    const staticRoutes: Array<{ path: string; priority: number; freq: MetadataRoute.Sitemap[number]['changeFrequency'] }> = [
+      { path: '', priority: 1.0, freq: 'weekly' },
+      { path: '/features', priority: 0.9, freq: 'weekly' },
+      { path: '/ai', priority: 0.9, freq: 'weekly' },
+      { path: '/pricing', priority: 0.9, freq: 'weekly' },
+      { path: '/demo', priority: 0.7, freq: 'monthly' },
+      { path: '/instagram-shop', priority: 0.8, freq: 'monthly' },
+      { path: '/wholesale', priority: 0.8, freq: 'monthly' },
+      { path: '/digital-products', priority: 0.8, freq: 'monthly' },
+      { path: '/payments-shipping', priority: 0.7, freq: 'monthly' },
+      { path: '/seo-content', priority: 0.7, freq: 'monthly' },
+      { path: '/marketing-tools', priority: 0.7, freq: 'monthly' },
+      { path: '/compare/instagram', priority: 0.7, freq: 'monthly' },
+      { path: '/compare/custom-website', priority: 0.7, freq: 'monthly' },
+      { path: '/about', priority: 0.6, freq: 'monthly' },
+      { path: '/contact', priority: 0.6, freq: 'monthly' },
+      { path: '/faq', priority: 0.6, freq: 'monthly' },
+      { path: '/blog', priority: 0.8, freq: 'weekly' },
+      { path: '/terms', priority: 0.3, freq: 'yearly' },
+      { path: '/privacy', priority: 0.3, freq: 'yearly' },
+      { path: '/login', priority: 0.4, freq: 'monthly' },
+      { path: '/register', priority: 0.8, freq: 'monthly' },
     ];
+
+    for (const route of staticRoutes) {
+      items.push({
+        url: `${baseUrl}${route.path}`,
+        lastModified: now,
+        changeFrequency: route.freq,
+        priority: route.priority,
+      });
+    }
+
+    // Published platform blog posts.
+    try {
+      const posts = await prisma.platformBlogPost.findMany({
+        where: { status: 'published' },
+        select: { slug: true, updatedAt: true, publishedAt: true },
+        orderBy: { updatedAt: 'desc' },
+      });
+      for (const post of posts) {
+        items.push({
+          url: `${baseUrl}/blog/${encodeURIComponent(post.slug)}`,
+          lastModified: post.updatedAt || post.publishedAt || now,
+          changeFrequency: 'weekly',
+          priority: 0.7,
+        });
+      }
+    } catch (error) {
+      console.error('Error adding platform blog posts to sitemap:', error);
+    }
+
+    // Published, CMS-managed marketing pages (avoid duplicating known static slugs).
+    try {
+      const knownSlugs = new Set(staticRoutes.map((r) => r.path.replace(/^\//, '')));
+      const pages = await prisma.marketingPage.findMany({
+        where: {
+          status: 'published',
+          noindex: false,
+          OR: [{ publishedAt: null }, { publishedAt: { lte: now } }],
+        },
+        select: { slug: true, updatedAt: true },
+      });
+      for (const page of pages) {
+        if (page.slug === 'home' || knownSlugs.has(page.slug)) continue;
+        items.push({
+          url: `${baseUrl}/${encodeURIComponent(page.slug)}`,
+          lastModified: page.updatedAt,
+          changeFrequency: 'monthly',
+          priority: 0.6,
+        });
+      }
+    } catch (error) {
+      console.error('Error adding marketing pages to sitemap:', error);
+    }
+
+    return items;
   }
 
   // --- CASE B: TENANT STORE SITEMAP ---

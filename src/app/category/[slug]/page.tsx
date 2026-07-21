@@ -96,7 +96,7 @@ export default async function CategoryPage({ params }: Props) {
           { name: { contains: decodedSlug, mode: 'insensitive' } },
           { slug: { contains: decodedSlug, mode: 'insensitive' } },
           ...(keywords.map(keyword => ({
-            name: { contains: keyword, mode: 'insensitive' }
+            name: { contains: keyword, mode: 'insensitive' as const }
           })))
         ]
       },

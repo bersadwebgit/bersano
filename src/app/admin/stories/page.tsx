@@ -62,15 +62,15 @@ export default function AdminStoriesPage() {
       const params = new URLSearchParams(window.location.search);
       const promptParam = params.get('aiPrompt');
       if (promptParam) {
-        setAiPrompt(promptParam);
         setTimeout(() => {
+          setAiPrompt(promptParam);
           document.getElementById('ai-assistant-section')?.scrollIntoView({ behavior: 'smooth' });
-        }, 500);
+        }, 100);
       }
     }
   }, []);
 
-  const fetchCategories = async () => {
+  async function fetchCategories() {
     try {
       const res = await fetch('/api/admin/categories');
       if (res.ok) {
@@ -82,9 +82,9 @@ export default function AdminStoriesPage() {
     } catch (error) {
       console.error('Failed to fetch categories:', error);
     }
-  };
+  }
 
-  const fetchProductsAndPosts = async () => {
+  async function fetchProductsAndPosts() {
     try {
       const [productsRes, postsRes] = await Promise.all([
         fetch('/api/admin/products'),
@@ -105,9 +105,9 @@ export default function AdminStoriesPage() {
     } catch (error) {
       console.error('Failed to fetch products or posts:', error);
     }
-  };
+  }
 
-  const fetchStories = async () => {
+  async function fetchStories() {
     try {
       const res = await fetch('/api/stories');
       if (res.status === 401) {
@@ -127,7 +127,7 @@ export default function AdminStoriesPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
   const toggleStatus = async (id: string, currentStatus: boolean) => {
     try {

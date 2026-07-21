@@ -1,13 +1,15 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { exec, spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import { invalidateModelCache } from '@/lib/ai-model-resolver';
+import { invalidateModelCache, resolveAiModel, AiModelSlot } from '@/lib/ai-model-resolver';
 import { invalidateGatewayCache } from '@/lib/openrouter-fetch';
 import { encrypt, decrypt } from '@/lib/crypto';
+import { shouldUpdateSecret } from '@/lib/validate-secret';
 
 function maskUrl(url: string | undefined): string {
   if (!url) return '';
@@ -19,6 +21,77 @@ function maskUrl(url: string | undefined): string {
   } catch (e) {
     return 'https://••••••••/••••••••';
   }
+}
+
+function validateAndTrimModel(val: any, required = false): string | null {
+  if (val === undefined) return null;
+  if (typeof val !== 'string') {
+    throw new Error('مدل باید یک رشته متنی باشد.');
+  }
+  const trimmed = val.trim();
+  if (!trimmed) {
+    if (required) {
+      throw new Error('نام مدل نمی‌تواند خالی باشد.');
+    }
+    return '';
+  }
+  const lower = trimmed.toLowerCase();
+  if (lower === 'undefined' || lower === 'null' || trimmed.includes('[object Object]')) {
+    throw new Error('نام مدل نامعتبر است.');
+  }
+  if (trimmed.length > 150) {
+    throw new Error('نام مدل بسیار طولانی است (حداکثر ۱۵۰ کاراکتر).');
+  }
+  return trimmed;
+}
+
+function validateEmbeddingBaseUrl(url: any): string {
+  if (!url) return '';
+  if (typeof url !== 'string') {
+    throw new Error('آدرس پایه باید یک رشته متنی باشد.');
+  }
+  const trimmed = url.trim();
+  if (!trimmed) return '';
+  
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(trimmed);
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      throw new Error();
+    }
+  } catch (e) {
+    throw new Error('آدرس پایه وارد شده یک URL معتبر نیست.');
+  }
+
+  // AI-001: Block obvious private/loopback/link-local/reserved targets at save time
+  // (SSRF defense-in-depth; DNS-based resolution is enforced at runtime in the transport layer).
+  const host = parsedUrl.hostname.toLowerCase().replace(/^\[/, '').replace(/\]$/, '');
+  const isBlockedHost =
+    host === 'localhost' ||
+    host === '0.0.0.0' ||
+    host === '::1' ||
+    host.endsWith('.localhost') ||
+    host.endsWith('.local') ||
+    host.endsWith('.internal') ||
+    /^127\./.test(host) ||
+    /^10\./.test(host) ||
+    /^192\.168\./.test(host) ||
+    /^169\.254\./.test(host) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(host);
+  if (isBlockedHost) {
+    throw new Error('آدرس پایه نمی‌تواند به شبکه داخلی، localhost یا آدرس‌های رزرو‌شده اشاره کند.');
+  }
+
+  if (trimmed.includes('gemini') || trimmed.includes('claude') || trimmed.includes('gpt-4') || trimmed.includes('text-embedding')) {
+    throw new Error('آدرس پایه نمی‌تواند شناسه مدل باشد.');
+  }
+
+  return trimmed;
+}
+
+function isEmbeddingCapableModel(model: string): boolean {
+  const lower = model.toLowerCase();
+  return lower.includes('embed') || lower.includes('embedding') || lower.includes('bge-') || lower.includes('ada-002');
 }
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-change-in-production';
@@ -615,6 +688,36 @@ export async function GET() {
 
     console.log('[DEBUG SETTINGS GET]', { aiProvider, aiEnabled });
 
+    const ALL_SLOTS: AiModelSlot[] = [
+      'general',
+      'product_assistant',
+      'router',
+      'simple',
+      'complex',
+      'content',
+      'chat',
+      'wholesale',
+      'fallback',
+      'embedding',
+      'blog',
+      'platform_blog_idea',
+      'platform_blog_outline',
+      'platform_blog_section',
+      'platform_blog_seo',
+      'platform_blog_geo',
+      'platform_blog_rewrite',
+      'platform_blog_faq',
+    ];
+
+    const resolvedModels: Record<string, { model: string; source: string }> = {};
+    for (const slot of ALL_SLOTS) {
+      const res = await resolveAiModel(undefined, slot);
+      resolvedModels[slot] = {
+        model: res.model,
+        source: res.source,
+      };
+    }
+
     return NextResponse.json({ 
       apiKey: maskedPoofApiKey, 
       openrouterApiKey: maskedOpenRouterApiKey, 
@@ -674,7 +777,8 @@ export async function GET() {
       saasDemos,
       saasPricing,
       saasComparisons,
-      saasPrompts
+      saasPrompts,
+      resolvedModels,
     });
   } catch (error) {
     console.error('Error fetching system settings:', error);
@@ -690,12 +794,71 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
+
+    // Validate and trim model fields
+    const validatedModels: Record<string, string> = {};
+    try {
+      if (body.openrouterModel !== undefined) validatedModels.openrouterModel = validateAndTrimModel(body.openrouterModel, true)!;
+      if (body.openrouterControlModel !== undefined) validatedModels.openrouterControlModel = validateAndTrimModel(body.openrouterControlModel)!;
+      if (body.openrouterBlogModel !== undefined) validatedModels.openrouterBlogModel = validateAndTrimModel(body.openrouterBlogModel)!;
+      if (body.aiModelRouter !== undefined) validatedModels.aiModelRouter = validateAndTrimModel(body.aiModelRouter)!;
+      if (body.aiModelSimple !== undefined) validatedModels.aiModelSimple = validateAndTrimModel(body.aiModelSimple)!;
+      if (body.aiModelComplex !== undefined) validatedModels.aiModelComplex = validateAndTrimModel(body.aiModelComplex)!;
+      if (body.aiModelContent !== undefined) validatedModels.aiModelContent = validateAndTrimModel(body.aiModelContent)!;
+      if (body.aiModelChat !== undefined) validatedModels.aiModelChat = validateAndTrimModel(body.aiModelChat)!;
+      if (body.aiModelFallback !== undefined) validatedModels.aiModelFallback = validateAndTrimModel(body.aiModelFallback)!;
+      if (body.aiModelWholesale !== undefined) validatedModels.aiModelWholesale = validateAndTrimModel(body.aiModelWholesale)!;
+      
+      if (body.aiModelEmbedding !== undefined) {
+        const validated = validateAndTrimModel(body.aiModelEmbedding);
+        if (validated) {
+          if (!isEmbeddingCapableModel(validated)) {
+            return NextResponse.json({ error: 'مدل انتخاب شده برای Embedding قابلیت تولید وکتور را ندارد.' }, { status: 400 });
+          }
+          validatedModels.aiModelEmbedding = validated;
+        } else {
+          validatedModels.aiModelEmbedding = '';
+        }
+      }
+
+      if (body.aiEmbeddingBaseUrl !== undefined) {
+        validatedModels.aiEmbeddingBaseUrl = validateEmbeddingBaseUrl(body.aiEmbeddingBaseUrl);
+      }
+
+      if (body.platformBlogIdeaModel !== undefined) validatedModels.platformBlogIdeaModel = validateAndTrimModel(body.platformBlogIdeaModel)!;
+      if (body.platformBlogOutlineModel !== undefined) validatedModels.platformBlogOutlineModel = validateAndTrimModel(body.platformBlogOutlineModel)!;
+      if (body.platformBlogSectionModel !== undefined) validatedModels.platformBlogSectionModel = validateAndTrimModel(body.platformBlogSectionModel)!;
+      if (body.platformBlogSeoModel !== undefined) validatedModels.platformBlogSeoModel = validateAndTrimModel(body.platformBlogSeoModel)!;
+      if (body.platformBlogGeoModel !== undefined) validatedModels.platformBlogGeoModel = validateAndTrimModel(body.platformBlogGeoModel)!;
+      if (body.platformBlogRewriteModel !== undefined) validatedModels.platformBlogRewriteModel = validateAndTrimModel(body.platformBlogRewriteModel)!;
+      if (body.platformBlogFaqModel !== undefined) validatedModels.platformBlogFaqModel = validateAndTrimModel(body.platformBlogFaqModel)!;
+    } catch (e: any) {
+      return NextResponse.json({ error: e.message }, { status: 400 });
+    }
+
+    const openrouterModel = validatedModels.openrouterModel !== undefined ? validatedModels.openrouterModel : body.openrouterModel;
+    const openrouterControlModel = validatedModels.openrouterControlModel !== undefined ? validatedModels.openrouterControlModel : body.openrouterControlModel;
+    const openrouterBlogModel = validatedModels.openrouterBlogModel !== undefined ? validatedModels.openrouterBlogModel : body.openrouterBlogModel;
+    const aiModelRouter = validatedModels.aiModelRouter !== undefined ? validatedModels.aiModelRouter : body.aiModelRouter;
+    const aiModelSimple = validatedModels.aiModelSimple !== undefined ? validatedModels.aiModelSimple : body.aiModelSimple;
+    const aiModelComplex = validatedModels.aiModelComplex !== undefined ? validatedModels.aiModelComplex : body.aiModelComplex;
+    const aiModelContent = validatedModels.aiModelContent !== undefined ? validatedModels.aiModelContent : body.aiModelContent;
+    const aiModelChat = validatedModels.aiModelChat !== undefined ? validatedModels.aiModelChat : body.aiModelChat;
+    const aiModelEmbedding = validatedModels.aiModelEmbedding !== undefined ? validatedModels.aiModelEmbedding : body.aiModelEmbedding;
+    const aiModelFallback = validatedModels.aiModelFallback !== undefined ? validatedModels.aiModelFallback : body.aiModelFallback;
+    const aiModelWholesale = validatedModels.aiModelWholesale !== undefined ? validatedModels.aiModelWholesale : body.aiModelWholesale;
+    const aiEmbeddingBaseUrl = validatedModels.aiEmbeddingBaseUrl !== undefined ? validatedModels.aiEmbeddingBaseUrl : body.aiEmbeddingBaseUrl;
+    const platformBlogIdeaModel = validatedModels.platformBlogIdeaModel !== undefined ? validatedModels.platformBlogIdeaModel : body.platformBlogIdeaModel;
+    const platformBlogOutlineModel = validatedModels.platformBlogOutlineModel !== undefined ? validatedModels.platformBlogOutlineModel : body.platformBlogOutlineModel;
+    const platformBlogSectionModel = validatedModels.platformBlogSectionModel !== undefined ? validatedModels.platformBlogSectionModel : body.platformBlogSectionModel;
+    const platformBlogSeoModel = validatedModels.platformBlogSeoModel !== undefined ? validatedModels.platformBlogSeoModel : body.platformBlogSeoModel;
+    const platformBlogGeoModel = validatedModels.platformBlogGeoModel !== undefined ? validatedModels.platformBlogGeoModel : body.platformBlogGeoModel;
+    const platformBlogRewriteModel = validatedModels.platformBlogRewriteModel !== undefined ? validatedModels.platformBlogRewriteModel : body.platformBlogRewriteModel;
+    const platformBlogFaqModel = validatedModels.platformBlogFaqModel !== undefined ? validatedModels.platformBlogFaqModel : body.platformBlogFaqModel;
+
     const { 
       apiKey, 
       openrouterApiKey, 
-      openrouterModel, 
-      openrouterControlModel, 
-      openrouterBlogModel,
       blogAiChunkSize,
       blogAiOverlapTokens,
       blogAiMaxChunks,
@@ -707,23 +870,7 @@ export async function POST(request: Request) {
       centralBaleBotApiKey,
       centralTelegramBotToken,
       centralTelegramBotApiKey,
-      aiModelRouter,
-      aiModelSimple,
-      aiModelComplex,
-      aiModelContent,
-      aiModelChat,
-      aiModelEmbedding,
-      aiModelFallback,
-      aiModelWholesale,
-      aiEmbeddingBaseUrl,
       aiEmbeddingApiKey,
-      platformBlogIdeaModel,
-      platformBlogOutlineModel,
-      platformBlogSectionModel,
-      platformBlogSeoModel,
-      platformBlogGeoModel,
-      platformBlogRewriteModel,
-      platformBlogFaqModel,
       globalSmsUsername,
       globalSmsPassword,
       globalSmsPatternCode,
@@ -742,6 +889,24 @@ export async function POST(request: Request) {
       saasComparisons,
       saasPrompts
     } = body;
+
+    if (body.aiModelEmbedding !== undefined) {
+      const currentEmbeddingSetting = await prisma.systemSetting.findUnique({
+        where: { key: 'ai_model_embedding' },
+      });
+      const currentEmbeddingModel = currentEmbeddingSetting?.value || '';
+      const newEmbeddingModel = validatedModels.aiModelEmbedding || '';
+      
+      if (currentEmbeddingModel && newEmbeddingModel && currentEmbeddingModel !== newEmbeddingModel) {
+        // Mark existing embeddings as stale
+        await prisma.$executeRaw(Prisma.sql`
+          UPDATE "Product"
+          SET embedding = NULL,
+              "embeddingUpdatedAt" = NULL
+        `);
+        console.log('[INFO] Embedding model changed. Marked all product embeddings as stale.');
+      }
+    }
 
     const aiProvider = 'openrouter';
 
@@ -858,7 +1023,7 @@ export async function POST(request: Request) {
       });
     }
 
-    if (apiKey !== undefined && apiKey !== '••••••••••••••••' && apiKey !== '') {
+    if (shouldUpdateSecret(apiKey)) {
       await prisma.systemSetting.upsert({
         where: { key: 'poof_api_key' },
         update: { value: apiKey },
@@ -866,7 +1031,7 @@ export async function POST(request: Request) {
       });
     }
 
-    if (openrouterApiKey !== undefined && openrouterApiKey !== '••••••••••••••••' && openrouterApiKey !== '') {
+    if (shouldUpdateSecret(openrouterApiKey)) {
       await prisma.systemSetting.upsert({
         where: { key: 'openrouter_api_key' },
         update: { value: openrouterApiKey },
@@ -959,7 +1124,7 @@ export async function POST(request: Request) {
       }
     }
 
-    if (aiEmbeddingApiKey !== undefined && aiEmbeddingApiKey !== '••••••••••••••••' && aiEmbeddingApiKey !== '') {
+    if (shouldUpdateSecret(aiEmbeddingApiKey)) {
       await prisma.systemSetting.upsert({
         where: { key: 'ai_embedding_api_key' },
         update: { value: aiEmbeddingApiKey },

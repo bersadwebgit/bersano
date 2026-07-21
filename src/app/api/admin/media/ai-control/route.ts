@@ -161,6 +161,12 @@ export async function POST(request: Request) {
       const openrouterApiKeySetting = await prisma.systemSetting.findUnique({
         where: { key: 'openrouter_api_key' },
       });
+      const openrouterControlModelSetting = await prisma.systemSetting.findUnique({
+        where: { key: 'openrouter_control_model' },
+      });
+      const openrouterModelSetting = await prisma.systemSetting.findUnique({
+        where: { key: 'openrouter_model' },
+      });
 
       const openrouterApiKey = openrouterApiKeySetting?.value;
       let openrouterModel = await getAiModel('simple', shopId);

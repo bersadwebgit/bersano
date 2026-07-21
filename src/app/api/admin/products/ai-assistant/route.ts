@@ -509,7 +509,9 @@ ${JSON.stringify(lightProducts, null, 2)}
     }
 
     const isBulkOp = parsedResult.isBulk;
-    const fieldUpdates = parsedResult.fieldUpdates || {};
+    const fieldUpdates = isBulkOp
+      ? (parsedResult.fieldUpdates || {})
+      : { ...(parsedResult.formData || {}), ...(parsedResult.fieldUpdates || {}) };
     const imageUpdates = parsedResult.imageUpdates;
 
     // PREVIEW MODE: Calculate and return proposed changes without saving to DB!

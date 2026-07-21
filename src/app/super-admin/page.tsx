@@ -218,10 +218,13 @@ export default function SuperAdminDashboard() {
   const [aiModelContent, setAiModelContent] = useState('');
   const [aiModelChat, setAiModelChat] = useState('');
   const [aiModelEmbedding, setAiModelEmbedding] = useState('');
+  const [initialEmbeddingModel, setInitialEmbeddingModel] = useState('');
   const [aiModelFallback, setAiModelFallback] = useState('');
   const [aiModelWholesale, setAiModelWholesale] = useState('');
   const [aiEmbeddingBaseUrl, setAiEmbeddingBaseUrl] = useState('');
   const [aiEmbeddingApiKey, setAiEmbeddingApiKey] = useState('');
+  const [resolvedModels, setResolvedModels] = useState<Record<string, { model: string; source: string }>>({});
+  const [testingModelSlot, setTestingModelSlot] = useState<string | null>(null);
   const [platformBlogIdeaModel, setPlatformBlogIdeaModel] = useState('');
   const [platformBlogOutlineModel, setPlatformBlogOutlineModel] = useState('');
   const [platformBlogSectionModel, setPlatformBlogSectionModel] = useState('');
@@ -272,6 +275,89 @@ export default function SuperAdminDashboard() {
       setTestingGatewayModel(false);
     }
   };
+
+  const handleTestModelSlot = async (slot: string, customModelValue: string) => {
+    setTestingModelSlot(slot);
+    try {
+      const res = await fetch('/api/super-admin/settings/test-model', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slot, model: customModelValue }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert(
+          `تست اسلات ${slot} موفقیت‌آمیز بود!\nمدل استفاده شده: ${data.model}\nزمان پاسخ: ${data.latencyMs} میلی‌ثانیه\n${
+            data.dimension ? `ابعاد وکتور: ${data.dimension}` : `پاسخ: ${data.text || 'pong'}`
+          }`
+        );
+      } else {
+        alert(`تست ناموفق بود.\nخطا: ${data.error || 'خطای ناشناخته'}`);
+      }
+    } catch (err: any) {
+      alert(`خطای شبکه یا سرور: ${err.message || err}`);
+    } finally {
+      setTestingModelSlot(null);
+    }
+  };
+
+  const renderModelField = (
+    label: string,
+    slot: string,
+    settingKey: string,
+    value: string,
+    onChange: (val: string) => void,
+    placeholder = 'google/gemini-2.5-flash-lite',
+    description = ''
+  ) => {
+    const resolved = resolvedModels[slot];
+    const isTesting = testingModelSlot === slot;
+
+    return (
+      <div className="space-y-2 bg-white p-3.5 rounded-2xl border border-gray-100 shadow-sm">
+        <div className="flex justify-between items-center">
+          <label className="block text-xs font-bold text-gray-700">{label}</label>
+          <span className="text-[9px] font-mono text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded">
+            Key: {settingKey}
+          </span>
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none text-xs font-mono text-gray-800 transition-all text-left"
+            dir="ltr"
+          />
+          <button
+            type="button"
+            onClick={() => handleTestModelSlot(slot, value)}
+            disabled={isTesting}
+            className={`px-3 py-2 rounded-xl font-bold text-[10px] transition-all flex items-center gap-1 shadow-sm ${
+              isTesting
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-blue-50 hover:bg-blue-100 text-blue-600 active:scale-[0.98]'
+            }`}
+          >
+            {isTesting ? 'در حال تست...' : 'تست مدل'}
+          </button>
+        </div>
+        {resolved && (
+          <div className="flex justify-between items-center text-[10px] font-bold text-emerald-600 bg-emerald-50/50 px-2 py-1 rounded-lg">
+            <span>فعال: <code className="font-mono text-[9px]">{resolved.model}</code></span>
+            <span className="text-[9px] text-emerald-700/80">منبع: {resolved.source}</span>
+          </div>
+        )}
+        {description && (
+          <p className="text-[10px] text-gray-500 font-bold leading-relaxed">
+            {description}
+          </p>
+        )}
+      </div>
+    );
+  };
+
   const [centralBaleBotToken, setCentralBaleBotToken] = useState('');
   const [centralBaleBotApiKey, setCentralBaleBotApiKey] = useState('');
   const [centralTelegramBotToken, setCentralTelegramBotToken] = useState('');
@@ -438,10 +524,12 @@ export default function SuperAdminDashboard() {
         setAiModelContent(data.aiModelContent || '');
         setAiModelChat(data.aiModelChat || '');
         setAiModelEmbedding(data.aiModelEmbedding || '');
+        setInitialEmbeddingModel(data.aiModelEmbedding || '');
         setAiModelFallback(data.aiModelFallback || '');
         setAiModelWholesale(data.aiModelWholesale || '');
         setAiEmbeddingBaseUrl(data.aiEmbeddingBaseUrl || '');
         setAiEmbeddingApiKey(data.aiEmbeddingApiKey || '');
+        setResolvedModels(data.resolvedModels || {});
         setPlatformBlogIdeaModel(data.platformBlogIdeaModel || '');
         setPlatformBlogOutlineModel(data.platformBlogOutlineModel || '');
         setPlatformBlogSectionModel(data.platformBlogSectionModel || '');
@@ -509,6 +597,16 @@ export default function SuperAdminDashboard() {
     setSettingsMessage('');
     setSettingsError('');
 
+    if (initialEmbeddingModel && aiModelEmbedding && initialEmbeddingModel !== aiModelEmbedding) {
+      const confirmChange = window.confirm(
+        'توجه: تغییر مدل Embedding باعث می‌شود تمام وکتورهای ذخیره شده قبلی نامعتبر شوند و نیاز به بازسازی کامل داشته باشند. آیا از این تغییر اطمینان دارید؟'
+      );
+      if (!confirmChange) {
+        setSavingSettings(false);
+        return;
+      }
+    }
+
     try {
       const res = await fetch('/api/super-admin/settings', {
         method: 'POST',
@@ -567,6 +665,7 @@ export default function SuperAdminDashboard() {
       });
 
       if (res.ok) {
+        setInitialEmbeddingModel(aiModelEmbedding);
         setSettingsMessage('تنظیمات با موفقیت ذخیره شد.');
         fetchSystemSettings();
       } else {
@@ -1258,6 +1357,7 @@ export default function SuperAdminDashboard() {
       { id: 'tickets', label: 'تیکت‌های پشتیبانی', icon: Headphones, badge: stats.openTickets > 0 ? stats.openTickets : null },
       { id: 'collaborators', label: 'همکاران پلتفرم', icon: Users },
       { id: 'blog', label: 'وبلاگ اصلی پلتفرم', icon: FileText, isLink: true, href: '/super-admin/blog' },
+      { id: 'marketing', label: 'سایت و صفحات فروش', icon: Globe, isLink: true, href: '/super-admin/marketing' },
       { id: 'settings', label: 'تنظیمات سیستم', icon: Settings }
     );
   } else if (currentRole === 'sales') {
@@ -1268,7 +1368,8 @@ export default function SuperAdminDashboard() {
   } else if (currentRole === 'content_manager' || currentRole === 'seo_manager') {
     sidebarItems.push(
       { id: 'overview', label: 'پیشخوان', icon: LayoutDashboard },
-      { id: 'blog', label: 'وبلاگ اصلی پلتفرم', icon: FileText, isLink: true, href: '/super-admin/blog' }
+      { id: 'blog', label: 'وبلاگ اصلی پلتفرم', icon: FileText, isLink: true, href: '/super-admin/blog' },
+      { id: 'marketing', label: 'سایت و صفحات فروش', icon: Globe, isLink: true, href: '/super-admin/marketing' }
     );
   }
 
@@ -2580,45 +2681,25 @@ export default function SuperAdminDashboard() {
                           </p>
                         </div>
 
-                        <div className="space-y-2">
-                          <label className="block text-xs font-bold text-gray-700 mb-1">مدل هوش مصنوعی (AI Model)</label>
-                          <input
-                            type="text"
-                            value={openrouterModel}
-                            onChange={(e) => setOpenrouterModel(e.target.value)}
-                            placeholder="google/gemini-2.5-flash"
-                            className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none text-xs font-mono text-gray-800 transition-all text-left"
-                            dir="ltr"
-                          />
-                          <p className="text-[10px] text-gray-500 font-bold leading-relaxed pt-1.5">
-                            شناسه مدل موردنظر را وارد کنید. پیشنهاد می‌شود از مدل‌های اقتصادی و باکیفیت مانند{' '}
-                            <code className="bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-[9px] font-mono">google/gemini-2.5-flash</code>{' '}
-                            یا{' '}
-                            <code className="bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-[9px] font-mono">openai/gpt-4o-mini</code>{' '}
-                            یا{' '}
-                            <code className="bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-[9px] font-mono">meta-llama/llama-3-8b-instruct:free</code>{' '}
-                            استفاده نمایید.
-                          </p>
-                        </div>
+                        {renderModelField(
+                          'مدل هوش مصنوعی عمومی (AI Model)',
+                          'general',
+                          'openrouter_model',
+                          openrouterModel,
+                          setOpenrouterModel,
+                          'google/gemini-2.5-flash',
+                          'شناسه مدل موردنظر عمومی برای کل پلتفرم.'
+                        )}
 
-                        <div className="space-y-2">
-                          <label className="block text-xs font-bold text-gray-700 mb-1">مدل هوش مصنوعی دستیار محصول (AI Product Assistant Model)</label>
-                          <input
-                            type="text"
-                            value={openrouterControlModel}
-                            onChange={(e) => setOpenrouterControlModel(e.target.value)}
-                            placeholder="google/gemini-2.5-flash"
-                            className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none text-xs font-mono text-gray-800 transition-all text-left"
-                            dir="ltr"
-                          />
-                          <p className="text-[10px] text-gray-500 font-bold leading-relaxed pt-1.5">
-                            شناسه مدل موردنظر را برای بخش <strong className="text-purple-600">دستیار هوشمند محصول (کنترل با پرامپت)</strong> وارد کنید. در صورت خالی گذاشتن، سیستم از مدل اصلی عمومی بالا استفاده خواهد کرد. پیشنهاد می‌شود برای پردازش دستورات پیچیده از مدل‌های هوشمندتر مانند{' '}
-                            <code className="bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-[9px] font-mono">google/gemini-1.5-pro</code>{' '}
-                            یا{' '}
-                            <code className="bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-[9px] font-mono">openai/gpt-4o</code>{' '}
-                            استفاده نمایید.
-                          </p>
-                        </div>
+                        {renderModelField(
+                          'مدل هوش مصنوعی دستیار محصول (AI Product Assistant Model)',
+                          'product_assistant',
+                          'openrouter_control_model',
+                          openrouterControlModel,
+                          setOpenrouterControlModel,
+                          'google/gemini-2.5-flash',
+                          'مدل موردنظر برای بخش دستیار هوشمند محصول (کنترل با پرامپت). در صورت خالی بودن، از مدل عمومی بالا استفاده می‌شود.'
+                        )}
 
                         <div className="border-t border-gray-100 my-4 pt-4"></div>
 
@@ -2629,125 +2710,85 @@ export default function SuperAdminDashboard() {
                           </h4>
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <label className="block text-xs font-bold text-gray-700 mb-1">مدل Router (Intent)</label>
-                              <input
-                                type="text"
-                                value={aiModelRouter}
-                                onChange={(e) => setAiModelRouter(e.target.value)}
-                                placeholder="google/gemini-2.5-flash-lite-preview-06-17"
-                                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none text-xs font-mono text-gray-800 transition-all text-left"
-                                dir="ltr"
-                              />
-                              <p className="text-[10px] text-gray-500 font-bold leading-relaxed">
-                                تشخیص نوع درخواست و مسیریابی (باید ارزان‌ترین مدل باشد).
-                              </p>
-                            </div>
+                            {renderModelField(
+                              'مدل Router (Intent)',
+                              'router',
+                              'ai_model_router',
+                              aiModelRouter,
+                              setAiModelRouter,
+                              'google/gemini-2.5-flash-lite',
+                              'تشخیص نوع درخواست و مسیریابی (باید ارزان‌ترین مدل باشد).'
+                            )}
 
-                            <div className="space-y-2">
-                              <label className="block text-xs font-bold text-gray-700 mb-1">مدل عملیات ساده</label>
-                              <input
-                                type="text"
-                                value={aiModelSimple}
-                                onChange={(e) => setAiModelSimple(e.target.value)}
-                                placeholder="google/gemini-2.5-flash"
-                                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none text-xs font-mono text-gray-800 transition-all text-left"
-                                dir="ltr"
-                              />
-                              <p className="text-[10px] text-gray-500 font-bold leading-relaxed">
-                                برای ۸۰٪ درخواست‌های ساده (قیمت، موجودی، تنظیمات).
-                              </p>
-                            </div>
+                            {renderModelField(
+                              'مدل عملیات ساده',
+                              'simple',
+                              'ai_model_simple',
+                              aiModelSimple,
+                              setAiModelSimple,
+                              'google/gemini-2.5-flash-lite',
+                              'برای ۸۰٪ درخواست‌های ساده (قیمت، موجودی، تنظیمات).'
+                            )}
 
-                            <div className="space-y-2">
-                              <label className="block text-xs font-bold text-gray-700 mb-1">مدل تحلیل پیچیده</label>
-                              <input
-                                type="text"
-                                value={aiModelComplex}
-                                onChange={(e) => setAiModelComplex(e.target.value)}
-                                placeholder="anthropic/claude-sonnet-4.6"
-                                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none text-xs font-mono text-gray-800 transition-all text-left"
-                                dir="ltr"
-                              />
-                              <p className="text-[10px] text-gray-500 font-bold leading-relaxed">
-                                برای تحلیل، گزارش‌گیری و ترکیب داده‌ها.
-                              </p>
-                            </div>
+                            {renderModelField(
+                              'مدل تحلیل پیچیده',
+                              'complex',
+                              'ai_model_complex',
+                              aiModelComplex,
+                              setAiModelComplex,
+                              'google/gemini-2.5-flash-lite',
+                              'برای تحلیل، گزارش‌گیری و ترکیب داده‌ها.'
+                            )}
 
-                            <div className="space-y-2">
-                              <label className="block text-xs font-bold text-gray-700 mb-1">مدل تولید محتوا</label>
-                              <input
-                                type="text"
-                                value={aiModelContent}
-                                onChange={(e) => setAiModelContent(e.target.value)}
-                                placeholder="anthropic/claude-sonnet-4.6"
-                                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none text-xs font-mono text-gray-800 transition-all text-left"
-                                dir="ltr"
-                              />
-                              <p className="text-[10px] text-gray-500 font-bold leading-relaxed">
-                                برای نوشتن بلاگ، توضیحات محصول و استوری‌ها با لحن فارسی روان.
-                              </p>
-                            </div>
+                            {renderModelField(
+                              'مدل تولید محتوا',
+                              'content',
+                              'ai_model_content',
+                              aiModelContent,
+                              setAiModelContent,
+                              'google/gemini-2.5-flash-lite',
+                              'برای نوشتن بلاگ، توضیحات محصول و استوری‌ها با لحن فارسی روان.'
+                            )}
 
-                            <div className="space-y-2">
-                              <label className="block text-xs font-bold text-gray-700 mb-1">مدل چت مشتری</label>
-                              <input
-                                type="text"
-                                value={aiModelChat}
-                                onChange={(e) => setAiModelChat(e.target.value)}
-                                placeholder="google/gemini-2.5-flash"
-                                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none text-xs font-mono text-gray-800 transition-all text-left"
-                                dir="ltr"
-                              />
-                              <p className="text-[10px] text-gray-500 font-bold leading-relaxed">
-                                پاسخ‌گویی به خریداران در چت آنلاین فروشگاه.
-                              </p>
-                            </div>
+                            {renderModelField(
+                              'مدل چت مشتری',
+                              'chat',
+                              'ai_model_chat',
+                              aiModelChat,
+                              setAiModelChat,
+                              'google/gemini-2.5-flash-lite',
+                              'پاسخ‌گویی به خریداران در چت آنلاین فروشگاه.'
+                            )}
 
-                            <div className="space-y-2">
-                              <label className="block text-xs font-bold text-gray-700 mb-1">مدل فروش عمده B2B</label>
-                              <input
-                                type="text"
-                                value={aiModelWholesale}
-                                onChange={(e) => setAiModelWholesale(e.target.value)}
-                                placeholder="anthropic/claude-sonnet-4.6"
-                                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none text-xs font-mono text-gray-800 transition-all text-left"
-                                dir="ltr"
-                              />
-                              <p className="text-[10px] text-gray-500 font-bold leading-relaxed">
-                                برای محاسبات قیمت پله‌ای، MOQ و اعتبارسنجی عمده‌فروشی.
-                              </p>
-                            </div>
+                            {renderModelField(
+                              'مدل فروش عمده B2B',
+                              'wholesale',
+                              'ai_model_wholesale',
+                              aiModelWholesale,
+                              setAiModelWholesale,
+                              'google/gemini-2.5-flash-lite',
+                              'برای محاسبات قیمت پله‌ای، MOQ و اعتبارسنجی عمده‌فروشی.'
+                            )}
 
-                            <div className="space-y-2">
-                              <label className="block text-xs font-bold text-gray-700 mb-1">مدل Fallback</label>
-                              <input
-                                type="text"
-                                value={aiModelFallback}
-                                onChange={(e) => setAiModelFallback(e.target.value)}
-                                placeholder="google/gemini-2.5-flash"
-                                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none text-xs font-mono text-gray-800 transition-all text-left"
-                                dir="ltr"
-                              />
-                              <p className="text-[10px] text-gray-500 font-bold leading-relaxed">
-                                مدل جایگزین در صورت بروز خطا در مدل اصلی.
-                              </p>
-                            </div>
+                            {renderModelField(
+                              'مدل Fallback',
+                              'fallback',
+                              'ai_model_fallback',
+                              aiModelFallback,
+                              setAiModelFallback,
+                              'google/gemini-2.5-flash-lite',
+                              'مدل جایگزین در صورت بروز خطا در مدل اصلی.'
+                            )}
 
-                            <div className="space-y-2">
-                              <label className="block text-xs font-bold text-gray-700 mb-1">مدل تولید Embedding</label>
-                              <input
-                                type="text"
-                                value={aiModelEmbedding}
-                                onChange={(e) => setAiModelEmbedding(e.target.value)}
-                                placeholder="openai/text-embedding-3-small"
-                                className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 outline-none text-xs font-mono text-gray-800 transition-all text-left"
-                                dir="ltr"
-                              />
-                              <p className="text-[10px] text-red-500 font-bold leading-relaxed">
-                                تغییر این مدل نیازمند بازسازی کامل وکتورهای ذخیره شده در دیتابیس است.
-                              </p>
-                            </div>
+                            {renderModelField(
+                              'مدل تولید Embedding',
+                              'embedding',
+                              'ai_model_embedding',
+                              aiModelEmbedding,
+                              setAiModelEmbedding,
+                              'openai/text-embedding-3-small',
+                              'تغییر این مدل نیازمند بازسازی کامل وکتورهای ذخیره شده در دیتابیس است.'
+                            )}
                           </div>
                         </div>
 
@@ -3527,7 +3568,7 @@ export default function SuperAdminDashboard() {
                             <RefreshCw className="w-4 h-4 animate-spin" />
                           ) : (
                             <>
-                              <CheckCircle2 className="w-4 h-4" />
+                              <CheckCircle className="w-4 h-4" />
                               <span>ذخیره نهایی محتوای پلتفرم (CMS)</span>
                             </>
                           )}

@@ -1,19 +1,28 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Sparkles, Check, Store, Heart, AlertCircle, ShoppingCart, Percent, Share2, Globe, ShieldCheck, Scale, ArrowLeft } from 'lucide-react';
-import { getMarketingCMSContent } from '@/lib/marketing-cms';
+import { buildMarketingMetadata } from '@/lib/marketing-seo';
+import StructuredData from '@/components/marketing/StructuredData';
+import { breadcrumbSchema } from '@/lib/marketing-schema';
+import RelatedLinks from '@/components/marketing/sections/RelatedLinks';
 
-export const metadata: Metadata = {
-  title: 'برسانا یا طراحی سایت اختصاصی؟ مقایسه برای فروشگاه آنلاین',
-  description: 'مقایسه جامع هزینه‌ها، زمان راه‌اندازی، نگهداری و قابلیت‌های مارکتینگ و هوش مصنوعی در برسانا در برابر طراحی سایت اختصاصی.',
-};
+export const metadata: Metadata = buildMarketingMetadata({
+  title: 'برسانا یا طراحی سایت اختصاصی؟',
+  description:
+    'مقایسه‌ای منصفانه از هزینه، زمان راه‌اندازی، نگهداری و قابلیت‌های بازاریابی و هوش مصنوعی در برسانا در برابر طراحی سایت اختصاصی.',
+  path: '/compare/custom-website',
+});
 
-export default async function CompareCustomWebsitePage() {
-  const cms = await getMarketingCMSContent();
-
+export default function CompareCustomWebsitePage() {
   return (
     <div className="text-right font-sans min-h-screen bg-slate-50 dark:bg-slate-950 pb-20">
-      
+      <StructuredData
+        data={breadcrumbSchema([
+          { name: 'خانه', path: '/' },
+          { name: 'مقایسه با سایت اختصاصی', path: '/compare/custom-website' },
+        ])}
+      />
+
       {/* Hero Section */}
       <section className="relative pt-16 pb-20 overflow-hidden text-center space-y-6">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-4">
@@ -56,10 +65,10 @@ export default async function CompareCustomWebsitePage() {
               </thead>
               <tbody className="text-[10px] sm:text-xs font-bold text-slate-600 dark:text-slate-300">
                 {[
-                  { f: 'زمان راه‌اندازی اولیه', c: 'از چندین هفته تا چند ماه انتظار فرساینده', b: 'کامل‌ترین فروشگاه در کمتر از ۶۰ ثانیه' },
-                  { f: 'هزینه‌های راه‌اندازی و توسعه', c: 'حداقل ۱۰ الی ۵۰ میلیون تومان هزینه پیش‌پرداخت', b: 'رایگان (تست ۱۴ روزه) / کاملاً اقتصادی' },
-                  { f: 'نیاز به برنامه‌نویس و پشتیبان فنی', d: 'بله؛ برای تغییر کوچک در قالب یا رفع باگ‌ها ناچار به پرداخت مستمر هستید', b: 'خیر؛ ۱۰۰٪ مستقل و خودکار بدون نیاز به کدنویسی' },
-                  { f: 'سرعت لود فرانت و هاستینگ', d: 'متغیر و منوط به هاست‌های گران‌قیمت اشتراکی یا اختصاصی', b: 'سرعت لود زیر ۵۰۰ میلی‌ثانیه با Next.js و Redis' },
+                  { f: 'زمان راه‌اندازی اولیه', c: 'از چندین هفته تا چند ماه انتظار فرساینده', b: 'راه‌اندازی سریع فروشگاه در همان روز اول' },
+                  { f: 'هزینه‌های راه‌اندازی و توسعه', c: 'هزینه اولیه و پیش‌پرداخت قابل‌توجه برای طراحی', b: 'شروع رایگان با پلن پایه / کاملاً اقتصادی' },
+                  { f: 'نیاز به برنامه‌نویس و پشتیبان فنی', d: 'بله؛ برای تغییر کوچک در قالب یا رفع باگ‌ها ناچار به پرداخت مستمر هستید', b: 'خیر؛ کاملاً مستقل و خودکار بدون نیاز به کدنویسی' },
+                  { f: 'سرعت لود فرانت و هاستینگ', d: 'متغیر و منوط به هاست‌های گران‌قیمت اشتراکی یا اختصاصی', b: 'بهینه‌شده برای بارگذاری سریع با Next.js و کش Redis' },
                   { f: 'دستیار چت با کاتالوگ و فاکتور (AI)', d: 'خیر؛ وجود ندارد یا افزونه‌های خارجی بسیار گران‌قیمت', b: '✓ (دستیار هوشمند با زبان فارسی بومی)', isAi: true },
                   { f: 'RAG زنده روی داده‌های انبار', d: '✗ خیر؛ وجود ندارد', b: '✓ بله؛ هسته هوش مصنوعی متصل به دیتابیس اختصاصی شما است', isAi: true },
                   { f: 'ثبت محصول از کپشن اینستاگرام', d: '✗ خیر؛ وجود ندارد', b: '✓ بله؛ پردازش کپشن پست‌ها و ساخت آنی کالا در کاتالوگ', isAi: true }
@@ -79,12 +88,20 @@ export default async function CompareCustomWebsitePage() {
         </div>
       </section>
 
+      <RelatedLinks
+        links={[
+          { title: 'مقایسه با اینستاگرام', desc: 'تفاوت فروش دستی در دایرکت با سبد خرید هوشمند.', href: '/compare/instagram' },
+          { title: 'امکانات پلتفرم', desc: 'همه قابلیت‌های فروشگاه هوشمند برسانا را ببینید.', href: '/features' },
+          { title: 'تعرفه‌ها', desc: 'با پلن رایگان شروع کنید و بر اساس رشد ارتقا دهید.', href: '/pricing' },
+        ]}
+      />
+
       {/* CTA final */}
       <section className="py-16 text-center">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
           <h2 className="text-2xl sm:text-3xl font-black text-slate-950 dark:text-white">انتخاب با شماست؛ هزینه سنگین یا بهره‌وری هوشمند؟</h2>
           <p className="text-xs sm:text-sm text-slate-500 font-bold max-w-lg mx-auto">
-            تست ۱۴ روزه برسانا کاملاً رایگان است. ما پیشنهاد می‌کنیم قبل از بستن هر قراردادی، فروشگاه خود را با برسانا بسازید و بسنجید.
+            شروع با پلن رایگان برسانا بدون هزینه است. پیشنهاد می‌کنیم قبل از بستن هر قراردادی، فروشگاه خود را با برسانا بسازید و بسنجید.
           </p>
           <div className="flex justify-center">
             <Link href="/register" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3.5 rounded-2xl text-xs font-black shadow-lg">

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, X, ChevronDown, Sparkles, Store } from 'lucide-react';
 
-export default function MarketingHeader() {
+export default function MarketingHeader({ ctaLabel = 'شروع رایگان' }: { ctaLabel?: string }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isSolutionsOpen, setIsSolutionsOpen] = useState(false);
@@ -132,10 +132,12 @@ export default function MarketingHeader() {
             </Link>
             <Link
               href="/register"
+              data-analytics-event="hero_cta_click"
+              data-analytics-location="header"
               className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-xs font-black shadow-sm shadow-blue-500/10 hover:shadow-blue-500/25 transition-all active:scale-95"
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-300 fill-amber-300 animate-pulse" />
-              <span>شروع رایگان</span>
+              <span>{ctaLabel}</span>
             </Link>
           </div>
 
@@ -219,10 +221,12 @@ export default function MarketingHeader() {
                 <Link
                   href="/register"
                   onClick={() => setIsMobileMenuOpen(false)}
+                  data-analytics-event="hero_cta_click"
+                  data-analytics-location="header_mobile"
                   className="flex-1 flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-xs font-black shadow-sm shadow-blue-500/20 transition-all active:scale-[0.98]"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-amber-300 fill-amber-200" />
-                  <span>شروع رایگان</span>
+                  <span>{ctaLabel}</span>
                 </Link>
               </div>
 

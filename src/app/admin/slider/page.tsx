@@ -152,7 +152,7 @@ export default function SliderAdminPage() {
     fetchSettings();
   }, []);
 
-  const fetchSettings = async () => {
+  async function fetchSettings() {
     try {
       const res = await fetch("/api/settings");
       if (res.ok) {
@@ -165,7 +165,9 @@ export default function SliderAdminPage() {
           if (data.settings.customHomeConfig) {
             try {
               customHome = { ...customHome, ...JSON.parse(data.settings.customHomeConfig) };
-            } catch (e) {}
+            } catch {
+              // Ignore
+            }
           }
           setSettings(customHome);
         }
@@ -175,9 +177,9 @@ export default function SliderAdminPage() {
     } finally {
       setSettingsLoading(false);
     }
-  };
+  }
 
-  const fetchSlides = async () => {
+  async function fetchSlides() {
       try {
         const res = await fetch("/api/admin/slider");
         if (res.status === 401) {
@@ -193,7 +195,7 @@ export default function SliderAdminPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
   const handleSave = async () => {
     if (!currentSlide.imageUrl) {

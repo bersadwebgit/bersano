@@ -8,22 +8,22 @@ datasource db {
 }
 
 model Story {
-  id           String   @id @default(cuid())
-  shopId       String   @map("shop_id")
-  title        String
-  thumbnailUrl String
-  mediaUrl     String
-  mediaType    String   // 'image' | 'video'
-  text         String?
-  linkUrl      String?
-  linkText     String?
-  duration     Int      @default(5)
-  category     String?  // Category for the story
-  isActive     Boolean  @default(true)
-  displayLocation String  @default("both") // 'shop', 'custom', 'both'
-  isDemo       Boolean  @default(false) @map("is_demo")
-  createdAt    DateTime @default(now())
-  expiresAt    DateTime
+  id              String   @id @default(cuid())
+  shopId          String   @map("shop_id")
+  title           String
+  thumbnailUrl    String
+  mediaUrl        String
+  mediaType       String // 'image' | 'video'
+  text            String?
+  linkUrl         String?
+  linkText        String?
+  duration        Int      @default(5)
+  category        String? // Category for the story
+  isActive        Boolean  @default(true)
+  displayLocation String   @default("both") // 'shop', 'custom', 'both'
+  isDemo          Boolean  @default(false) @map("is_demo")
+  createdAt       DateTime @default(now())
+  expiresAt       DateTime
 
   @@index([shopId])
   @@index([shopId, isDemo])
@@ -33,49 +33,49 @@ model Media {
   id          String   @id @default(cuid())
   shopId      String   @map("shop_id")
   url         String
-  type        String   // 'image' | 'video'
+  type        String // 'image' | 'video'
   name        String
   alt         String?
-  size        Int?     // Size in bytes
+  size        Int? // Size in bytes
   createdAt   DateTime @default(now())
-  originalId  String?  // Store original Media ID if processed
-  originalUrl String?  // Store original URL if processed
+  originalId  String? // Store original Media ID if processed
+  originalUrl String? // Store original URL if processed
 
   @@index([shopId])
 }
 
 model User {
-  id        String     @id @default(cuid())
-  shopId    String     @map("shop_id")
-  email     String
-  password  String
-  name      String?
-  phone     String?    // Added phone number
-  birthDate String?    // Added birth date
-  gender    String?    // Added gender
-  avatarUrl String?
-  role      String     @default("customer") // admin, product_manager, sales_manager, customer
-  isBlocked Boolean    @default(false)
-  loyaltyPoints Int      @default(0)
-  group     String?    @default("عادی")
-  isWholesaler Boolean @default(false)
-  creditLimit Float    @default(0)
-  creditBalance Float  @default(0)
-  wholesaleGroup String? @default("")
-  isDemo    Boolean    @default(false) @map("is_demo")
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id             String   @id @default(cuid())
+  shopId         String   @map("shop_id")
+  email          String
+  password       String
+  name           String?
+  phone          String? // Added phone number
+  birthDate      String? // Added birth date
+  gender         String? // Added gender
+  avatarUrl      String?
+  role           String   @default("customer") // admin, product_manager, sales_manager, customer
+  isBlocked      Boolean  @default(false)
+  loyaltyPoints  Int      @default(0)
+  group          String?  @default("عادی")
+  isWholesaler   Boolean  @default(false)
+  creditLimit    Float    @default(0)
+  creditBalance  Float    @default(0)
+  wholesaleGroup String?  @default("")
+  isDemo         Boolean  @default(false) @map("is_demo")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  addresses Address[]
-  cartItems CartItem[]
-  orders    Order[]
-  reviews   Review[]
+  addresses     Address[]
+  cartItems     CartItem[]
+  orders        Order[]
+  reviews       Review[]
   notifications Notification[]
-  tickets   Ticket[]
-  blogPosts BlogPost[]
+  tickets       Ticket[]
+  blogPosts     BlogPost[]
 
-  @@index([shopId])
   @@unique([shopId, email])
+  @@index([shopId])
 }
 
 model Address {
@@ -83,9 +83,9 @@ model Address {
   shopId    String   @map("shop_id")
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title     String   // e.g. "خانه", "محل کار"
+  title     String // e.g. "خانه", "محل کار"
   receiver  String   @default("نام گیرنده")
-  address   String   // full address or street
+  address   String // full address or street
   street    String?
   plaque    String?
   unit      String?
@@ -101,123 +101,123 @@ model Address {
 }
 
 model ShopSettings {
-  id           String   @id @default(cuid())
-  shopId       String   @unique @map("shop_id")
-  shopName     String   @default("My Shop")
-  subdomain    String?  @unique
-  customDomain String?  @unique
-  description  String?
-  logoUrl      String?
-  faviconUrl   String?
-  themeColor   String   @default("#000000")
-  currency     String   @default("USD")
-  language     String   @default("fa")
-  contactEmail String?
-  contactPhone String?
-  address      String?
-  registrationNumber String?  @default("")
-  economicCode       String?  @default("")
-  productType  String   @default("digital") // physical, digital, both
-  headerConfig String?  // JSON string for header configuration
-  footerConfig String?  // JSON string for footer configuration
-  bottomNavConfig String? // JSON string for mobile bottom navigation bar configuration
-  homePageType String @default("custom") // "shop" or "custom"
-  customHomeConfig String? // JSON string for custom home page configuration
-  specialDealsEnabled Boolean @default(false)
-  specialDealsLimit   Int      @default(4)
-  relatedProductsEnabled Boolean @default(true)
-  zarinpalEnabled   Boolean  @default(false)
-  zarinpalMerchantId String?  @default("")
-  zarinpalSandbox   Boolean  @default(false)
-  zibalEnabled      Boolean  @default(false)
-  zibalMerchantId   String?  @default("")
-  zibalSandbox      Boolean  @default(false)
-  digipayEnabled      Boolean  @default(false)
-  digipayClientId     String?  @default("")
-  digipayClientSecret String?  @default("")
-  digipayUsername     String?  @default("")
-  digipayPassword     String?  @default("")
-  digipaySandbox      Boolean  @default(false)
-  cardToCardEnabled Boolean  @default(false)
-  cardNumber        String?  @default("")
-  cardHolderName    String?  @default("")
-  cardBankName      String?  @default("")
-  cardSheba         String?  @default("")
-  cardToCardConfig  String?  @default("[]") // JSON string for multiple cards config: [{id, cardNumber, cardHolderName, cardBankName, cardSheba, monthlyLimit, isActive}]
-  tipaxEnabled       Boolean  @default(false)
-  tipaxUsername      String?  @default("")
-  tipaxPassword      String?  @default("")
-  tipaxApiKey        String?  @default("")
-  tipaxSandbox       Boolean  @default(false)
-  tipaxShippingMode  String   @default("manual") // "manual" or "api"
-  isApproved   Boolean  @default(true)
-  isActive     Boolean  @default(true)
-  wholesaleEnabled Boolean @default(false)
-  productSetsEnabled Boolean @default(true)
-  customerClubEnabled Boolean @default(false)
-  loyaltyPointsRate   Int     @default(10000) // Points earned per 10,000 spent (e.g. 1 point for every 10,000 Tomans)
-  loyaltyPointValue   Int     @default(100)   // Value of each point in currency (e.g. each point is worth 100 Tomans)
-  loyaltyDiscountThreshold Int @default(100)   // Points threshold to trigger automatic discount code
-  loyaltyDiscountAmount Float @default(50000)   // Value/percentage of the auto discount code
-  loyaltyDiscountType String @default("flat") // "percentage" or "flat"
-  sitemapEnabled Boolean  @default(true)
-  robotsEnabled  Boolean  @default(true)
-  packageId      String?  @map("package_id")
-  packageExpiresAt DateTime? @map("package_expires_at")
-  package        Package? @relation(fields: [packageId], references: [id], onDelete: SetNull)
-  bgRemovalCount Int      @default(0) @map("bg_removal_count")
-  imageProcessConfig String?  @default("{}") @map("image_process_config")
-  hasDemoData  Boolean  @default(true) @map("has_demo_data")
-  setupWizardCompleted Boolean  @default(false) @map("setup_wizard_completed")
-  aboutUsPage  String?
-  termsPage    String?
-  contactUsPage String?
-  faqsConfig   String?  @default("[]")
-  
+  id                       String    @id @default(cuid())
+  shopId                   String    @unique @map("shop_id")
+  shopName                 String    @default("My Shop")
+  subdomain                String?   @unique
+  customDomain             String?   @unique
+  description              String?
+  logoUrl                  String?
+  faviconUrl               String?
+  themeColor               String    @default("#000000")
+  currency                 String    @default("USD")
+  language                 String    @default("fa")
+  contactEmail             String?
+  contactPhone             String?
+  address                  String?
+  registrationNumber       String?   @default("")
+  economicCode             String?   @default("")
+  productType              String    @default("digital") // physical, digital, both
+  headerConfig             String? // JSON string for header configuration
+  footerConfig             String? // JSON string for footer configuration
+  bottomNavConfig          String? // JSON string for mobile bottom navigation bar configuration
+  homePageType             String    @default("custom") // "shop" or "custom"
+  customHomeConfig         String? // JSON string for custom home page configuration
+  specialDealsEnabled      Boolean   @default(false)
+  specialDealsLimit        Int       @default(4)
+  relatedProductsEnabled   Boolean   @default(true)
+  zarinpalEnabled          Boolean   @default(false)
+  zarinpalMerchantId       String?   @default("")
+  zarinpalSandbox          Boolean   @default(false)
+  zibalEnabled             Boolean   @default(false)
+  zibalMerchantId          String?   @default("")
+  zibalSandbox             Boolean   @default(false)
+  digipayEnabled           Boolean   @default(false)
+  digipayClientId          String?   @default("")
+  digipayClientSecret      String?   @default("")
+  digipayUsername          String?   @default("")
+  digipayPassword          String?   @default("")
+  digipaySandbox           Boolean   @default(false)
+  cardToCardEnabled        Boolean   @default(false)
+  cardNumber               String?   @default("")
+  cardHolderName           String?   @default("")
+  cardBankName             String?   @default("")
+  cardSheba                String?   @default("")
+  cardToCardConfig         String?   @default("[]") // JSON string for multiple cards config: [{id, cardNumber, cardHolderName, cardBankName, cardSheba, monthlyLimit, isActive}]
+  tipaxEnabled             Boolean   @default(false)
+  tipaxUsername            String?   @default("")
+  tipaxPassword            String?   @default("")
+  tipaxApiKey              String?   @default("")
+  tipaxSandbox             Boolean   @default(false)
+  tipaxShippingMode        String    @default("manual") // "manual" or "api"
+  isApproved               Boolean   @default(true)
+  isActive                 Boolean   @default(true)
+  wholesaleEnabled         Boolean   @default(false)
+  productSetsEnabled       Boolean   @default(true)
+  customerClubEnabled      Boolean   @default(false)
+  loyaltyPointsRate        Int       @default(10000) // Points earned per 10,000 spent (e.g. 1 point for every 10,000 Tomans)
+  loyaltyPointValue        Int       @default(100) // Value of each point in currency (e.g. each point is worth 100 Tomans)
+  loyaltyDiscountThreshold Int       @default(100) // Points threshold to trigger automatic discount code
+  loyaltyDiscountAmount    Float     @default(50000) // Value/percentage of the auto discount code
+  loyaltyDiscountType      String    @default("flat") // "percentage" or "flat"
+  sitemapEnabled           Boolean   @default(true)
+  robotsEnabled            Boolean   @default(true)
+  packageId                String?   @map("package_id")
+  packageExpiresAt         DateTime? @map("package_expires_at")
+  package                  Package?  @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  bgRemovalCount           Int       @default(0) @map("bg_removal_count")
+  imageProcessConfig       String?   @default("{}") @map("image_process_config")
+  hasDemoData              Boolean   @default(true) @map("has_demo_data")
+  setupWizardCompleted     Boolean   @default(false) @map("setup_wizard_completed")
+  aboutUsPage              String?
+  termsPage                String?
+  contactUsPage            String?
+  faqsConfig               String?   @default("[]")
+
   // Bale Integration Settings
-  baleIntegrationToken          String?  @default("") @map("bale_integration_token")
-  baleChatId                    String?  @default("") @map("bale_chat_id")
-  baleOrderNotificationsEnabled Boolean  @default(false) @map("bale_order_notifications_enabled")
-  baleNotificationStatuses      String?  @default("[\"new_order\",\"status_change\"]") @map("bale_notification_statuses") // JSON string of statuses, e.g. ["new_order", "paid", "shipped", "delivered", "cancelled"]
-  
+  baleIntegrationToken          String? @default("") @map("bale_integration_token")
+  baleChatId                    String? @default("") @map("bale_chat_id")
+  baleOrderNotificationsEnabled Boolean @default(false) @map("bale_order_notifications_enabled")
+  baleNotificationStatuses      String? @default("[\"new_order\",\"status_change\"]") @map("bale_notification_statuses") // JSON string of statuses, e.g. ["new_order", "paid", "shipped", "delivered", "cancelled"]
+
   // Telegram Integration Settings
-  telegramIntegrationToken          String?  @default("") @map("telegram_integration_token")
-  telegramChatId                    String?  @default("") @map("telegram_chat_id")
-  telegramOrderNotificationsEnabled Boolean  @default(false) @map("telegram_order_notifications_enabled")
-  telegramNotificationStatuses      String?  @default("[\"new_order\",\"status_change\"]") @map("telegram_notification_statuses") // JSON string of statuses, e.g. ["new_order", "paid", "shipped", "delivered", "cancelled"]
-  
+  telegramIntegrationToken          String? @default("") @map("telegram_integration_token")
+  telegramChatId                    String? @default("") @map("telegram_chat_id")
+  telegramOrderNotificationsEnabled Boolean @default(false) @map("telegram_order_notifications_enabled")
+  telegramNotificationStatuses      String? @default("[\"new_order\",\"status_change\"]") @map("telegram_notification_statuses") // JSON string of statuses, e.g. ["new_order", "paid", "shipped", "delivered", "cancelled"]
+
   // Google Analytics & Tag Manager Settings
-  googleAnalyticsId             String?  @default("") @map("google_analytics_id")
-  googleTagManagerId            String?  @default("") @map("google_tag_manager_id")
-  microsoftClarityId            String?  @default("") @map("microsoft_clarity_id")
+  googleAnalyticsId  String? @default("") @map("google_analytics_id")
+  googleTagManagerId String? @default("") @map("google_tag_manager_id")
+  microsoftClarityId String? @default("") @map("microsoft_clarity_id")
 
   // Mahak Accounting Integration Settings
-  mahakEnabled                  Boolean  @default(false) @map("mahak_enabled")
-  mahakApiKey                   String?  @default("") @map("mahak_api_key")
-  mahakServerUrl                String?  @default("") @map("mahak_server_url")
-  mahakUsername                 String?  @default("") @map("mahak_username")
-  mahakPassword                 String?  @default("") @map("mahak_password")
-  mahakSyncProducts             Boolean  @default(false) @map("mahak_sync_products")
-  mahakSyncOrders               Boolean  @default(false) @map("mahak_sync_orders")
-  mahakSyncCustomers            Boolean  @default(false) @map("mahak_sync_customers")
-  mahakSyncCustomersPhoneOnly   Boolean  @default(false) @map("mahak_sync_customers_phone_only")
-  mahakSyncInterval             Int      @default(60) @map("mahak_sync_interval") // in minutes
-  mahakLastSync                 DateTime? @map("mahak_last_sync")
+  mahakEnabled                Boolean   @default(false) @map("mahak_enabled")
+  mahakApiKey                 String?   @default("") @map("mahak_api_key")
+  mahakServerUrl              String?   @default("") @map("mahak_server_url")
+  mahakUsername               String?   @default("") @map("mahak_username")
+  mahakPassword               String?   @default("") @map("mahak_password")
+  mahakSyncProducts           Boolean   @default(false) @map("mahak_sync_products")
+  mahakSyncOrders             Boolean   @default(false) @map("mahak_sync_orders")
+  mahakSyncCustomers          Boolean   @default(false) @map("mahak_sync_customers")
+  mahakSyncCustomersPhoneOnly Boolean   @default(false) @map("mahak_sync_customers_phone_only")
+  mahakSyncInterval           Int       @default(60) @map("mahak_sync_interval") // in minutes
+  mahakLastSync               DateTime? @map("mahak_last_sync")
 
   // AI Self-Learning Memory
-  aiMemory                      String?  @default("{}") @map("ai_memory")
+  aiMemory String? @default("{}") @map("ai_memory")
 
   // AI Content Calendar (JSON array of planned blog/story/discount content items)
-  contentCalendar               String?  @default("[]") @map("content_calendar")
+  contentCalendar String? @default("[]") @map("content_calendar")
 
   // Chat Integration Settings
-  chatSettings                  String?  @default("{\"enabled\":true,\"requireName\":true,\"requirePhone\":true,\"requireEmail\":false,\"welcomeMessage\":\"سلام! چطور می‌توانم کمکتان کنم؟\",\"defaultMode\":\"ai\"}") @map("chat_settings")
+  chatSettings String? @default("{\"enabled\":true,\"requireName\":true,\"requirePhone\":true,\"requireEmail\":false,\"welcomeMessage\":\"سلام! چطور می‌توانم کمکتان کنم؟\",\"defaultMode\":\"ai\"}") @map("chat_settings")
 
   // SMS Notification Settings
-  smsConfig                     String?  @default("{\"enabled\":false,\"provider\":\"\",\"credentials\":{},\"patterns\":{},\"adminPhone\":\"\"}") @map("sms_config")
+  smsConfig String? @default("{\"enabled\":false,\"provider\":\"\",\"credentials\":{},\"patterns\":{},\"adminPhone\":\"\"}") @map("sms_config")
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([shopId])
   @@index([packageId])
@@ -229,8 +229,8 @@ model MenuItem {
   title     String
   url       String
   order     Int      @default(0)
-  color     String?  // For custom color
-  icon      String?  // For custom icon
+  color     String? // For custom color
+  icon      String? // For custom icon
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -239,92 +239,92 @@ model MenuItem {
 }
 
 model Category {
-  id          String    @id @default(cuid())
-  shopId      String    @map("shop_id")
-  parentId    String?   @map("parent_id")
-  name        String
-  slug        String
-  description String?
-  seoTitle    String?   @map("seo_title")
-  seoDescription String? @map("seo_description")
-  imageUrl    String?
-  icon        String?   // For category icon
-  isActive    Boolean   @default(true)
-  isDemo      Boolean   @default(false) @map("is_demo")
-  isSampleData  Boolean  @default(false) @map("is_sample_data")
-  generatedByAi Boolean  @default(false) @map("generated_by_ai")
-  seedJobId     String?  @map("seed_job_id")
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id             String   @id @default(cuid())
+  shopId         String   @map("shop_id")
+  parentId       String?  @map("parent_id")
+  name           String
+  slug           String
+  description    String?
+  seoTitle       String?  @map("seo_title")
+  seoDescription String?  @map("seo_description")
+  imageUrl       String?
+  icon           String? // For category icon
+  isActive       Boolean  @default(true)
+  isDemo         Boolean  @default(false) @map("is_demo")
+  isSampleData   Boolean  @default(false) @map("is_sample_data")
+  generatedByAi  Boolean  @default(false) @map("generated_by_ai")
+  seedJobId      String?  @map("seed_job_id")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  parent      Category?  @relation("SubCategories", fields: [parentId], references: [id], onDelete: SetNull)
-  children    Category[] @relation("SubCategories")
-  products    Product[]
-  secondaryProducts Product[] @relation("SecondaryCategories")
+  parent            Category?  @relation("SubCategories", fields: [parentId], references: [id], onDelete: SetNull)
+  children          Category[] @relation("SubCategories")
+  products          Product[]
+  secondaryProducts Product[]  @relation("SecondaryCategories")
 
+  @@unique([shopId, slug])
   @@index([shopId])
   @@index([parentId])
-  @@unique([shopId, slug])
 }
 
 model Product {
-  id          String    @id @default(cuid())
-  shopId      String    @map("shop_id")
-  title       String
-  type        String    @default("physical") // physical, digital
-  categoryId  String?   @map("category_id")
-  category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  categories  Category[] @relation("SecondaryCategories")
-  fileUrl     String?   // for digital products
-  downloadLimit Int?    @default(0) // max downloads allowed (0/null = unlimited)
-  downloadExpiryDays Int? @default(0) // link valid for X days (0/null = unlimited)
-  downloadIpRestriction Boolean @default(false) // restrict downloading to same IP
-  fileFormat  String?   // for display (e.g., PDF, ZIP, MP4)
-  fileSize    String?   // for display (e.g., "15.4 MB")
-  previewUrl  String?   // URL for preview (PDF first page, trailer, sample audio)
-  techSpecs   String?   // technical requirements / software system info
-  downloadFiles String? // JSON string array of multiple files [{name, url, size, format}]
-  description String?
-  price       Float
-  discount    Float?    @default(0)
-  discountMinQty Int?     @default(0) @map("discount_min_qty")
-  imageUrl    String?
-  stock       Int       @default(0)
-  fullDescription String?
-  features    String?   // JSON string
-  specs       String?   // JSON string
-  galleryUrls String?   // JSON string array
-  isSpecial   Boolean   @default(false)
-  specialEndsAt DateTime?
-  isActive    Boolean   @default(true)
-  brand       String?
-  seoTitle    String?   @map("seo_title")
-  seoDescription String? @map("seo_description")
-  schemaMarkup String?   @map("schema_markup")
-  faqs        String?   @default("[]")
-  wholesalePrice Float?
-  wholesaleTiers String?   @default("[]")
-  wholesaleExclusivePrices String? @default("[]")
-  moq         Int       @default(1)
-  wholesaleUnit String?   @default("عدد")
-  wholesaleUnitSize Int   @default(1)
-  weight      Float     @default(0)
-  volume      Float     @default(0)
-  isWholesaleOnly Boolean @default(false)
-  isDemo      Boolean   @default(false) @map("is_demo")
-  isSampleData  Boolean  @default(false) @map("is_sample_data")
-  generatedByAi Boolean  @default(false) @map("generated_by_ai")
-  seedJobId     String?  @map("seed_job_id")
-  embedding   Unsupported("vector(1536)")?
-  embeddingUpdatedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id                       String                       @id @default(cuid())
+  shopId                   String                       @map("shop_id")
+  title                    String
+  type                     String                       @default("physical") // physical, digital
+  categoryId               String?                      @map("category_id")
+  category                 Category?                    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categories               Category[]                   @relation("SecondaryCategories")
+  fileUrl                  String? // for digital products
+  downloadLimit            Int?                         @default(0) // max downloads allowed (0/null = unlimited)
+  downloadExpiryDays       Int?                         @default(0) // link valid for X days (0/null = unlimited)
+  downloadIpRestriction    Boolean                      @default(false) // restrict downloading to same IP
+  fileFormat               String? // for display (e.g., PDF, ZIP, MP4)
+  fileSize                 String? // for display (e.g., "15.4 MB")
+  previewUrl               String? // URL for preview (PDF first page, trailer, sample audio)
+  techSpecs                String? // technical requirements / software system info
+  downloadFiles            String? // JSON string array of multiple files [{name, url, size, format}]
+  description              String?
+  price                    Float
+  discount                 Float?                       @default(0)
+  discountMinQty           Int?                         @default(0) @map("discount_min_qty")
+  imageUrl                 String?
+  stock                    Int                          @default(0)
+  fullDescription          String?
+  features                 String? // JSON string
+  specs                    String? // JSON string
+  galleryUrls              String? // JSON string array
+  isSpecial                Boolean                      @default(false)
+  specialEndsAt            DateTime?
+  isActive                 Boolean                      @default(true)
+  brand                    String?
+  seoTitle                 String?                      @map("seo_title")
+  seoDescription           String?                      @map("seo_description")
+  schemaMarkup             String?                      @map("schema_markup")
+  faqs                     String?                      @default("[]")
+  wholesalePrice           Float?
+  wholesaleTiers           String?                      @default("[]")
+  wholesaleExclusivePrices String?                      @default("[]")
+  moq                      Int                          @default(1)
+  wholesaleUnit            String?                      @default("عدد")
+  wholesaleUnitSize        Int                          @default(1)
+  weight                   Float                        @default(0)
+  volume                   Float                        @default(0)
+  isWholesaleOnly          Boolean                      @default(false)
+  isDemo                   Boolean                      @default(false) @map("is_demo")
+  isSampleData             Boolean                      @default(false) @map("is_sample_data")
+  generatedByAi            Boolean                      @default(false) @map("generated_by_ai")
+  seedJobId                String?                      @map("seed_job_id")
+  embedding                Unsupported("vector(1536)")?
+  embeddingUpdatedAt       DateTime?
+  createdAt                DateTime                     @default(now())
+  updatedAt                DateTime                     @updatedAt
 
-  cartItems   CartItem[]
-  orderItems  OrderItem[]
-  reviews     Review[]
-  variants    ProductVariant[]
-  setItems    ProductSetItem[]
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+  reviews    Review[]
+  variants   ProductVariant[]
+  setItems   ProductSetItem[]
 
   @@index([shopId])
   @@index([categoryId])
@@ -343,145 +343,145 @@ model Brand {
 }
 
 model ProductVariant {
-  id          String   @id @default(cuid())
-  shopId      String   @map("shop_id")
-  productId   String
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
-  name        String   // e.g. "قرمز"
-  colorCode   String?  // e.g. "#FF0000" (optional, for color display)
-  imageUrl    String?  // Optional image for this variant
-  price       Float    // Final price for this variant
-  stock       Int      @default(0)
-  isDefault   Boolean  @default(false)
-  sku         String?  // Optional SKU for this variant
-  optionsJson String?  // JSON string representing structured options, e.g. {"رنگ": "سبز", "سایز": "M"}
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String  @id @default(cuid())
+  shopId    String  @map("shop_id")
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  cartItems   CartItem[]
-  orderItems  OrderItem[]
+  name        String // e.g. "قرمز"
+  colorCode   String? // e.g. "#FF0000" (optional, for color display)
+  imageUrl    String? // Optional image for this variant
+  price       Float // Final price for this variant
+  stock       Int     @default(0)
+  isDefault   Boolean @default(false)
+  sku         String? // Optional SKU for this variant
+  optionsJson String? // JSON string representing structured options, e.g. {"رنگ": "سبز", "سایز": "M"}
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cartItems  CartItem[]
+  orderItems OrderItem[]
 
   @@index([shopId])
   @@index([productId])
 }
 
 model CartItem {
-  id        String   @id @default(cuid())
-  shopId    String   @map("shop_id")
+  id        String          @id @default(cuid())
+  shopId    String          @map("shop_id")
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product   Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   variantId String?
   variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
-  quantity  Int      @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  quantity  Int             @default(1)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
 
+  @@unique([userId, productId, variantId])
   @@index([shopId])
   @@index([userId])
   @@index([productId])
   @@index([variantId])
-  @@unique([userId, productId, variantId])
 }
 
 model DiscountCode {
   id                String    @id @default(cuid())
   shopId            String    @map("shop_id")
   code              String
-  discount          Float     // percentage or flat amount based on type
+  discount          Float // percentage or flat amount based on type
   type              String    @default("percentage") // percentage, flat
-  maxUses           Int?      // limit number of uses
+  maxUses           Int? // limit number of uses
   usedCount         Int       @default(0)
   isActive          Boolean   @default(true)
   expiresAt         DateTime?
   startDate         DateTime? // Start date of validity
-  minOrderAmount    Float?    // Minimum order total required
+  minOrderAmount    Float? // Minimum order total required
   minQuantity       Int?      @default(0) @map("min_quantity")
-  maxDiscountAmount Float?    // Maximum discount amount (for percentage)
+  maxDiscountAmount Float? // Maximum discount amount (for percentage)
   maxUsesPerUser    Int?      @default(1) // Limit uses per user
   firstOrderOnly    Boolean   @default(false) // Only valid for first purchase
   targetCategoryIds String?   @default("[]")
   targetProductIds  String?   @default("[]")
   allowedGender     String?   @default("all") // all, male, female
   allowedCategories String?   @default("[]") // JSON array of allowed category IDs (alias/compatibility)
-  targetUserId      String?   @default("")    // Restricted to a specific user/customer
+  targetUserId      String?   @default("") // Restricted to a specific user/customer
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  @@index([shopId])
   @@unique([shopId, code])
+  @@index([shopId])
 }
 
 model Order {
-  id            String      @id @default(cuid())
-  shopId        String      @map("shop_id")
-  userId        String
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status        String      @default("pending") // pending, paid, shipped, delivered, cancelled
-  totalAmount   Float
-  discountAmount Float      @default(0)
-  discountCode  String?     // Track which discount code was used
-  finalAmount   Float
-  paymentMethod String?
-  cardToCardReceipt   String?   @map("card_to_card_receipt")
-  cardToCardCode      String?   @map("card_to_card_code")
-  cardToCardSenderCard String?  @map("card_to_card_sender_card")
-  cardToCardReceiverCard String? @map("card_to_card_receiver_card")
-  cardToCardTime      String?   @map("card_to_card_time")
-  address       String?
-  city          String?
-  state         String?
-  zipCode       String?
-  phone         String?
-  userNotes     String?
-  adminNotes    String?
-  shippingStatus String     @default("new") // new, processing, shipped, delivered
-  paymentStatus  String     @default("pending") // paid, pending, failed, refunded
-  paymentAuthority String?
-  shippingCarrier String?
-  shippingTrackingCode String?
-  shippingCost   Float      @default(0)
-  taxAmount      Float      @default(0)
-  trackingLink   String?
-  returnReason   String?
-  returnStatus   String     @default("none") // none, pending, approved, rejected
-  refundAmount   Float      @default(0)
-  refundMethod   String?
-  refundDate     DateTime?
-  statusTimeline String?    // JSON string
-  isWholesale    Boolean    @default(false)
-  wholesalePaymentType String?
-  wholesaleDepositAmount Float @default(0)
-  wholesaleSettlementAmount Float @default(0)
-  proformaUrl    String?
-  officialInvoice Boolean   @default(false)
-  idempotencyKey String?    @map("idempotency_key")
-  items         OrderItem[]
-  tickets       Ticket[]
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id                        String      @id @default(cuid())
+  shopId                    String      @map("shop_id")
+  userId                    String
+  user                      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status                    String      @default("pending") // pending, paid, shipped, delivered, cancelled
+  totalAmount               Float
+  discountAmount            Float       @default(0)
+  discountCode              String? // Track which discount code was used
+  finalAmount               Float
+  paymentMethod             String?
+  cardToCardReceipt         String?     @map("card_to_card_receipt")
+  cardToCardCode            String?     @map("card_to_card_code")
+  cardToCardSenderCard      String?     @map("card_to_card_sender_card")
+  cardToCardReceiverCard    String?     @map("card_to_card_receiver_card")
+  cardToCardTime            String?     @map("card_to_card_time")
+  address                   String?
+  city                      String?
+  state                     String?
+  zipCode                   String?
+  phone                     String?
+  userNotes                 String?
+  adminNotes                String?
+  shippingStatus            String      @default("new") // new, processing, shipped, delivered
+  paymentStatus             String      @default("pending") // paid, pending, failed, refunded
+  paymentAuthority          String?
+  shippingCarrier           String?
+  shippingTrackingCode      String?
+  shippingCost              Float       @default(0)
+  taxAmount                 Float       @default(0)
+  trackingLink              String?
+  returnReason              String?
+  returnStatus              String      @default("none") // none, pending, approved, rejected
+  refundAmount              Float       @default(0)
+  refundMethod              String?
+  refundDate                DateTime?
+  statusTimeline            String? // JSON string
+  isWholesale               Boolean     @default(false)
+  wholesalePaymentType      String?
+  wholesaleDepositAmount    Float       @default(0)
+  wholesaleSettlementAmount Float       @default(0)
+  proformaUrl               String?
+  officialInvoice           Boolean     @default(false)
+  idempotencyKey            String?     @map("idempotency_key")
+  items                     OrderItem[]
+  tickets                   Ticket[]
+  createdAt                 DateTime    @default(now())
+  updatedAt                 DateTime    @updatedAt
 
+  @@unique([shopId, idempotencyKey])
   @@index([shopId])
   @@index([userId])
-  @@unique([shopId, idempotencyKey])
 }
 
 model OrderItem {
-  id        String   @id @default(cuid())
-  shopId    String   @map("shop_id")
+  id        String          @id @default(cuid())
+  shopId    String          @map("shop_id")
   orderId   String
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order     Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  product   Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
   variantId String?
   variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
   quantity  Int
-  price     Float    // Snapshot of price at time of purchase
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  price     Float // Snapshot of price at time of purchase
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
 
   @@index([shopId])
   @@index([orderId])
@@ -490,20 +490,20 @@ model OrderItem {
 }
 
 model HeroSlide {
-  id             String   @id @default(cuid())
-  shopId         String   @map("shop_id")
-  imageUrl       String
-  mobileImageUrl String?
-  title          String?
-  subtitle       String?
-  linkUrl        String?
-  linkText       String?
-  order          Int      @default(0)
-  isActive       Boolean  @default(true)
-  displayLocation String  @default("both") // 'shop', 'custom', 'both'
-  isDemo         Boolean  @default(false) @map("is_demo")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id              String   @id @default(cuid())
+  shopId          String   @map("shop_id")
+  imageUrl        String
+  mobileImageUrl  String?
+  title           String?
+  subtitle        String?
+  linkUrl         String?
+  linkText        String?
+  order           Int      @default(0)
+  isActive        Boolean  @default(true)
+  displayLocation String   @default("both") // 'shop', 'custom', 'both'
+  isDemo          Boolean  @default(false) @map("is_demo")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([shopId])
   @@index([shopId, isDemo])
@@ -519,15 +519,15 @@ model Review {
   status         String   @default("pending") // pending, approved, rejected
   isBuyer        Boolean  @default(false)
   showOnHomepage Boolean  @default(false) // Whether to show this review on the homepage
-  images         String?  // JSON string array of image URLs
+  images         String? // JSON string array of image URLs
   likes          Int      @default(0)
   dislikes       Int      @default(0)
   isDemo         Boolean  @default(false) @map("is_demo")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([shopId])
   @@index([productId])
@@ -547,28 +547,28 @@ model Notification {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([shopId])
   @@index([userId])
 }
 
 model Ticket {
-  id          String   @id @default(cuid())
-  shopId      String   @map("shop_id")
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orderId     String?
-  order       Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
-  subject     String   // e.g., 'return', 'shipping', 'payment', 'other'
-  description String
-  status      String   @default("new") // 'new', 'in_progress', 'answered', 'closed'
-  priority    String   @default("normal") // 'low', 'normal', 'high', 'urgent'
+  id            String   @id @default(cuid())
+  shopId        String   @map("shop_id")
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId       String?
+  order         Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  subject       String // e.g., 'return', 'shipping', 'payment', 'other'
+  description   String
+  status        String   @default("new") // 'new', 'in_progress', 'answered', 'closed'
+  priority      String   @default("normal") // 'low', 'normal', 'high', 'urgent'
   attachmentUrl String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  messages    TicketMessage[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  messages TicketMessage[]
 
   @@index([shopId])
   @@index([userId])
@@ -576,16 +576,16 @@ model Ticket {
 }
 
 model TicketMessage {
-  id          String   @id @default(cuid())
-  shopId      String   @map("shop_id")
-  ticketId    String
-  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  senderId    String   // could be user id or admin id
-  isStaff     Boolean  @default(false)
-  message     String
+  id            String   @id @default(cuid())
+  shopId        String   @map("shop_id")
+  ticketId      String
+  ticket        Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  senderId      String // could be user id or admin id
+  isStaff       Boolean  @default(false)
+  message       String
   attachmentUrl String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@index([shopId])
   @@index([ticketId])
@@ -607,19 +607,19 @@ model PageView {
 }
 
 model DownloadToken {
-  id            String   @id @default(cuid())
-  shopId        String   @map("shop_id")
+  id            String    @id @default(cuid())
+  shopId        String    @map("shop_id")
   orderId       String
   productId     String
   userId        String
-  token         String   @unique
+  token         String    @unique
   buyerEmail    String?
-  downloadCount Int      @default(0)
-  maxDownloads  Int?     // from product setting at time of purchase (0 or null means unlimited)
+  downloadCount Int       @default(0)
+  maxDownloads  Int? // from product setting at time of purchase (0 or null means unlimited)
   expiresAt     DateTime? // from product setting at time of purchase (null means unlimited)
   lastIp        String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@index([shopId])
   @@index([token])
@@ -640,15 +640,15 @@ model Otp {
 }
 
 model SmsLog {
-  id             String   @id @default(cuid())
-  shopId         String   @map("shop_id")
-  phone          String
-  provider       String
-  event          String
-  messageId      String?
-  status         String
-  error          String?
-  createdAt      DateTime @default(now())
+  id        String   @id @default(cuid())
+  shopId    String   @map("shop_id")
+  phone     String
+  provider  String
+  event     String
+  messageId String?
+  status    String
+  error     String?
+  createdAt DateTime @default(now())
 
   @@index([shopId])
   @@index([phone])
@@ -666,47 +666,47 @@ model BlogCategory {
   updatedAt   DateTime   @updatedAt
   posts       BlogPost[]
 
+  @@unique([shopId, slug])
   @@index([shopId])
   @@index([shopId, isDemo])
-  @@unique([shopId, slug])
 }
 
 model BlogPost {
-  id           String        @id @default(cuid())
-  shopId       String        @map("shop_id")
-  title        String
-  slug         String
-  content      String
-  summary      String?
-  featuredImage String?
-  status       String        @default("draft") // draft, scheduled, published, archived
-  publishedAt  DateTime      @default(now())
-  authorId     String?
-  author       User?         @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  authorName   String?       // Fallback custom author name
-  categoryId   String?
-  category     BlogCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  tags         String        @default("[]") // JSON array of strings
-  seoTitle     String?
+  id             String        @id @default(cuid())
+  shopId         String        @map("shop_id")
+  title          String
+  slug           String
+  content        String
+  summary        String?
+  featuredImage  String?
+  status         String        @default("draft") // draft, scheduled, published, archived
+  publishedAt    DateTime      @default(now())
+  authorId       String?
+  author         User?         @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  authorName     String? // Fallback custom author name
+  categoryId     String?
+  category       BlogCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  tags           String        @default("[]") // JSON array of strings
+  seoTitle       String?
   seoDescription String?
-  seoSlug      String?
-  ogImage      String?
-  allowComments Boolean      @default(true)
-  viewCount    Int           @default(0)
-  faqs         String        @default("[]") // JSON array of {question: string, answer: string}
-  isDemo       Boolean       @default(false) @map("is_demo")
-  isSampleData  Boolean  @default(false) @map("is_sample_data")
-  generatedByAi Boolean  @default(false) @map("generated_by_ai")
-  seedJobId     String?  @map("seed_job_id")
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  comments     BlogComment[]
+  seoSlug        String?
+  ogImage        String?
+  allowComments  Boolean       @default(true)
+  viewCount      Int           @default(0)
+  faqs           String        @default("[]") // JSON array of {question: string, answer: string}
+  isDemo         Boolean       @default(false) @map("is_demo")
+  isSampleData   Boolean       @default(false) @map("is_sample_data")
+  generatedByAi  Boolean       @default(false) @map("generated_by_ai")
+  seedJobId      String?       @map("seed_job_id")
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  comments       BlogComment[]
 
+  @@unique([shopId, slug])
   @@index([shopId])
   @@index([authorId])
   @@index([categoryId])
   @@index([shopId, isDemo])
-  @@unique([shopId, slug])
 }
 
 model BlogComment {
@@ -730,36 +730,36 @@ model BlogComment {
 }
 
 model ProductSet {
-  id           String           @id @default(cuid())
-  shopId       String           @map("shop_id")
-  name         String
-  slug         String
-  imageUrl     String           @map("image_url")
-  isActive     Boolean          @default(true)
-  order        Int              @default(0)
-  views        Int              @default(0)
-  tagClicks    Int              @default(0) @map("tag_clicks")
-  addToCarts   Int              @default(0) @map("add_to_carts")
-  discount     Float            @default(0)
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  items        ProductSetItem[]
+  id         String           @id @default(cuid())
+  shopId     String           @map("shop_id")
+  name       String
+  slug       String
+  imageUrl   String           @map("image_url")
+  isActive   Boolean          @default(true)
+  order      Int              @default(0)
+  views      Int              @default(0)
+  tagClicks  Int              @default(0) @map("tag_clicks")
+  addToCarts Int              @default(0) @map("add_to_carts")
+  discount   Float            @default(0)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  items      ProductSetItem[]
 
-  @@index([shopId])
   @@unique([shopId, slug])
+  @@index([shopId])
 }
 
 model ProductSetItem {
-  id           String     @id @default(cuid())
-  shopId       String     @map("shop_id")
-  setId        String     @map("set_id")
-  set          ProductSet @relation(fields: [setId], references: [id], onDelete: Cascade)
-  productId    String     @map("product_id")
-  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
-  x            Float      // Percentage X coordinate (0-100)
-  y            Float      // Percentage Y coordinate (0-100)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id        String     @id @default(cuid())
+  shopId    String     @map("shop_id")
+  setId     String     @map("set_id")
+  set       ProductSet @relation(fields: [setId], references: [id], onDelete: Cascade)
+  productId String     @map("product_id")
+  product   Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  x         Float // Percentage X coordinate (0-100)
+  y         Float // Percentage Y coordinate (0-100)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
   @@index([shopId])
   @@index([setId])
@@ -767,14 +767,14 @@ model ProductSetItem {
 }
 
 model ProductNotificationRequest {
-  id          String   @id @default(cuid())
-  shopId      String   @map("shop_id")
-  productId   String   @map("product_id")
-  variantId   String?  @map("variant_id")
-  phone       String
-  isNotified  Boolean  @default(false) @map("is_notified")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  shopId     String   @map("shop_id")
+  productId  String   @map("product_id")
+  variantId  String?  @map("variant_id")
+  phone      String
+  isNotified Boolean  @default(false) @map("is_notified")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([shopId])
   @@index([productId])
@@ -782,46 +782,47 @@ model ProductNotificationRequest {
 }
 
 model SystemTicket {
-  id          String   @id @default(cuid())
-  shopId      String   @map("shop_id")
-  subject     String
-  description String
-  status      String   @default("new") // 'new', 'in_progress', 'answered', 'closed'
-  priority    String   @default("normal") // 'low', 'normal', 'high', 'urgent'
+  id            String   @id @default(cuid())
+  shopId        String   @map("shop_id")
+  subject       String
+  description   String
+  status        String   @default("new") // 'new', 'in_progress', 'answered', 'closed'
+  priority      String   @default("normal") // 'low', 'normal', 'high', 'urgent'
   attachmentUrl String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  messages    SystemTicketMessage[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  messages SystemTicketMessage[]
 
   @@index([shopId])
 }
 
 model SystemTicketMessage {
-  id          String   @id @default(cuid())
-  ticketId    String
-  ticket      SystemTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  senderId    String   // tenant admin user id or "superadmin"
-  senderRole  String   // 'admin' or 'superadmin'
-  message     String
+  id            String       @id @default(cuid())
+  ticketId      String
+  ticket        SystemTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  senderId      String // tenant admin user id or "superadmin"
+  senderRole    String // 'admin' or 'superadmin'
+  message       String
   attachmentUrl String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
   @@index([ticketId])
   @@index([senderId])
 }
 
 model Package {
-  id           String   @id @default(cuid())
-  name         String
-  months       Int      @default(1)
-  price        Float    @default(0)
-  features     String   // JSON string representing enabled features
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id        String   @id @default(cuid())
+  name      String
+  months    Int      @default(1)
+  price     Float    @default(0)
+  features  String // JSON string representing enabled features
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  shopSettings ShopSettings[]
+  shopSettings  ShopSettings[]
+  marketingPlans MarketingPlan[]
 }
 
 model SystemSetting {
@@ -832,16 +833,16 @@ model SystemSetting {
 }
 
 model ChatSession {
-  id          String   @id @default(cuid())
-  shopId      String   @map("shop_id")
-  name        String?
-  phone       String?
-  email       String?
-  status      String   @default("active") // "active", "closed"
-  mode        String   @default("ai") // "ai", "manual"
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  messages    ChatMessage[]
+  id        String        @id @default(cuid())
+  shopId    String        @map("shop_id")
+  name      String?
+  phone     String?
+  email     String?
+  status    String        @default("active") // "active", "closed"
+  mode      String        @default("ai") // "ai", "manual"
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  messages  ChatMessage[]
 
   @@index([shopId])
   @@index([phone])
@@ -849,16 +850,16 @@ model ChatSession {
 }
 
 model ChatMessage {
-  id          String   @id @default(cuid())
-  shopId      String   @map("shop_id")
-  sessionId   String   @map("session_id")
+  id          String      @id @default(cuid())
+  shopId      String      @map("shop_id")
+  sessionId   String      @map("session_id")
   session     ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  sender      String   // "customer", "ai", "admin"
-  message     String   @db.Text
-  messageType String   @default("text") @map("message_type") // "text", "product", "article"
-  metadata    String?  @db.Text // JSON string for product/article details
-  isRead      Boolean  @default(false) @map("is_read")
-  createdAt   DateTime @default(now())
+  sender      String // "customer", "ai", "admin"
+  message     String      @db.Text
+  messageType String      @default("text") @map("message_type") // "text", "product", "article"
+  metadata    String?     @db.Text // JSON string for product/article details
+  isRead      Boolean     @default(false) @map("is_read")
+  createdAt   DateTime    @default(now())
 
   @@index([shopId])
   @@index([sessionId])
@@ -920,41 +921,41 @@ model AiUsage {
 }
 
 model ShopDomain {
-  id                String   @id @default(cuid())
-  shopId            String   @map("shop_id")
-  domain            String   @unique
-  isPrimary         Boolean  @default(false)
-  isVerified        Boolean  @default(false)
-  verificationType  String   @default("TXT") // TXT or CNAME
+  id                String    @id @default(cuid())
+  shopId            String    @map("shop_id")
+  domain            String    @unique
+  isPrimary         Boolean   @default(false)
+  isVerified        Boolean   @default(false)
+  verificationType  String    @default("TXT") // TXT or CNAME
   verificationToken String
-  sslStatus         String   @default("pending") // pending, active, failed
+  sslStatus         String    @default("pending") // pending, active, failed
   sslExpiresAt      DateTime?
-  redirectWww       Boolean  @default(true) // redirect non-www to www or www to non-www
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  redirectWww       Boolean   @default(true) // redirect non-www to www or www to non-www
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@index([shopId])
   @@index([domain])
 }
 
 model ShopSeedProfile {
-  id              String   @id @default(cuid())
-  shopId          String   @unique @map("shop_id")
-  businessType    String?  @map("business_type")
-  niche           String?
-  targetAudience  Json?    @map("target_audience")
-  priceLevel      String?  @map("price_level")
-  brandTone       String?  @map("brand_tone")
-  mainCategories  Json?    @map("main_categories")
-  productRules    Json?    @map("product_rules")
-  seoKeywords     Json?    @map("seo_keywords")
-  contentTopics   Json?    @map("content_topics")
-  imageStyle      String?  @map("image_style")
-  confidence      Float?
-  source          String?  // onboarding | ai_inferred | admin
-  seedVersion     Int      @default(1) @map("seed_version")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(cuid())
+  shopId         String   @unique @map("shop_id")
+  businessType   String?  @map("business_type")
+  niche          String?
+  targetAudience Json?    @map("target_audience")
+  priceLevel     String?  @map("price_level")
+  brandTone      String?  @map("brand_tone")
+  mainCategories Json?    @map("main_categories")
+  productRules   Json?    @map("product_rules")
+  seoKeywords    Json?    @map("seo_keywords")
+  contentTopics  Json?    @map("content_topics")
+  imageStyle     String?  @map("image_style")
+  confidence     Float?
+  source         String? // onboarding | ai_inferred | admin
+  seedVersion    Int      @default(1) @map("seed_version")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   @@index([shopId])
 }
@@ -962,7 +963,7 @@ model ShopSeedProfile {
 model ShopSeedJob {
   id          String   @id @default(cuid())
   shopId      String   @map("shop_id")
-  status      String   // pending | blueprint_ready | preview_ready | saved | failed
+  status      String // pending | blueprint_ready | preview_ready | saved | failed
   phase       String?
   progress    Int      @default(0)
   error       String?
@@ -978,7 +979,7 @@ model PlatformCollaborator {
   email     String   @unique
   password  String
   name      String
-  role      String   // 'superadmin', 'sales', 'content_manager', 'seo_manager'
+  role      String // 'superadmin', 'sales', 'content_manager', 'seo_manager'
   isActive  Boolean  @default(true)
   notes     String?
   createdAt DateTime @default(now())
@@ -996,9 +997,9 @@ model PlatformBlogCategory {
 }
 
 model PlatformBlogTag {
-  id        String                @id @default(cuid())
-  name      String                @unique
-  posts     PlatformBlogPostTag[]
+  id    String                @id @default(cuid())
+  name  String                @unique
+  posts PlatformBlogPostTag[]
 }
 
 model PlatformBlogPost {
@@ -1020,7 +1021,7 @@ model PlatformBlogPost {
   metaTitle          String?
   metaDescription    String?
   focusKeyword       String?
-  secondaryKeywords  String?               // comma-separated
+  secondaryKeywords  String? // comma-separated
   geoSummary         String?               @db.Text // Direct answer summary
   keyTakeaways       String?               @db.Text // Markdown bullet list
   entityList         String?               @db.Text // Entity mentions
@@ -1039,8 +1040,8 @@ model PlatformBlogPost {
   twitterTitle       String?
   twitterDescription String?
   twitterImage       String?
-  
-  tags               PlatformBlogPostTag[]
+
+  tags PlatformBlogPostTag[]
 
   @@index([status])
   @@index([publishedAt])
@@ -1058,7 +1059,216 @@ model PlatformBlogPostTag {
   @@index([tagId])
 }
 
+model AiChangeSet {
+  id            String         @id @default(cuid())
+  shopId        String         @map("shop_id")
+  prompt        String         @db.Text
+  status        String         @default("pending") // pending, approved, executing, completed, failed, cancelled, rolled_back
+  riskLevel     String         @default("low") @map("risk_level") // low, medium, high
+  riskAnalysis  String?        @map("risk_analysis") @db.Text
+  summary       String?        @db.Text
+  steps         AiChangeStep[]
+  approvals     AiApproval[]
+  feedback      AiFeedback[]
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  executedAt    DateTime?      @map("executed_at")
+  rolledBackAt  DateTime?      @map("rolled_back_at")
+  rollbackNotes String?        @map("rollback_notes") @db.Text
 
+  @@index([shopId])
+  @@index([status])
+  @@index([createdAt])
+}
 
+model AiChangeStep {
+  id           String      @id @default(cuid())
+  changeSetId  String      @map("change_set_id")
+  changeSet    AiChangeSet @relation(fields: [changeSetId], references: [id], onDelete: Cascade)
+  action       String // create, update, delete
+  modelName    String      @map("model_name") // e.g. Product, Category, etc.
+  recordId     String?     @map("record_id") // Target record ID
+  beforeValue  Json?       @map("before_value") // For rollback
+  afterValue   Json?       @map("after_value") // Proposed value
+  status       String      @default("pending") // pending, completed, failed, rolled_back
+  errorMessage String?     @map("error_message") @db.Text
+  order        Int         @default(0)
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
 
+  @@index([changeSetId])
+  @@index([recordId])
+}
 
+model AiApproval {
+  id          String      @id @default(cuid())
+  changeSetId String      @map("change_set_id")
+  changeSet   AiChangeSet @relation(fields: [changeSetId], references: [id], onDelete: Cascade)
+  userId      String      @map("user_id")
+  approved    Boolean
+  notes       String?     @db.Text
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  @@index([changeSetId])
+  @@index([userId])
+}
+
+model AiFeedback {
+  id          String      @id @default(cuid())
+  changeSetId String      @map("change_set_id")
+  changeSet   AiChangeSet @relation(fields: [changeSetId], references: [id], onDelete: Cascade)
+  userId      String?     @map("user_id")
+  rating      Int // 1 to 5 stars
+  comment     String?     @db.Text
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  @@index([changeSetId])
+}
+
+model AiPromptVersion {
+  id        String   @id @default(cuid())
+  name      String   @unique // Unique name of the prompt (e.g. "product_planner")
+  version   Int      @default(1)
+  content   String   @db.Text
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([name, isActive])
+}
+
+// =====================================================================
+// Marketing CMS (platform brand website) — hybrid architecture.
+// SystemSetting keeps global singletons (announcement, contact, tracking).
+// These models hold structured, versionable, previewable page content.
+// Scope: platform marketing site only (NOT tenant storefronts).
+// =====================================================================
+
+model MarketingPage {
+  id            String  @id @default(cuid())
+  slug          String  @unique // e.g. "home", "about", "pricing"
+  title         String
+  status        String  @default("draft") // draft | published | scheduled | archived
+  // SEO
+  metaTitle     String? @db.Text
+  metaDesc      String? @db.Text
+  canonicalUrl  String?
+  ogImage       String?
+  noindex       Boolean @default(false)
+  structuredData String? @db.Text // optional raw JSON-LD, validated/sanitized before publish
+
+  publishedAt   DateTime?
+  scheduledAt   DateTime?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sections  MarketingSection[]
+  revisions MarketingRevision[]
+
+  @@index([status])
+  @@index([slug, status])
+}
+
+model MarketingSection {
+  id           String  @id @default(cuid())
+  pageId       String
+  page         MarketingPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  type         String // hero | featureGrid | pricing | comparison | faq | cta | trustBar | richText | ...
+  order        Int     @default(0)
+  enabled      Boolean @default(true)
+  content      Json    @default("{}") // JSONB: section-specific fields
+  themeVariant String  @default("surface") // surface | muted | inverse
+  anchorId     String? // in-page anchor
+  visibility   String  @default("all") // all | desktop | mobile
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([pageId])
+  @@index([pageId, order])
+}
+
+model MarketingRevision {
+  id         String  @id @default(cuid())
+  pageId     String
+  page       MarketingPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  snapshot   Json // full serialized page + sections at capture time
+  label      String? // "autosave" | "publish" | custom
+  isAutosave Boolean @default(false)
+  authorId   String?
+  authorName String?
+  createdAt  DateTime @default(now())
+
+  @@index([pageId])
+  @@index([pageId, createdAt])
+}
+
+model MarketingRedirect {
+  id         String  @id @default(cuid())
+  fromPath   String  @unique
+  toPath     String
+  statusCode Int     @default(301) // 301 | 302 | 307 | 308
+  enabled    Boolean @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([enabled])
+}
+
+model MediaAsset {
+  id         String  @id @default(cuid())
+  url        String
+  type       String  @default("image") // image | video
+  name       String
+  alt        String?
+  width      Int?
+  height     Int?
+  size       Int? // bytes
+  mime       String?
+  uploadedBy String?
+  createdAt  DateTime @default(now())
+
+  @@index([type])
+  @@index([createdAt])
+}
+
+model MarketingAuditLog {
+  id        String  @id @default(cuid())
+  actorId   String?
+  actorName String?
+  action    String // create | update | publish | rollback | delete | schedule
+  entity    String // page | section | plan | redirect | media | settings
+  entityId  String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([entity])
+  @@index([createdAt])
+}
+
+model MarketingPlan {
+  id           String  @id @default(cuid())
+  key          String  @unique // e.g. "start" | "professional" | "growth"
+  name         String
+  description  String? @db.Text
+  audience     String? // who it's for
+  priceLabel   String  @default("") // display price, supports "رایگان"
+  period       String  @default("") // "تومان / ماهانه"
+  annualPriceLabel String @default("")
+  badge        String?
+  ctaText      String  @default("شروع کنید")
+  ctaLink      String  @default("/register")
+  features     Json    @default("[]") // string[]
+  highlighted  Boolean @default(false)
+  isActive     Boolean @default(true)
+  order        Int     @default(0)
+  // Optional link to the billing Package that this display plan maps to
+  packageId    String?
+  package      Package? @relation(fields: [packageId], references: [id], onDelete: SetNull)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([isActive, order])
+}

@@ -12,9 +12,8 @@ import { headers } from 'next/headers';
 import { verifyAuth } from '@/lib/auth';
 import { injectContextualLinks, generateBreadcrumbSchema, generateDiscussionSchema } from '@/lib/seo-geo';
 import Link from 'next/link';
-import MarketingHeader from '@/components/layout/MarketingHeader';
-import MarketingFooter from '@/components/layout/MarketingFooter';
-import StickyMobileCTA from '@/components/layout/StickyMobileCTA';
+import MarketingShell from '@/components/marketing/MarketingShell';
+import CtaSection from '@/components/marketing/sections/CtaSection';
 
 // Cached function to fetch platform-level blog post data
 const getPlatformBlogPostData = cache(async (slug: string) => {
@@ -467,7 +466,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     }));
 
     return (
-      <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950 font-sans" dir="rtl">
+      <MarketingShell>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdSchema) }}
@@ -476,12 +475,16 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
         />
-
-        {/* Unified Premium Marketing Header */}
-        <MarketingHeader />
+        {/* Admin-authored structured data (rendered as-is when present) */}
+        {post.structuredData && typeof post.structuredData === 'string' && post.structuredData.trim() && (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: post.structuredData }}
+          />
+        )}
 
         {/* Blog Post Content */}
-        <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <BlogPostClient
             slug={post.slug}
             initialData={{
@@ -492,12 +495,19 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               navigation: { prevPost: null, nextPost: null }
             }}
           />
-        </main>
+        </div>
 
-        {/* Unified Premium Marketing Footer & Sticky Mobile CTA */}
-        <MarketingFooter />
-        <StickyMobileCTA />
-      </div>
+        {/* Contextual conversion CTA (platform blog only) */}
+        <CtaSection
+          title="فروشگاه هوشمند خود را رایگان بسازید"
+          subtitle="آموخته‌های این مقاله را همین حالا در فروشگاه واقعی خود پیاده کنید."
+          primaryLabel="شروع رایگان ساخت فروشگاه"
+          primaryHref="/register"
+          secondaryLabel="مشاهده تعرفه‌ها"
+          secondaryHref="/pricing"
+          analyticsLocation="blog_article_cta"
+        />
+      </MarketingShell>
     );
   }
 
@@ -523,7 +533,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           { title: { contains: decodedSlug, mode: 'insensitive' } },
           { slug: { contains: decodedSlug, mode: 'insensitive' } },
           ...(keywords.map(keyword => ({
-            title: { contains: keyword, mode: 'insensitive' }
+            title: { contains: keyword, mode: 'insensitive' as const }
           })))
         ]
       },
