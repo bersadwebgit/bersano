@@ -1,17 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Sparkles, Check, Store, Heart, AlertCircle, ShoppingCart, Percent, Share2, Layers, ShieldCheck } from 'lucide-react';
-import { buildMarketingMetadata } from '@/lib/marketing-seo';
-import StructuredData from '@/components/marketing/StructuredData';
-import { breadcrumbSchema } from '@/lib/marketing-schema';
-import RelatedLinks from '@/components/marketing/sections/RelatedLinks';
 
-export const metadata: Metadata = buildMarketingMetadata({
-  title: 'فروشگاه عمده‌فروشی آنلاین (B2B)',
-  description:
-    'با برسانا فروشگاه عمده‌فروشی آنلاین بسازید؛ قیمت پله‌ای، حداقل سفارش (MOQ)، گروه‌بندی مشتری، اعتبار و بیعانه و مدیریت سفارش عمده را یک‌جا داشته باشید.',
-  path: '/wholesale',
-});
+export const metadata: Metadata = {
+  title: 'فروشگاه عمده‌فروشی آنلاین با برسانا | قیمت عمده و مشتریان B2B',
+  description: 'با برسانا فروشگاه عمده‌فروشی آنلاین بسازید، قیمت پله‌ای، MOQ، گروه مشتری، اعتبار، بیعانه و سفارش عمده را مدیریت کنید.',
+};
 
 export default function WholesalePage() {
   const pains = [
@@ -29,14 +23,8 @@ export default function WholesalePage() {
   ];
 
   return (
-    <div className="text-right font-sans min-h-screen bg-slate-50 dark:bg-slate-950 pb-20">
-      <StructuredData
-        data={breadcrumbSchema([
-          { name: 'خانه', path: '/' },
-          { name: 'عمده‌فروشی (B2B)', path: '/wholesale' },
-        ])}
-      />
-
+    <div className="marketing-page min-h-screen bg-white pb-20 text-right font-sans dark:bg-slate-950">
+      
       {/* Hero Section */}
       <section className="relative pt-16 pb-20 overflow-hidden text-center space-y-6">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-4">
@@ -121,14 +109,6 @@ export default function WholesalePage() {
           </p>
         </div>
       </section>
-
-      <RelatedLinks
-        links={[
-          { title: 'فروش محصولات دیجیتال', desc: 'فایل، لایسنس و دوره را کنار فروش عمده عرضه کنید.', href: '/digital-products' },
-          { title: 'پرداخت و ارسال', desc: 'درگاه بومی، خرید اعتباری و بیعانه و کد رهگیری خودکار.', href: '/payments-shipping' },
-          { title: 'تعرفه‌ها', desc: 'امکانات B2B در پلن رشد؛ متناسب با ابعاد کسب‌وکار.', href: '/pricing' },
-        ]}
-      />
 
       {/* CTA */}
       <section className="py-16 text-center">

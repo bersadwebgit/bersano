@@ -101,6 +101,7 @@ interface ProductListItem {
 
 interface BlogPostClientProps {
   slug: string;
+  platform?: boolean;
   initialData?: {
     post: PostDetails;
     comments: Comment[];
@@ -110,7 +111,7 @@ interface BlogPostClientProps {
   } | null;
 }
 
-export default function BlogPostClient({ slug, initialData }: BlogPostClientProps) {
+export default function BlogPostClient({ slug, platform = false, initialData }: BlogPostClientProps) {
   const [data, setData] = useState<{
     post: PostDetails;
     comments: Comment[];
@@ -343,7 +344,7 @@ export default function BlogPostClient({ slug, initialData }: BlogPostClientProp
   const { post, comments, relatedPosts, relatedProducts = [], navigation } = data;
   const hasHeadings = /<h[23][^>]*>/i.test(post.content);
   const pageUrl = typeof window !== 'undefined' ? window.location.href : '';
-  const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/b/${post.id}` : '';
+  const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/blog/${post.slug}` : '';
   const pageTitle = encodeURIComponent(post.title);
 
   // Formatted tags list
@@ -359,7 +360,7 @@ export default function BlogPostClient({ slug, initialData }: BlogPostClientProp
   } catch (e) {}
 
   return (
-    <div className="space-y-8 text-right" dir="rtl">
+    <div className={`${platform ? 'platform-blog-post' : ''} space-y-8 text-right`} dir="rtl">
       {/* Scroll Progress Bar */}
       <div 
         className="fixed left-0 right-0 h-[3px] bg-gray-100/30 dark:bg-gray-800/30 z-[101]"
@@ -600,7 +601,9 @@ export default function BlogPostClient({ slug, initialData }: BlogPostClientProp
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400">{post.author?.name || 'مدیر سایت'}</span>
               </h4>
               <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
-                تیم نگارش و تولید محتوای تخصصی وب‌سایت. تلاش ما ارائه جدیدترین مقالات، آموزش‌ها، راهنماهای خرید اصولی و نقد و بررسی‌های بی‌طرفانه محصولات است تا خرید هوشمندانه‌ای را تجربه کنید.
+                {platform
+                  ? 'تیم محتوای برسانا درباره فروش آنلاین، فروشگاه‌سازی، سئو، بازاریابی و کاربرد هوش مصنوعی در تجارت الکترونیک می‌نویسد.'
+                  : 'تیم نگارش و تولید محتوای تخصصی وب‌سایت. تلاش ما ارائه جدیدترین مقالات، آموزش‌ها، راهنماهای خرید اصولی و نقد و بررسی‌های بی‌طرفانه محصولات است تا خرید هوشمندانه‌ای را تجربه کنید.'}
               </p>
             </div>
           </div>

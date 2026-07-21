@@ -6,30 +6,6 @@
   --background: #ffffff;
   --foreground: #171717;
   --primary: #2563eb; /* Default brand theme color */
-
-  /* --- Marketing Design System: semantic surfaces & lines (additive, non-breaking) --- */
-  --mk-surface: #ffffff;
-  --mk-surface-muted: #f8fafc; /* slate-50 */
-  --mk-surface-inverse: #0f172a; /* slate-900 */
-  --mk-border-subtle: #e2e8f0; /* slate-200 */
-  --mk-border-strong: #cbd5e1; /* slate-300 */
-  --mk-text-muted: #64748b; /* slate-500 */
-  --mk-text-strong: #0f172a; /* slate-900 */
-
-  /* Unified radius scale (referenced by marketing primitives) */
-  --mk-radius-sm: 0.5rem;
-  --mk-radius-md: 0.875rem;
-  --mk-radius-lg: 1.25rem;
-  --mk-radius-xl: 1.75rem;
-
-  /* Section spacing rhythm */
-  --mk-space-section: 4rem;
-  --mk-space-section-lg: 6rem;
-
-  /* Elevation (kept deliberately soft & limited) */
-  --mk-shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
-  --mk-shadow-md: 0 8px 24px -8px rgba(15, 23, 42, 0.10);
-  --mk-shadow-lg: 0 20px 48px -16px rgba(15, 23, 42, 0.16);
 }
 
 @theme inline {
@@ -63,33 +39,12 @@
   --color-primary-900: var(--color-blue-900);
   --color-primary-950: var(--color-blue-950);
   --background-image-story-ring: linear-gradient(to top right, #fbbf24 0%, #ec4899 50%, color-mix(in srgb, var(--primary) 60%, #3b82f6) 100%);
-
-  /* Marketing semantic color utilities (e.g. bg-mk-surface, border-mk-line, text-mk-muted) */
-  --color-mk-surface: var(--mk-surface);
-  --color-mk-surface-muted: var(--mk-surface-muted);
-  --color-mk-surface-inverse: var(--mk-surface-inverse);
-  --color-mk-line: var(--mk-border-subtle);
-  --color-mk-line-strong: var(--mk-border-strong);
-  --color-mk-muted: var(--mk-text-muted);
-  --color-mk-strong: var(--mk-text-strong);
 }
 
 /* Base dark mode variables - applied when .dark class is present */
 .dark {
   --background: #0a0a0a;
   --foreground: #ededed;
-
-  /* Marketing dark surfaces */
-  --mk-surface: #0b1120; /* slate-950-ish */
-  --mk-surface-muted: #0f172a; /* slate-900 */
-  --mk-surface-inverse: #f8fafc;
-  --mk-border-subtle: #1e293b; /* slate-800 */
-  --mk-border-strong: #334155; /* slate-700 */
-  --mk-text-muted: #94a3b8; /* slate-400 */
-  --mk-text-strong: #f8fafc;
-  --mk-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
-  --mk-shadow-md: 0 8px 24px -8px rgba(0, 0, 0, 0.6);
-  --mk-shadow-lg: 0 20px 48px -16px rgba(0, 0, 0, 0.7);
 }
 
 /* Fallback for system preference if no class is present */
@@ -411,46 +366,574 @@ aside .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background-image: linear-gradient(to top right, #fbbf24 0%, #ec4899 50%, color-mix(in srgb, var(--primary) 60%, #3b82f6) 100%) !important;
 }
 
-/* --- Accessibility: respect user motion preferences (WCAG 2.2) --- */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    scroll-behavior: auto !important;
+/* ──────────────────────────────────────────────────────────────────────────
+   Bersana central brand — marketing UI system
+   Scoped classes keep tenant storefronts and dashboards completely isolated.
+   ────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --marketing-ink: #0f172a;
+  --marketing-muted: #64748b;
+  --marketing-line: rgba(148, 163, 184, 0.2);
+  --marketing-surface: rgba(255, 255, 255, 0.82);
+  --marketing-section: #f8fafc;
+  --marketing-blue: #2563eb;
+  --marketing-blue-deep: #1d4ed8;
+  --marketing-orange: #f97316;
+  --marketing-radius: 20px;
+  --marketing-shadow: 0 24px 70px -42px rgba(15, 23, 42, 0.38);
+}
+
+.dark {
+  --marketing-ink: #f8fafc;
+  --marketing-muted: #94a3b8;
+  --marketing-line: rgba(148, 163, 184, 0.13);
+  --marketing-surface: rgba(15, 23, 42, 0.78);
+  --marketing-section: #0b1220;
+  --marketing-shadow: 0 28px 80px -42px rgba(0, 0, 0, 0.9);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(37, 99, 235, 0.18);
+  color: inherit;
+}
+
+.marketing-shell {
+  isolation: isolate;
+}
+
+.marketing-header {
+  border-bottom: 1px solid transparent;
+  background: color-mix(in srgb, var(--background) 78%, transparent);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+}
+
+.marketing-header.is-scrolled {
+  border-bottom-color: var(--marketing-line);
+  background: color-mix(in srgb, var(--background) 92%, transparent);
+  box-shadow: 0 12px 40px -32px rgba(15, 23, 42, 0.55);
+}
+
+.marketing-skip-link {
+  position: fixed;
+  top: 10px;
+  right: 50%;
+  z-index: 200;
+  transform: translate(50%, -160%);
+  border-radius: 12px;
+  background: #0f172a;
+  padding: 10px 16px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  box-shadow: 0 16px 36px -18px rgba(15, 23, 42, 0.8);
+  transition: transform 180ms ease;
+}
+
+.marketing-skip-link:focus {
+  transform: translate(50%, 0);
+  outline: 3px solid rgba(96, 165, 250, 0.55);
+  outline-offset: 2px;
+}
+
+.marketing-nav-link {
+  position: relative;
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  padding: 0 13px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  outline: none;
+  transition: color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+
+.dark .marketing-nav-link {
+  color: #cbd5e1;
+}
+
+.marketing-nav-link:hover {
+  color: #0f172a;
+  background: rgba(241, 245, 249, 0.86);
+}
+
+.dark .marketing-nav-link:hover {
+  color: #fff;
+  background: rgba(30, 41, 59, 0.75);
+}
+
+.marketing-nav-link.is-active {
+  color: #1d4ed8;
+  background: rgba(37, 99, 235, 0.09);
+  box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.08);
+}
+
+.dark .marketing-nav-link.is-active {
+  color: #60a5fa;
+  background: rgba(37, 99, 235, 0.15);
+}
+
+.marketing-nav-link:focus-visible,
+.marketing-primary-button:focus-visible {
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.18);
+}
+
+.marketing-primary-button {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 15px;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  padding: 12px 22px;
+  color: white;
+  font-size: 12px;
+  font-weight: 900;
+  box-shadow: 0 16px 34px -20px rgba(37, 99, 235, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  outline: none;
+  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+}
+
+.marketing-primary-button:hover {
+  filter: saturate(1.08) brightness(1.04);
+  transform: translateY(-1px);
+  box-shadow: 0 20px 40px -20px rgba(37, 99, 235, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.marketing-primary-button:active {
+  transform: translateY(0) scale(0.985);
+}
+
+.marketing-page {
+  position: relative;
+  color: var(--marketing-ink);
+}
+
+.marketing-page > section {
+  position: relative;
+  scroll-margin-top: 84px;
+}
+
+.marketing-page > section:first-of-type {
+  isolation: isolate;
+  min-height: min(660px, calc(100svh - 76px));
+  display: flex;
+  align-items: center;
+  background:
+    radial-gradient(circle at 74% 15%, rgba(37, 99, 235, 0.13), transparent 32%),
+    radial-gradient(circle at 18% 38%, rgba(249, 115, 22, 0.07), transparent 27%),
+    linear-gradient(180deg, rgba(239, 246, 255, 0.85) 0%, rgba(255, 255, 255, 0.96) 70%, #fff 100%) !important;
+}
+
+.dark .marketing-page > section:first-of-type {
+  background:
+    radial-gradient(circle at 74% 15%, rgba(37, 99, 235, 0.2), transparent 34%),
+    radial-gradient(circle at 18% 38%, rgba(249, 115, 22, 0.08), transparent 28%),
+    linear-gradient(180deg, #081224 0%, #020617 100%) !important;
+}
+
+.marketing-page > section:first-of-type::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.42;
+  background-image: radial-gradient(circle, rgba(37, 99, 235, 0.28) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: linear-gradient(to bottom, black, transparent 78%);
+  -webkit-mask-image: linear-gradient(to bottom, black, transparent 78%);
+}
+
+.marketing-page > section:first-of-type::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 10%;
+  right: 50%;
+  width: min(760px, 85vw);
+  height: 260px;
+  transform: translateX(50%);
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.08);
+  filter: blur(70px);
+  pointer-events: none;
+}
+
+.marketing-home > section:first-of-type {
+  min-height: auto;
+}
+
+.marketing-page > section:first-of-type h1 {
+  max-width: 900px;
+  margin-inline: auto;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+
+.marketing-page h2,
+.marketing-page h3 {
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+.marketing-page p {
+  text-wrap: pretty;
+}
+
+.marketing-page .text-\[9px\] {
+  font-size: 10px !important;
+}
+
+.marketing-page .text-\[10px\] {
+  font-size: 11px !important;
+}
+
+.marketing-page .text-\[11px\] {
+  font-size: 12px !important;
+  line-height: 1.9 !important;
+}
+
+.marketing-page .text-xs {
+  font-size: 13px !important;
+  line-height: 1.85 !important;
+}
+
+.marketing-page .text-sm {
+  font-size: 15px !important;
+  line-height: 1.9 !important;
+}
+
+.marketing-page :where(div, article)[class*="rounded-3xl"][class*="border"],
+.marketing-page :where(div, article)[class*="rounded-2xl"][class*="border"] {
+  border-color: var(--marketing-line);
+  box-shadow: var(--marketing-shadow);
+}
+
+.marketing-page :where(div, article)[class*="rounded-3xl"][class*="border"] {
+  border-radius: 24px;
+}
+
+.marketing-page :where(div, article)[class*="rounded-2xl"][class*="border"] {
+  border-radius: 18px;
+}
+
+.marketing-page :where(div, article)[class*="rounded-3xl"][class*="border"],
+.marketing-page :where(div, article)[class*="rounded-2xl"][class*="border"] {
+  transition: border-color 220ms ease, box-shadow 220ms ease, transform 220ms ease;
+}
+
+@media (hover: hover) {
+  .marketing-page :where(div, article)[class*="rounded-3xl"][class*="border"]:hover,
+  .marketing-page :where(div, article)[class*="rounded-2xl"][class*="border"]:hover {
+    border-color: rgba(96, 165, 250, 0.38);
+    box-shadow: 0 30px 75px -40px rgba(37, 99, 235, 0.3);
   }
 }
 
-/* Long-form content styling for CMS rich-text sections (about/terms/privacy) */
-.mk-prose h2 { font-size: 1.25rem; font-weight: 900; color: var(--mk-text-strong); margin: 1.75rem 0 0.75rem; }
-.mk-prose h3 { font-size: 1.05rem; font-weight: 800; color: var(--mk-text-strong); margin: 1.25rem 0 0.5rem; }
-.mk-prose p { margin: 0 0 1rem; }
-.mk-prose ul, .mk-prose ol { margin: 0 0 1rem; padding-inline-start: 1.5rem; list-style: disc; }
-.mk-prose ol { list-style: decimal; }
-.mk-prose li { margin-bottom: 0.375rem; }
-.mk-prose a { color: var(--primary); font-weight: 800; text-decoration: underline; }
-.mk-prose strong, .mk-prose b { font-weight: 900; color: inherit; }
-.mk-prose blockquote { border-inline-start: 3px solid var(--primary); padding-inline-start: 1rem; color: var(--mk-text-muted); margin: 0 0 1rem; }
-.mk-prose table { width: 100%; border-collapse: collapse; margin: 0 0 1rem; }
-.mk-prose th, .mk-prose td { border: 1px solid var(--mk-border-subtle); padding: 0.5rem 0.75rem; text-align: right; }
-.dark .mk-prose h2, .dark .mk-prose h3, .dark .mk-prose strong { color: #f8fafc; }
+.marketing-page a[class*="bg-blue-600"],
+.marketing-page button[class*="bg-blue-600"] {
+  background-image: linear-gradient(135deg, #2563eb, #1d4ed8);
+  box-shadow: 0 16px 34px -20px rgba(37, 99, 235, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
 
-/* Skip-to-content link for keyboard users (visually hidden until focused) */
-.mk-skip-link {
+.marketing-page a[class*="bg-blue-600"]:hover,
+.marketing-page button[class*="bg-blue-600"]:hover {
+  filter: brightness(1.04) saturate(1.06);
+}
+
+.marketing-page table {
+  font-variant-numeric: tabular-nums;
+}
+
+.marketing-page table thead {
+  backdrop-filter: blur(12px);
+}
+
+.marketing-page table tbody tr:last-child {
+  border-bottom: 0;
+}
+
+.marketing-page input,
+.marketing-page select,
+.merchant-auth-page input,
+.merchant-auth-page select,
+.merchant-auth-page textarea {
+  min-height: 46px;
+}
+
+.marketing-page input:focus-visible,
+.marketing-page select:focus-visible,
+.merchant-auth-page input:focus-visible,
+.merchant-auth-page select:focus-visible,
+.merchant-auth-page textarea:focus-visible {
+  outline: none;
+  border-color: rgba(37, 99, 235, 0.72) !important;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1) !important;
+}
+
+/* The blog components are shared with tenant stores. These rules apply only
+   when the central Bersana wrapper is rendered by the platform branch. */
+.marketing-blog-page {
+  position: relative;
+  overflow-x: clip;
+  background:
+    radial-gradient(circle at 82% 5%, rgba(37, 99, 235, 0.1), transparent 25%),
+    linear-gradient(180deg, #f8fbff 0, #fff 460px) !important;
+}
+
+.dark .marketing-blog-page {
+  background:
+    radial-gradient(circle at 82% 5%, rgba(37, 99, 235, 0.16), transparent 28%),
+    linear-gradient(180deg, #071120 0, #020617 500px) !important;
+}
+
+.marketing-blog-main > div > div:first-child h1 {
+  font-size: clamp(1.7rem, 3vw, 2.5rem) !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.04em;
+}
+
+.marketing-blog-main > div {
+  width: 100%;
+}
+
+.marketing-blog-main :where(article, section, div)[class*="rounded-2xl"][class*="border"],
+.marketing-blog-main :where(article, section, div)[class*="rounded-3xl"][class*="border"] {
+  border-color: var(--marketing-line);
+  box-shadow: var(--marketing-shadow);
+}
+
+.marketing-blog-main section[aria-label="اسلایدر مقالات ویژه"] {
+  border-radius: 26px !important;
+  box-shadow: 0 32px 80px -42px rgba(15, 23, 42, 0.5) !important;
+}
+
+.marketing-blog-main article {
+  overflow: hidden;
+}
+
+.marketing-blog-main article img {
+  transition: transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (hover: hover) {
+  .marketing-blog-main article:hover img {
+    transform: scale(1.035);
+  }
+}
+
+.marketing-blog-main input[type="text"],
+.marketing-blog-main input[type="email"] {
+  min-height: 50px;
+  border-radius: 16px !important;
+}
+
+.platform-blog-list > div:first-child {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 250px;
+  border: 1px solid rgba(191, 219, 254, 0.72);
+  border-radius: 30px;
+  padding: 44px 20px;
+  background:
+    radial-gradient(circle at 78% 22%, rgba(37, 99, 235, 0.2), transparent 30%),
+    radial-gradient(circle at 18% 82%, rgba(249, 115, 22, 0.1), transparent 26%),
+    linear-gradient(145deg, rgba(239, 246, 255, 0.94), rgba(255, 255, 255, 0.98));
+  box-shadow: 0 34px 90px -52px rgba(37, 99, 235, 0.55);
+}
+
+.platform-blog-list > div:first-child::before {
+  content: "";
   position: absolute;
-  left: -9999px;
-  top: 0;
-  z-index: 100;
-  padding: 0.75rem 1.25rem;
-  background: var(--primary);
-  color: #fff;
-  font-weight: 800;
-  border-radius: 0 0 var(--mk-radius-md) 0;
-}
-.mk-skip-link:focus {
-  left: 0;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.28;
+  background-image: radial-gradient(circle, rgba(37, 99, 235, 0.35) 1px, transparent 1px);
+  background-size: 25px 25px;
+  mask-image: linear-gradient(to left, black, transparent 78%);
+  -webkit-mask-image: linear-gradient(to left, black, transparent 78%);
 }
 
+.dark .platform-blog-list > div:first-child {
+  border-color: rgba(30, 64, 175, 0.35);
+  background:
+    radial-gradient(circle at 78% 22%, rgba(37, 99, 235, 0.25), transparent 34%),
+    linear-gradient(145deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.98));
+}
 
+.platform-blog-list > div:first-child h1 {
+  font-size: clamp(1.9rem, 4vw, 3.25rem) !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.05em !important;
+}
+
+.platform-blog-list section[aria-label="اسلایدر مقالات ویژه"] {
+  border-radius: 30px !important;
+  border-color: rgba(191, 219, 254, 0.68) !important;
+  box-shadow: 0 34px 90px -48px rgba(15, 23, 42, 0.58) !important;
+}
+
+.platform-blog-list article {
+  border-radius: 22px !important;
+  box-shadow: 0 24px 60px -42px rgba(15, 23, 42, 0.48) !important;
+}
+
+.platform-blog-list article h3,
+.platform-blog-list article h2,
+.platform-blog-list article h4 {
+  letter-spacing: -0.025em;
+  line-height: 1.75 !important;
+}
+
+.platform-blog-post > div:nth-of-type(2) > a {
+  min-height: 42px;
+  padding-inline: 14px;
+  border: 1px solid var(--marketing-line);
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--background) 88%, transparent);
+}
+
+.platform-blog-post h1 {
+  font-size: clamp(1.85rem, 4.5vw, 3.45rem) !important;
+  line-height: 1.45 !important;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+
+.platform-blog-post article {
+  border-radius: 26px !important;
+  padding: clamp(22px, 4vw, 48px) !important;
+  box-shadow: 0 32px 85px -48px rgba(15, 23, 42, 0.48) !important;
+}
+
+.platform-blog-post article [class~="prose"] {
+  max-width: 76ch;
+  font-size: clamp(15px, 1.4vw, 18px) !important;
+  line-height: 2.12 !important;
+  color: #334155;
+}
+
+.dark .platform-blog-post article [class~="prose"] {
+  color: #cbd5e1;
+}
+
+.platform-blog-post article [class~="prose"] h2,
+.platform-blog-post article [class~="prose"] h3 {
+  border-right-color: #2563eb !important;
+  letter-spacing: -0.035em;
+}
+
+.platform-blog-post article [class~="prose"] a {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+
+.platform-blog-post article [class~="prose"] img {
+  border-radius: 22px !important;
+  box-shadow: 0 28px 70px -42px rgba(15, 23, 42, 0.65) !important;
+}
+
+/* Merchant authentication belongs to the Bersana brand, not tenant UI. */
+.merchant-auth-page {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 75% 18%, rgba(37, 99, 235, 0.14), transparent 30%),
+    radial-gradient(circle at 20% 80%, rgba(249, 115, 22, 0.08), transparent 27%),
+    #f8fafc !important;
+}
+
+.merchant-auth-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.38;
+  background-image: radial-gradient(circle, rgba(37, 99, 235, 0.3) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: radial-gradient(ellipse at center, black, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black, transparent 75%);
+}
+
+.dark .merchant-auth-page {
+  background:
+    radial-gradient(circle at 75% 18%, rgba(37, 99, 235, 0.2), transparent 32%),
+    radial-gradient(circle at 20% 80%, rgba(249, 115, 22, 0.08), transparent 28%),
+    #020617 !important;
+}
+
+.merchant-auth-card {
+  border-color: var(--marketing-line) !important;
+  border-radius: 26px !important;
+  background: color-mix(in srgb, var(--background) 90%, transparent) !important;
+  box-shadow: 0 34px 90px -40px rgba(15, 23, 42, 0.5) !important;
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+}
+
+.merchant-auth-card button[class*="bg-blue-600"] {
+  min-height: 48px;
+  background-image: linear-gradient(135deg, #2563eb, #1d4ed8);
+  box-shadow: 0 18px 36px -20px rgba(37, 99, 235, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+@media (max-width: 640px) {
+  .marketing-page > section:first-of-type {
+    min-height: auto;
+  }
+
+  .marketing-page > section:first-of-type h1 {
+    font-size: clamp(1.85rem, 9vw, 2.5rem) !important;
+    line-height: 1.35 !important;
+  }
+
+  .marketing-page > section {
+    scroll-margin-top: 72px;
+  }
+
+  .marketing-blog-main {
+    padding-top: 28px;
+  }
+
+  .merchant-auth-page {
+    align-items: flex-start;
+    padding-top: 24px;
+  }
+
+  .merchant-auth-card {
+    border-radius: 22px !important;
+    padding: 20px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .marketing-shell *,
+  .marketing-page *,
+  .merchant-auth-page * {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,17 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Sparkles, Check, Store, Heart, AlertCircle, ShoppingCart, Percent, Share2, Globe, ShieldCheck, FileText, Search } from 'lucide-react';
-import { buildMarketingMetadata } from '@/lib/marketing-seo';
-import StructuredData from '@/components/marketing/StructuredData';
-import { breadcrumbSchema } from '@/lib/marketing-schema';
-import RelatedLinks from '@/components/marketing/sections/RelatedLinks';
 
-export const metadata: Metadata = buildMarketingMetadata({
-  title: 'سئو و تولید محتوا با هوش مصنوعی',
-  description:
-    'با برسانا برای محصولات فروشگاه، عنوان سئو، توضیح متا، سوالات متداول، داده ساختاریافته و مقاله بلاگ تولید کنید و از گوگل مشتری بگیرید.',
-  path: '/seo-content',
-});
+export const metadata: Metadata = {
+  title: 'سئو فروشگاه با برسانا | تولید محتوا و SEO با هوش مصنوعی',
+  description: 'با برسانا برای محصولات فروشگاه SEO title، meta description، FAQ، schema و مقاله بلاگ تولید کنید و از گوگل مشتری بگیرید.',
+};
 
 export default function SeoContentPage() {
   const features = [
@@ -22,14 +16,8 @@ export default function SeoContentPage() {
   ];
 
   return (
-    <div className="text-right font-sans min-h-screen bg-slate-50 dark:bg-slate-950 pb-20">
-      <StructuredData
-        data={breadcrumbSchema([
-          { name: 'خانه', path: '/' },
-          { name: 'سئو و تولید محتوا', path: '/seo-content' },
-        ])}
-      />
-
+    <div className="marketing-page min-h-screen bg-white pb-20 text-right font-sans dark:bg-slate-950">
+      
       {/* Hero Section */}
       <section className="relative pt-16 pb-20 overflow-hidden text-center space-y-6">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-4">
@@ -43,7 +31,7 @@ export default function SeoContentPage() {
           </h1>
 
           <p className="text-sm sm:text-md text-slate-500 dark:text-slate-400 font-medium leading-relaxed max-w-2xl mx-auto">
-            بخش بزرگی از خریداران اینترنتی، کالای موردنظرشان را مستقیماً در گوگل جست‌وجو می‌کنند. برسانا هسته فروشگاه شما را طوری سئو می‌کند که بدون یک کلمه برنامه‌نویسی یا کار دستی، شانس دیده‌شدن‌تان در نتایج بیشتر شود.
+            بیش از ۶۰٪ خریداران اینترنتی مستقیماً کالای خود را در گوگل سرچ می‌کنند. برسانا هسته فروشگاه شما را طوری سئو می‌کند که بدون یک کلمه برنامه‌نویسی یا کار دستی، بهترین رتبه را بگیرید.
           </p>
 
           <div className="flex pt-4 justify-center">
@@ -91,14 +79,6 @@ export default function SeoContentPage() {
           </p>
         </div>
       </section>
-
-      <RelatedLinks
-        links={[
-          { title: 'ابزارهای بازاریابی', desc: 'کد تخفیف، کمپین و باشگاه مشتریان برای فروش بیشتر.', href: '/marketing-tools' },
-          { title: 'هوش مصنوعی و RAG', desc: 'ببینید دستیار چطور روی داده واقعی فروشگاه کار می‌کند.', href: '/ai' },
-          { title: 'وبلاگ برسانا', desc: 'مقاله‌های آموزشی درباره فروش آنلاین و سئو.', href: '/blog' },
-        ]}
-      />
 
       {/* CTA */}
       <section className="py-16 text-center">

@@ -59,6 +59,7 @@ interface BlogListClientProps {
   activeSearch: string;
   activePage: number;
   activeSort?: string;
+  platform?: boolean;
 }
 
 export default function BlogListClient({ 
@@ -72,7 +73,8 @@ export default function BlogListClient({
   activeTag,
   activeSearch,
   activePage,
-  activeSort = 'latest'
+  activeSort = 'latest',
+  platform = false
 }: BlogListClientProps) {
   const router = useRouter();
 
@@ -484,18 +486,20 @@ export default function BlogListClient({
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-10 pb-12 select-none text-right" dir="rtl">
+    <div className={`${platform ? 'platform-blog-list' : ''} max-w-7xl mx-auto space-y-10 pb-12 select-none text-right`} dir="rtl">
       
       {/* 1. Header & Minimal Search Bar Container */}
       <div className="flex flex-col items-center justify-center text-center space-y-6 pt-4">
         <div className="space-y-2">
           <div className="inline-flex items-center gap-1.5 bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full text-[10px] font-bold tracking-wide">
             <Sparkles className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 animate-pulse" />
-            مجله خبری و آموزشی {shopName}
+            {platform ? 'وبلاگ رسمی برسانا' : `مجله خبری و آموزشی ${shopName}`}
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">آخرین مقالات و خواندنی‌ها</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">{platform ? 'راهنمای رشد فروش آنلاین' : 'آخرین مقالات و خواندنی‌ها'}</h1>
           <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 max-w-md mx-auto leading-relaxed">
-            در این بخش می‌توانید جدیدترین نقد و بررسی‌ها، اخبار روز بازار و آموزش‌های کاربردی ما را با چاشنی طراحی مینیمال بخوانید.
+            {platform
+              ? 'مقالات تخصصی درباره فروشگاه‌سازی، هوش مصنوعی، سئو و بازاریابی؛ برای تصمیم‌های دقیق‌تر و رشد پایدار کسب‌وکار شما.'
+              : 'در این بخش می‌توانید جدیدترین نقد و بررسی‌ها، اخبار روز بازار و آموزش‌های کاربردی ما را بخوانید.'}
           </p>
         </div>
 

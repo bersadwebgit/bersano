@@ -10,9 +10,10 @@ import BottomNav from '@/components/layout/BottomNav';
 import BlogListClient from './BlogListClient';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
-import MarketingShell from '@/components/marketing/MarketingShell';
-import StructuredData from '@/components/marketing/StructuredData';
-import { breadcrumbSchema } from '@/lib/marketing-schema';
+import Link from 'next/link';
+import MarketingHeader from '@/components/layout/MarketingHeader';
+import MarketingFooter from '@/components/layout/MarketingFooter';
+import StickyMobileCTA from '@/components/layout/StickyMobileCTA';
 
 export async function generateMetadata(): Promise<Metadata> {
   const shop = await getTenantShop();
@@ -239,21 +240,19 @@ export default async function BlogListPage({ searchParams }: BlogListPageProps) 
     };
 
     return (
-      <MarketingShell>
+      <div className="marketing-shell marketing-blog-page flex min-h-screen flex-col bg-white font-sans dark:bg-slate-950" dir="rtl">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdSchema) }}
         />
-        <StructuredData
-          data={breadcrumbSchema([
-            { name: 'خانه', path: '/' },
-            { name: 'وبلاگ', path: '/blog' },
-          ])}
-        />
+
+        {/* Unified Premium Marketing Header */}
+        <MarketingHeader />
 
         {/* Blog Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <main id="main-content" className="marketing-blog-main mx-auto w-full max-w-7xl flex-grow px-4 py-10 sm:px-6 lg:px-8">
           <BlogListClient
+            platform
             shopName="برسانا"
             initialPosts={formattedPosts}
             initialPagination={pagination}
@@ -266,8 +265,12 @@ export default async function BlogListPage({ searchParams }: BlogListPageProps) 
             activePage={activePage}
             activeSort={activeSort}
           />
-        </div>
-      </MarketingShell>
+        </main>
+
+        {/* Unified Premium Marketing Footer & Sticky Mobile CTA */}
+        <MarketingFooter />
+        <StickyMobileCTA />
+      </div>
     );
   }
 

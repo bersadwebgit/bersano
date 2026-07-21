@@ -36,7 +36,6 @@ export interface PricingPlan {
   badge?: string;
   ctaText: string;
   ctaLink: string;
-  highlighted?: boolean;
 }
 
 export interface ComparisonRow {
@@ -296,58 +295,6 @@ const DEFAULT_PROMPTS: PromptExample[] = [
   }
 ];
 
-/**
- * Typed pricing resolution for the marketing funnel.
- * Priority: MarketingPlan table (managed, typed) -> saas_pricing JSON (legacy) -> DEFAULT_PRICING.
- * Never throws; always returns a usable list so the funnel stays intact.
- */
-export async function getMarketingPricingPlans(): Promise<PricingPlan[]> {
-  try {
-    const plans = await prisma.marketingPlan.findMany({
-      where: { isActive: true },
-      orderBy: { order: 'asc' },
-    });
-
-    if (plans.length > 0) {
-      return plans.map((p) => {
-        let features: string[] = [];
-        try {
-          features = Array.isArray(p.features) ? (p.features as string[]) : [];
-        } catch {
-          features = [];
-        }
-        return {
-          id: p.key,
-          name: p.name,
-          desc: p.description || '',
-          price: p.priceLabel,
-          period: p.period,
-          features,
-          badge: p.badge || undefined,
-          ctaText: p.ctaText,
-          ctaLink: p.ctaLink,
-          highlighted: p.highlighted,
-        } as PricingPlan & { highlighted?: boolean };
-      });
-    }
-  } catch (error) {
-    console.error('[CMS] MarketingPlan read failed, falling back to saas_pricing/defaults', error);
-  }
-
-  // Fallback to legacy saas_pricing JSON key, then hardcoded defaults.
-  try {
-    const row = await prisma.systemSetting.findUnique({ where: { key: 'saas_pricing' } });
-    if (row?.value) {
-      const parsed = JSON.parse(row.value);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch {
-    // ignore, fall through to defaults
-  }
-
-  return DEFAULT_PRICING;
-}
-
 export async function getMarketingCMSContent(): Promise<MarketingContent> {
   try {
     const keys = [
@@ -375,8 +322,8 @@ export async function getMarketingCMSContent(): Promise<MarketingContent> {
     const metaDesc = settingsMap.get('saas_meta_desc') || 'با برسانا فروشگاه آنلاین حرفه‌ای بسازید، با فروشگاه خود حرف بزنید، محصول و سئو تولید کنید، سفارش‌ها را تحلیل کنید و فروش خود را با هوش مصنوعی رشد دهید.';
     const heroTitle = settingsMap.get('saas_hero_title') || 'فروشگاهت را با پرامپت مدیریت کن؛ برسانا اجرا می‌کند';
     const heroSubtitle = settingsMap.get('saas_hero_subtitle') || 'برسانا اولین پلتفرم تجارت الکترونیک هوشمند در ایران است که با استفاده از هوش مصنوعی و فناوری RAG، داده‌های فروشگاه شما (محصولات، سفارش‌ها، مشتریان و سئو) را به طور کامل درک کرده و به شما اجازه می‌دهد تمام عملیات را فقط با پرامپت‌های ساده فارسی مدیریت کنید.';
-    const primaryCtaLabel = settingsMap.get('saas_primary_cta') || 'ساخت فروشگاه هوشمند رایگان';
-    const secondaryCtaLabel = settingsMap.get('saas_secondary_cta') || 'دیدن دمو گفت‌وگو با فروشگاه';
+    const primaryCtaLabel = settingsMap.get('saas_primary_cta') || 'ساخت فروشگاه رایگان';
+    const secondaryCtaLabel = settingsMap.get('saas_secondary_cta') || 'مشاهده دمو';
 
     // Parse structures
     let features = DEFAULT_FEATURES;
@@ -436,8 +383,8 @@ export async function getMarketingCMSContent(): Promise<MarketingContent> {
       metaDesc: 'با برسانا فروشگاه آنلاین حرفه‌ای بسازید، با فروشگاه خود حرف بزنید، محصول و سئو تولید کنید، سفارش‌ها را تحلیل کنید و فروش خود را با هوش مصنوعی رشد دهید.',
       heroTitle: 'فروشگاهت را با پرامپت مدیریت کن؛ برسانا اجرا می‌کند',
       heroSubtitle: 'برسانا اولین پلتفرم تجارت الکترونیک هوشمند در ایران است که با استفاده از هوش مصنوعی و فناوری RAG، داده‌های فروشگاه شما (محصولات، سفارش‌ها، مشتریان و سئو) را به طور کامل درک کرده و به شما اجازه می‌دهد تمام عملیات را فقط با پرامپت‌های ساده فارسی مدیریت کنید.',
-      primaryCtaLabel: 'ساخت فروشگاه هوشمند رایگان',
-      secondaryCtaLabel: 'دیدن دمو گفت‌وگو با فروشگاه',
+      primaryCtaLabel: 'ساخت فروشگاه رایگان',
+      secondaryCtaLabel: 'مشاهده دمو',
       features: DEFAULT_FEATURES,
       faqs: DEFAULT_FAQS,
       demos: DEFAULT_DEMOS,
@@ -447,3 +394,9 @@ export async function getMarketingCMSContent(): Promise<MarketingContent> {
     };
   }
 }
+
+export async function getMarketingPricingPlans(): Promise<PricingPlan[]> {
+  const content = await getMarketingCMSContent();
+  return content.pricing;
+}
+

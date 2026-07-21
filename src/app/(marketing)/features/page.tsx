@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getMarketingCMSContent } from '@/lib/marketing-cms';
-import { buildMarketingMetadata } from '@/lib/marketing-seo';
 import { 
   Sparkles, Check, Store, ShieldCheck, CreditCard, Ship, 
   Users, Percent, Globe, MessageSquare, Database, FileText, 
@@ -9,12 +8,11 @@ import {
 } from 'lucide-react';
 
 export async function generateMetadata(): Promise<Metadata> {
-  return buildMarketingMetadata({
-    title: 'امکانات فروشگاه‌ساز برسانا',
-    description:
-      'بررسی جامع ابزارهای بومی و هوشمند برسانا: مدیریت محصول و انبار، فاکتور، درگاه پرداخت، ارسال، عمده‌فروشی و دستیار هوش مصنوعی فارسی.',
-    path: '/features',
-  });
+  const cms = await getMarketingCMSContent();
+  return {
+    title: `امکانات برسانا | ${cms.metaTitle}`,
+    description: `بررسی جامع ابزارهای بومی و هوشمند فروش کالا، فاکتور، درگاه پرداخت، ارسال و هوش مصنوعی. ${cms.metaDesc}`,
+  };
 }
 
 export default async function FeaturesPage() {
@@ -101,7 +99,7 @@ export default async function FeaturesPage() {
   ];
 
   return (
-    <div className="text-right font-sans min-h-screen bg-slate-50 dark:bg-slate-950 pb-20">
+    <div className="marketing-page min-h-screen bg-white pb-20 text-right font-sans dark:bg-slate-950">
       
       {/* Hero Section */}
       <section className="relative pt-16 pb-20 overflow-hidden">

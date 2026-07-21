@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getMarketingCMSContent } from '@/lib/marketing-cms';
-import { buildMarketingMetadata } from '@/lib/marketing-seo';
 import { 
   Sparkles, 
   Database, 
@@ -20,12 +19,11 @@ import {
 } from 'lucide-react';
 
 export async function generateMetadata(): Promise<Metadata> {
-  return buildMarketingMetadata({
-    title: 'هوش مصنوعی و دستیار فارسی برسانا',
-    description:
-      'فروشگاه خود را با گفت‌وگوی ساده فارسی مدیریت کنید؛ دستیار هوشمند برسانا مبتنی بر معماری RAG، محصول و محتوا و سئو می‌سازد و هر تغییر با پیش‌نمایش و تایید شما اجرا می‌شود.',
-    path: '/ai',
-  });
+  const cms = await getMarketingCMSContent();
+  return {
+    title: `هوش مصنوعی برسانا | ${cms.metaTitle}`,
+    description: `دستیار هوشمند فروشگاه شما متکی بر آخرین مدل‌های هوش مصنوعی و معماری RAG. ${cms.metaDesc}`,
+  };
 }
 
 export default async function AIPage() {
@@ -45,7 +43,7 @@ export default async function AIPage() {
   };
 
   return (
-    <div className="text-right font-sans min-h-screen bg-slate-50 dark:bg-slate-950 pb-20">
+    <div className="marketing-page min-h-screen bg-white pb-20 text-right font-sans dark:bg-slate-950">
       
       {/* Schema Injection */}
       <script
