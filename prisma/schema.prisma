@@ -897,13 +897,24 @@ model AiUsage {
   operationType  String?  @map("operation_type") // 'chat' | 'embedding'
   resolvedModel  String?  @map("resolved_model") // the model actually sent to the provider (AI-004)
   status         String?  // 'success' | 'failed' | 'quota_exceeded'
-  costStatus     String?  @map("cost_status") // 'resolved' | 'unresolved'
+  costStatus     String?  @map("cost_status") // 'resolved' | 'unresolved' | 'unknown'
   costUsdDecimal Decimal? @map("cost_usd_decimal") @db.Decimal(14, 8) // precise billing currency
   requestId      String?  @map("request_id")
   durationMs     Int?     @map("duration_ms")
   inputCount     Int?     @map("input_count") // embedding: number of inputs in the (batch) request
-  idempotencyKey String?  @unique @map("idempotency_key") // prevents duplicate usage on retry/resume
+  idempotencyKey String?  @map("idempotency_key") // prevents duplicate usage on retry/resume
 
+  // Attempt-level tracking additions
+  rootRequestId     String?  @map("root_request_id")
+  attemptIndex      Int?     @default(0) @map("attempt_index")
+  providerRequestId String?  @map("provider_request_id")
+  usageKnown        Boolean? @default(true) @map("usage_known")
+  actualCost        Decimal? @map("actual_cost") @db.Decimal(14, 8)
+  estimatedCost     Decimal? @map("estimated_cost") @db.Decimal(14, 8)
+  errorCode         String?  @map("error_code")
+  transportMode     String?  @map("transport_mode")
+
+  @@unique([shopId, idempotencyKey, operationType, attemptIndex])
   @@index([shopId])
   @@index([shopId, monthKey])
   @@index([shopId, operationType, monthKey])
