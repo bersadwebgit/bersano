@@ -913,6 +913,7 @@ model AiUsage {
   estimatedCost     Decimal? @map("estimated_cost") @db.Decimal(14, 8)
   errorCode         String?  @map("error_code")
   transportMode     String?  @map("transport_mode")
+  tokenCountSource  String?  @map("token_count_source") // 'provider' | 'tokenizer' | 'estimated'
 
   @@unique([shopId, idempotencyKey, operationType, attemptIndex])
   @@index([shopId])

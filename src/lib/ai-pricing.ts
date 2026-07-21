@@ -8,11 +8,12 @@
  * can reconcile later instead of under-charging to $0.
  */
 
-export type CostStatus = 'resolved' | 'unresolved';
+export type CostStatus = 'resolved' | 'unresolved' | 'unknown';
 export type AiOperationType = 'chat' | 'embedding';
 
-export interface ResolvedCost {
-  costUsd: number;
+export interface ResolvedCostResult {
+  actualCostUsd: number | null;
+  estimatedCostUsd: number;
   costStatus: CostStatus;
 }
 
@@ -54,11 +55,15 @@ export function resolveAiCost(
   tokensIn: number,
   tokensOut: number,
   operationType: AiOperationType = 'chat'
-): ResolvedCost {
+): ResolvedCostResult {
   if (!model || typeof model !== 'string') {
     console.warn('[ai-pricing] Cost unresolved: missing/invalid model name.');
     const rate = operationType === 'embedding' ? DEFAULT_EMBEDDING_RATE : DEFAULT_CHAT_RATE.in;
-    return { costUsd: tokensIn * rate, costStatus: 'unresolved' };
+    return {
+      actualCostUsd: 0,
+      estimatedCostUsd: tokensIn * rate,
+      costStatus: 'resolved',
+    };
   }
 
   const m = model.toLowerCase();
@@ -66,19 +71,34 @@ export function resolveAiCost(
   if (operationType === 'embedding') {
     const known = EMBEDDING_PRICING.find((e) => e.match(m));
     if (known) {
-      return { costUsd: tokensIn * known.rate, costStatus: 'resolved' };
+      const cost = tokensIn * known.rate;
+      return {
+        actualCostUsd: cost,
+        estimatedCostUsd: cost,
+        costStatus: 'resolved',
+      };
     }
     console.warn(`[ai-pricing] Cost unresolved for unknown embedding model: ${model}`);
-    return { costUsd: tokensIn * DEFAULT_EMBEDDING_RATE, costStatus: 'unresolved' };
+    return {
+      actualCostUsd: null,
+      estimatedCostUsd: tokensIn * DEFAULT_EMBEDDING_RATE,
+      costStatus: 'unresolved',
+    };
   }
 
   const known = CHAT_PRICING.find((c) => c.match(m));
   if (known) {
-    return { costUsd: tokensIn * known.rate.in + tokensOut * known.rate.out, costStatus: 'resolved' };
+    const cost = tokensIn * known.rate.in + tokensOut * known.rate.out;
+    return {
+      actualCostUsd: cost,
+      estimatedCostUsd: cost,
+      costStatus: 'resolved',
+    };
   }
   console.warn(`[ai-pricing] Cost unresolved for unknown chat model: ${model}`);
   return {
-    costUsd: tokensIn * DEFAULT_CHAT_RATE.in + tokensOut * DEFAULT_CHAT_RATE.out,
+    actualCostUsd: null,
+    estimatedCostUsd: tokensIn * DEFAULT_CHAT_RATE.in + tokensOut * DEFAULT_CHAT_RATE.out,
     costStatus: 'unresolved',
   };
 }
@@ -91,5 +111,6 @@ export function calculateAiCost(model: string, tokensIn: number, tokensOut: numb
   if (!model || typeof model !== 'string') {
     return 0;
   }
-  return resolveAiCost(model, tokensIn, tokensOut, 'chat').costUsd;
+  const resolved = resolveAiCost(model, tokensIn, tokensOut, 'chat');
+  return resolved.actualCostUsd ?? resolved.estimatedCostUsd;
 }

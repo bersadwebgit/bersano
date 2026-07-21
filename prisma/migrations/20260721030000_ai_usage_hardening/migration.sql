@@ -9,7 +9,8 @@ ALTER TABLE "AiUsage"
     ADD COLUMN IF NOT EXISTS "actual_cost"        DECIMAL(14,8),
     ADD COLUMN IF NOT EXISTS "estimated_cost"     DECIMAL(14,8),
     ADD COLUMN IF NOT EXISTS "error_code"         TEXT,
-    ADD COLUMN IF NOT EXISTS "transport_mode"     TEXT;
+    ADD COLUMN IF NOT EXISTS "transport_mode"     TEXT,
+    ADD COLUMN IF NOT EXISTS "token_count_source" TEXT;
 
 -- Drop old single-column unique index if it exists
 DROP INDEX IF EXISTS "AiUsage_idempotency_key_key";
