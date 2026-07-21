@@ -1,11 +1,17 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Sparkles, Check, Store, Heart, AlertCircle, ShoppingCart, Percent, Share2, Globe, ShieldCheck, CreditCard, Truck } from 'lucide-react';
+import { buildMarketingMetadata } from '@/lib/marketing-seo';
+import StructuredData from '@/components/marketing/StructuredData';
+import { breadcrumbSchema } from '@/lib/marketing-schema';
+import RelatedLinks from '@/components/marketing/sections/RelatedLinks';
 
-export const metadata: Metadata = {
-  title: 'پرداخت، ارسال و مدیریت سفارش در برسانا',
-  description: 'پرداخت آنلاین، کارت‌به‌کارت، ارسال، تیپاکس، پست، فاکتور، کد رهگیری و مدیریت سفارش را در فروشگاه برسانا فعال کنید.',
-};
+export const metadata: Metadata = buildMarketingMetadata({
+  title: 'پرداخت، ارسال و مدیریت سفارش',
+  description:
+    'پرداخت آنلاین و کارت‌به‌کارت، محاسبه هزینه ارسال تیپاکس و پست، فاکتور، کد رهگیری و مدیریت یکپارچه سفارش را در فروشگاه برسانا فعال کنید.',
+  path: '/payments-shipping',
+});
 
 export default function PaymentsShippingPage() {
   const payments = [
@@ -23,7 +29,13 @@ export default function PaymentsShippingPage() {
 
   return (
     <div className="text-right font-sans min-h-screen bg-slate-50 dark:bg-slate-950 pb-20">
-      
+      <StructuredData
+        data={breadcrumbSchema([
+          { name: 'خانه', path: '/' },
+          { name: 'پرداخت و ارسال', path: '/payments-shipping' },
+        ])}
+      />
+
       {/* Hero Section */}
       <section className="relative pt-16 pb-20 overflow-hidden text-center space-y-6">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-4">
@@ -106,6 +118,14 @@ export default function PaymentsShippingPage() {
           </p>
         </div>
       </section>
+
+      <RelatedLinks
+        links={[
+          { title: 'راهکار فروشگاه اینستاگرامی', desc: 'ترافیک پیج را به سبد خرید و پرداخت آنلاین وصل کنید.', href: '/instagram-shop' },
+          { title: 'عمده‌فروشی (B2B)', desc: 'خرید اعتباری، بیعانه و مدیریت سفارش عمده.', href: '/wholesale' },
+          { title: 'تعرفه‌ها', desc: 'امکانات پرداخت و ارسال در پلن‌های مختلف.', href: '/pricing' },
+        ]}
+      />
 
       {/* CTA */}
       <section className="py-16 text-center">

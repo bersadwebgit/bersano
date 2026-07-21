@@ -3,11 +3,13 @@ import { getTenantShop } from './tenant';
 import { prisma } from './prisma';
 import { isAdminRole, hasPermission, type AdminPermission } from './admin-roles';
 
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET && process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE !== 'phase-production-build') {
-  throw new Error('JWT_SECRET environment variable is missing!');
+function getJwtKey() {
+  const JWT_SECRET = process.env.JWT_SECRET;
+  if (!JWT_SECRET && process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE !== 'phase-production-build') {
+    throw new Error('JWT_SECRET environment variable is missing!');
+  }
+  return new TextEncoder().encode(JWT_SECRET || 'your-super-secret-key-change-in-production');
 }
-const key = new TextEncoder().encode(JWT_SECRET || 'your-super-secret-key-change-in-production');
 
 export async function verifyAuth(request: Request, requiredRole?: 'admin' | 'customer' | 'superadmin') {
   // Extract token from cookies based on requiredRole
@@ -34,6 +36,7 @@ export async function verifyAuth(request: Request, requiredRole?: 'admin' | 'cus
   if (!token) return null;
 
   try {
+    const key = getJwtKey();
     const { payload } = await jwtVerify(token, key);
     
     // Super admins have access everywhere

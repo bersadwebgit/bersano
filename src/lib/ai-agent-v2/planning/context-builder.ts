@@ -1,5 +1,6 @@
 import { prisma } from '../../prisma';
 import { searchProducts } from '../../product-search';
+import { resolveProduct, resolveCategory, resolveOrder } from '../routing/entity-resolver';
 
 export interface ContextOptions {
   shopId: string;
@@ -20,6 +21,40 @@ export async function buildShopContext(opts: ContextOptions): Promise<string> {
   if (shopSettings) {
     context += `- نام فروشگاه: ${shopSettings.shopName || 'ثبت نشده'}\n`;
     context += `- شماره تماس: ${shopSettings.contactPhone || 'ثبت نشده'}\n`;
+  }
+
+  // AI-003 (Entity Resolver Integration): Resolve entities mentioned in the prompt
+  // using the fuzzy entity resolver and inject them directly into the planning context.
+  let identifiedEntities = '';
+  try {
+    const resolvedProd = await resolveProduct(p, shopId);
+    if (resolvedProd) {
+      identifiedEntities += `- محصول: "${resolvedProd.name}" (شناسه: ${resolvedProd.id}, امتیاز تطابق: ${resolvedProd.score.toFixed(2)})\n`;
+    }
+  } catch (err) {
+    console.error('[buildShopContext] Product resolution failed:', err);
+  }
+
+  try {
+    const resolvedCat = await resolveCategory(p, shopId);
+    if (resolvedCat) {
+      identifiedEntities += `- دسته‌بندی: "${resolvedCat.name}" (شناسه: ${resolvedCat.id}, امتیاز تطابق: ${resolvedCat.score.toFixed(2)})\n`;
+    }
+  } catch (err) {
+    console.error('[buildShopContext] Category resolution failed:', err);
+  }
+
+  try {
+    const resolvedOrder = await resolveOrder(p, shopId);
+    if (resolvedOrder) {
+      identifiedEntities += `- سفارش: "${resolvedOrder.name}" (شناسه: ${resolvedOrder.id})\n`;
+    }
+  } catch (err) {
+    console.error('[buildShopContext] Order resolution failed:', err);
+  }
+
+  if (identifiedEntities) {
+    context += `\nموجودیت‌های دقیق شناسایی‌شده از درخواست کاربر:\n${identifiedEntities}`;
   }
 
   const categories = await prisma.category.findMany({

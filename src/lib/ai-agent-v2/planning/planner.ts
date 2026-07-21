@@ -1,4 +1,5 @@
 import { executeChatCompletion } from '../../ai-provider/client';
+import { AiProviderError } from '../../ai-provider/errors';
 import { PlanningError } from '../contracts/errors';
 import { buildShopContext } from './context-builder';
 import { ChangeSetDto, ChangeSetSchema } from '../contracts/change-set';
@@ -56,9 +57,20 @@ export async function generatePlan(opts: PlanOptions): Promise<ChangeSetDto> {
       return validated;
     }
 
+    if (result.errorCode) {
+      throw new AiProviderError(
+        result.errorCode as any,
+        result.error,
+        result.status || 502
+      );
+    }
+
     throw new PlanningError(result.error || 'Planner failed to generate a plan.');
   } catch (error: unknown) {
     console.error('[generatePlan] Planning failed:', error);
+    if (error instanceof AiProviderError || (error && typeof error === 'object' && 'code' in error && 'persianMessage' in error)) {
+      throw error;
+    }
     const errorMessage = error instanceof Error ? error.message : 'Planning failed.';
     throw new PlanningError(errorMessage);
   }

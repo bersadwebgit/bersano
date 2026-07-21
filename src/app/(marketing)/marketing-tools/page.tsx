@@ -1,11 +1,17 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Sparkles, Check, Store, Heart, AlertCircle, ShoppingCart, Percent, Share2, Globe, ShieldCheck, Gift, Users } from 'lucide-react';
+import { buildMarketingMetadata } from '@/lib/marketing-seo';
+import StructuredData from '@/components/marketing/StructuredData';
+import { breadcrumbSchema } from '@/lib/marketing-schema';
+import RelatedLinks from '@/components/marketing/sections/RelatedLinks';
 
-export const metadata: Metadata = {
-  title: 'ابزارهای بازاریابی برسانا | تخفیف، باشگاه مشتریان و افزایش فروش',
-  description: 'با ابزارهای بازاریابی برسانا کد تخفیف، پیشنهاد شگفت‌انگیز، باشگاه مشتریان، امتیاز وفاداری، نظرات و کمپین‌های فروش بسازید.',
-};
+export const metadata: Metadata = buildMarketingMetadata({
+  title: 'ابزارهای بازاریابی و افزایش فروش',
+  description:
+    'با ابزارهای بازاریابی برسانا کد تخفیف، پیشنهاد شگفت‌انگیز، باشگاه مشتریان، امتیاز وفاداری، نظرات مشتری و کمپین‌های فروش هدفمند بسازید.',
+  path: '/marketing-tools',
+});
 
 export default function MarketingToolsPage() {
   const discounts = [
@@ -23,7 +29,13 @@ export default function MarketingToolsPage() {
 
   return (
     <div className="text-right font-sans min-h-screen bg-slate-50 dark:bg-slate-950 pb-20">
-      
+      <StructuredData
+        data={breadcrumbSchema([
+          { name: 'خانه', path: '/' },
+          { name: 'ابزارهای بازاریابی', path: '/marketing-tools' },
+        ])}
+      />
+
       {/* Hero Section */}
       <section className="relative pt-16 pb-20 overflow-hidden text-center space-y-6">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-4">
@@ -106,6 +118,14 @@ export default function MarketingToolsPage() {
           </p>
         </div>
       </section>
+
+      <RelatedLinks
+        links={[
+          { title: 'سئو و تولید محتوا', desc: 'ترافیک ارگانیک از گوگل را به کمپین‌ها اضافه کنید.', href: '/seo-content' },
+          { title: 'راهکار فروشگاه اینستاگرامی', desc: 'استوری‌های شاپبل و لینک بیو برای فروش از پیج.', href: '/instagram-shop' },
+          { title: 'تعرفه‌ها', desc: 'باشگاه مشتریان و ابزارهای پیشرفته در پلن‌های بالاتر.', href: '/pricing' },
+        ]}
+      />
 
       {/* CTA */}
       <section className="py-16 text-center">

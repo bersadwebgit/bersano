@@ -14,7 +14,6 @@ import CategoryQuickAccess from '@/components/store/CategoryQuickAccess';
 import FeaturedProductsTabs from '@/components/store/FeaturedProductsTabs';
 import MiddleBanners from '@/components/store/MiddleBanners';
 import ShoppableSection from '@/components/shoppable/ShoppableSection';
-import SaaSLandingPage from '@/components/saas/SaaSLandingPage';
 import ScrollReveal from '@/components/store/ScrollReveal';
 import { getTenantShop } from '@/lib/tenant';
 import { prisma } from '@/lib/prisma';
@@ -28,10 +27,11 @@ import Link from 'next/link';
 import Image from 'next/image';
 import * as LucideIcons from 'lucide-react';
 import { jwtVerify } from 'jose';
-import { getMarketingCMSContent } from '@/lib/marketing-cms';
-import MarketingHeader from '@/components/layout/MarketingHeader';
-import MarketingFooter from '@/components/layout/MarketingFooter';
-import StickyMobileCTA from '@/components/layout/StickyMobileCTA';
+import { getMarketingCMSContent, getMarketingPricingPlans } from '@/lib/marketing-cms';
+import { getMarketingGlobals } from '@/lib/marketing-globals';
+import MarketingShell from '@/components/marketing/MarketingShell';
+import HomeLanding from '@/components/marketing/home/HomeLanding';
+import { buildMarketingMetadata } from '@/lib/marketing-seo';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-change-in-production';
 const key = new TextEncoder().encode(JWT_SECRET);
@@ -48,11 +48,12 @@ export async function generateMetadata(): Promise<Metadata> {
 
   if (!shop) {
     const cms = await getMarketingCMSContent();
-    return {
-      metadataBase,
+    return buildMarketingMetadata({
       title: cms.metaTitle,
       description: cms.metaDesc,
-    };
+      path: '/',
+      rawTitle: true,
+    });
   }
 
   const settings = await prisma.shopSettings.findUnique({
@@ -77,16 +78,15 @@ export default async function Home() {
   logPerf('tenant.resolve', startHome);
   
   if (!shop) {
-    const cmsContent = await getMarketingCMSContent();
+    const [cmsContent, pricing, globals] = await Promise.all([
+      getMarketingCMSContent(),
+      getMarketingPricingPlans(),
+      getMarketingGlobals(),
+    ]);
     return (
-      <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950">
-        <MarketingHeader />
-        <main className="flex-grow">
-          <SaaSLandingPage content={cmsContent} />
-        </main>
-        <MarketingFooter />
-        <StickyMobileCTA />
-      </div>
+      <MarketingShell>
+        <HomeLanding content={cmsContent} pricing={pricing} globals={globals} />
+      </MarketingShell>
     );
   }
 

@@ -23,6 +23,17 @@ export async function verifyChangeSet(changeSetId: string, shopId: string): Prom
   const details: VerificationResult['details'] = [];
   let overallSuccess = true;
 
+  // Build reference map from completed create steps
+  const refMap = new Map<string, string>();
+  for (const step of changeSet.steps) {
+    if (step.action === 'create' && step.recordId) {
+      const afterVal = step.afterValue as Record<string, unknown> | null;
+      if (afterVal && afterVal.tempRef && typeof afterVal.tempRef === 'string') {
+        refMap.set(afterVal.tempRef, step.recordId);
+      }
+    }
+  }
+
   for (const step of changeSet.steps) {
     if (step.status !== 'completed') {
       details.push({
@@ -51,6 +62,21 @@ export async function verifyChangeSet(changeSetId: string, shopId: string): Prom
             where: { id: step.recordId, shopId },
           });
           dbRecord = cat ? (cat as unknown as Record<string, unknown>) : null;
+        } else if (step.modelName === 'ProductVariant') {
+          const variant = await prisma.productVariant.findFirst({
+            where: { id: step.recordId, shopId },
+          });
+          dbRecord = variant ? (variant as unknown as Record<string, unknown>) : null;
+        } else if (step.modelName === 'Story') {
+          const story = await prisma.story.findFirst({
+            where: { id: step.recordId, shopId },
+          });
+          dbRecord = story ? (story as unknown as Record<string, unknown>) : null;
+        } else if (step.modelName === 'DiscountCode') {
+          const discount = await prisma.discountCode.findFirst({
+            where: { id: step.recordId, shopId },
+          });
+          dbRecord = discount ? (discount as unknown as Record<string, unknown>) : null;
         }
 
         if (!dbRecord) {
@@ -60,9 +86,28 @@ export async function verifyChangeSet(changeSetId: string, shopId: string): Prom
         // Verify fields match afterValue
         if (step.afterValue) {
           for (const [field, expectedVal] of Object.entries(step.afterValue as Record<string, unknown>)) {
+            if (field === 'tempRef') continue;
+
             const actualVal = dbRecord[field];
-            if (JSON.stringify(actualVal) !== JSON.stringify(expectedVal)) {
-              throw new Error(`محتوای فیلد ${field} با مقدار پیشنهادی همخوانی ندارد. انتظار می‌رفت: ${expectedVal}، اما ثبت شده: ${actualVal}`);
+            let cleanExpectedVal: any = expectedVal;
+            if (typeof cleanExpectedVal === 'string') {
+              if (refMap.has(cleanExpectedVal)) {
+                cleanExpectedVal = refMap.get(cleanExpectedVal);
+              } else {
+                for (const [tempRef, realId] of refMap.entries()) {
+                  if (cleanExpectedVal.includes(tempRef)) {
+                    cleanExpectedVal = cleanExpectedVal.replace(new RegExp(tempRef, 'g'), realId);
+                  }
+                }
+              }
+            }
+
+            if (actualVal instanceof Date && (typeof cleanExpectedVal === 'string' || cleanExpectedVal instanceof Date)) {
+              if (actualVal.getTime() !== new Date(cleanExpectedVal as any).getTime()) {
+                throw new Error(`محتوای فیلد تاریخ ${field} همخوانی ندارد.`);
+              }
+            } else if (JSON.stringify(actualVal) !== JSON.stringify(cleanExpectedVal)) {
+              throw new Error(`محتوای فیلد ${field} با مقدار پیشنهادی همخوانی ندارد. انتظار می‌رفت: ${cleanExpectedVal}، اما ثبت شده: ${actualVal}`);
             }
           }
         }
@@ -78,6 +123,21 @@ export async function verifyChangeSet(changeSetId: string, shopId: string): Prom
             where: { id: step.recordId, shopId },
           });
           dbRecord = cat ? (cat as unknown as Record<string, unknown>) : null;
+        } else if (step.modelName === 'ProductVariant') {
+          const variant = await prisma.productVariant.findFirst({
+            where: { id: step.recordId, shopId },
+          });
+          dbRecord = variant ? (variant as unknown as Record<string, unknown>) : null;
+        } else if (step.modelName === 'Story') {
+          const story = await prisma.story.findFirst({
+            where: { id: step.recordId, shopId },
+          });
+          dbRecord = story ? (story as unknown as Record<string, unknown>) : null;
+        } else if (step.modelName === 'DiscountCode') {
+          const discount = await prisma.discountCode.findFirst({
+            where: { id: step.recordId, shopId },
+          });
+          dbRecord = discount ? (discount as unknown as Record<string, unknown>) : null;
         }
 
         if (dbRecord) {

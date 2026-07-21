@@ -1,6 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Sparkles, Check, Store, Heart, AlertCircle, ShoppingCart, Percent, Share2, Globe, ShieldCheck, Scale, ArrowLeft } from 'lucide-react';
+import { buildMarketingMetadata } from '@/lib/marketing-seo';
+import StructuredData from '@/components/marketing/StructuredData';
+import { breadcrumbSchema } from '@/lib/marketing-schema';
+import RelatedLinks from '@/components/marketing/sections/RelatedLinks';
 
 const InstagramIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
   <svg
@@ -18,15 +22,23 @@ const InstagramIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
   </svg>
 );
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMarketingMetadata({
   title: 'فروش در اینستاگرام یا فروشگاه برسانا؟',
-  description: 'مقایسه جامع فروش دستی در دایرکت و کامنت اینستاگرام در برابر سبد خرید هوشمند و فاکتور اتوماتیک در فروشگاه ابری برسانا.',
-};
+  description:
+    'مقایسه‌ای منصفانه میان فروش دستی در دایرکت و کامنت اینستاگرام و سبد خرید هوشمند و فاکتور خودکار فروشگاه ابری برسانا؛ تا آگاهانه تصمیم بگیرید.',
+  path: '/compare/instagram',
+});
 
 export default function CompareInstagramPage() {
   return (
     <div className="text-right font-sans min-h-screen bg-slate-50 dark:bg-slate-950 pb-20">
-      
+      <StructuredData
+        data={breadcrumbSchema([
+          { name: 'خانه', path: '/' },
+          { name: 'مقایسه با اینستاگرام', path: '/compare/instagram' },
+        ])}
+      />
+
       {/* Hero Section */}
       <section className="relative pt-16 pb-20 overflow-hidden text-center space-y-6">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-4">
@@ -90,6 +102,14 @@ export default function CompareInstagramPage() {
           </div>
         </div>
       </section>
+
+      <RelatedLinks
+        links={[
+          { title: 'راهکار فروشگاه اینستاگرامی', desc: 'پیج خود را به فروشگاه هوشمند با لینک بیو تبدیل کنید.', href: '/instagram-shop' },
+          { title: 'مقایسه با سایت اختصاصی', desc: 'هزینه و سرعت راه‌اندازی برسانا در برابر سایت سفارشی.', href: '/compare/custom-website' },
+          { title: 'تعرفه‌ها', desc: 'با پلن رایگان شروع کنید و بر اساس رشد ارتقا دهید.', href: '/pricing' },
+        ]}
+      />
 
       {/* CTA final */}
       <section className="py-16 text-center">

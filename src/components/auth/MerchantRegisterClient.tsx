@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { trackEvent } from '@/lib/analytics';
 import { 
   Sparkles, Store, Check, ArrowLeft, ArrowRight, ShieldCheck, 
   Globe, Clock, MessageSquare, AlertCircle, RefreshCw, Key, 
@@ -73,6 +74,11 @@ export default function MerchantRegisterClient() {
   const [showPassword, setShowPassword] = useState(false);
 
   const [origin, setOrigin] = useState('localhost:3000');
+
+  useEffect(() => {
+    trackEvent('register_start', { source_page: '/register' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -154,6 +160,7 @@ export default function MerchantRegisterClient() {
       });
       const data = await res.json();
       if (res.ok) {
+        trackEvent('register_step_complete', { value: 2, cta_location: 'owner_info' });
         setStep(3); // Go to verification
         setTimer(120); // 2 min timeout
       } else {
@@ -204,6 +211,7 @@ export default function MerchantRegisterClient() {
       if (res.ok || (data && data.alreadyCreated)) {
         setCreationProgress(100);
         setSuccessData(data.shop);
+        trackEvent('register_complete', { cta_location: 'provisioning', plan: businessField });
         setTimeout(() => {
           setStep(6); // Success
           setLoading(false);
@@ -300,6 +308,7 @@ export default function MerchantRegisterClient() {
                   setError('پر کردن تمامی فیلدهای ستاره‌دار الزامی است.');
                   return;
                 }
+                trackEvent('register_step_complete', { value: 1, cta_location: 'store_name' });
                 setStep(2);
               }}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-2xl text-xs font-black shadow-lg shadow-blue-500/10 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
@@ -369,6 +378,15 @@ export default function MerchantRegisterClient() {
                   dir="ltr"
                 />
               </div>
+            </div>
+
+            <div className="flex items-start gap-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-900 p-3">
+              <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+              <p className="text-[10px] font-bold leading-relaxed text-slate-500 dark:text-slate-400">
+                اطلاعات شما فقط برای ساخت و مدیریت فروشگاه استفاده می‌شود و نزد ما محفوظ است.
+                {' '}
+                <Link href="/privacy" className="text-blue-600 hover:underline">حریم خصوصی</Link>
+              </p>
             </div>
 
             <div className="flex gap-3 pt-2">
@@ -447,6 +465,7 @@ export default function MerchantRegisterClient() {
                     setError('لطفاً کد تایید ۵ رقمی را به طور کامل وارد کنید.');
                     return;
                   }
+                  trackEvent('register_step_complete', { value: 3, cta_location: 'otp_verify' });
                   setStep(4); // Go to personalization
                 }}
                 className="flex-2 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl text-xs font-black shadow-lg shadow-blue-500/10 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
@@ -522,15 +541,18 @@ export default function MerchantRegisterClient() {
             </div>
 
             <button
+              disabled={loading}
               onClick={() => {
+                if (loading) return;
                 if (!ownerJob.trim()) {
                   setError('لطفاً شغل، تخصص یا حوزه دقیق فعالیت خود را وارد کنید.');
                   return;
                 }
+                trackEvent('register_step_complete', { value: 4, cta_location: 'ai_personalization' });
                 setStep(5);
                 handleCreateShop();
               }}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl text-xs font-black shadow-lg shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl text-xs font-black shadow-lg shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-75 disabled:pointer-events-none"
             >
               <Sparkles className="w-4 h-4 text-amber-300 fill-amber-300" />
               <span>ساخت نهایی فروشگاه من با AI</span>

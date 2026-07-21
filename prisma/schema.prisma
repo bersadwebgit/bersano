@@ -821,7 +821,8 @@ model Package {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  shopSettings ShopSettings[]
+  shopSettings  ShopSettings[]
+  marketingPlans MarketingPlan[]
 }
 
 model SystemSetting {
@@ -891,8 +892,21 @@ model AiUsage {
   monthKey  String   @map("month_key") // e.g. "2026-06"
   createdAt DateTime @default(now()) @map("created_at")
 
+  // AI-008 (Phase C): durable usage/billing enrichment. All nullable + additive so legacy rows
+  // (operationType=null) keep counting toward the chat quota exactly as before.
+  operationType  String?  @map("operation_type") // 'chat' | 'embedding'
+  resolvedModel  String?  @map("resolved_model") // the model actually sent to the provider (AI-004)
+  status         String?  // 'success' | 'failed' | 'quota_exceeded'
+  costStatus     String?  @map("cost_status") // 'resolved' | 'unresolved'
+  costUsdDecimal Decimal? @map("cost_usd_decimal") @db.Decimal(14, 8) // precise billing currency
+  requestId      String?  @map("request_id")
+  durationMs     Int?     @map("duration_ms")
+  inputCount     Int?     @map("input_count") // embedding: number of inputs in the (batch) request
+  idempotencyKey String?  @unique @map("idempotency_key") // prevents duplicate usage on retry/resume
+
   @@index([shopId])
   @@index([shopId, monthKey])
+  @@index([shopId, operationType, monthKey])
 }
 
 model ShopDomain {
@@ -1110,4 +1124,140 @@ model AiPromptVersion {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([name, isActive])
+}
+
+// =====================================================================
+// Marketing CMS (platform brand website) — hybrid architecture.
+// SystemSetting keeps global singletons (announcement, contact, tracking).
+// These models hold structured, versionable, previewable page content.
+// Scope: platform marketing site only (NOT tenant storefronts).
+// =====================================================================
+
+model MarketingPage {
+  id            String  @id @default(cuid())
+  slug          String  @unique // e.g. "home", "about", "pricing"
+  title         String
+  status        String  @default("draft") // draft | published | scheduled | archived
+  // SEO
+  metaTitle     String? @db.Text
+  metaDesc      String? @db.Text
+  canonicalUrl  String?
+  ogImage       String?
+  noindex       Boolean @default(false)
+  structuredData String? @db.Text // optional raw JSON-LD, validated/sanitized before publish
+
+  publishedAt   DateTime?
+  scheduledAt   DateTime?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sections  MarketingSection[]
+  revisions MarketingRevision[]
+
+  @@index([status])
+  @@index([slug, status])
+}
+
+model MarketingSection {
+  id           String  @id @default(cuid())
+  pageId       String
+  page         MarketingPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  type         String // hero | featureGrid | pricing | comparison | faq | cta | trustBar | richText | ...
+  order        Int     @default(0)
+  enabled      Boolean @default(true)
+  content      Json    @default("{}") // JSONB: section-specific fields
+  themeVariant String  @default("surface") // surface | muted | inverse
+  anchorId     String? // in-page anchor
+  visibility   String  @default("all") // all | desktop | mobile
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([pageId])
+  @@index([pageId, order])
+}
+
+model MarketingRevision {
+  id         String  @id @default(cuid())
+  pageId     String
+  page       MarketingPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  snapshot   Json // full serialized page + sections at capture time
+  label      String? // "autosave" | "publish" | custom
+  isAutosave Boolean @default(false)
+  authorId   String?
+  authorName String?
+  createdAt  DateTime @default(now())
+
+  @@index([pageId])
+  @@index([pageId, createdAt])
+}
+
+model MarketingRedirect {
+  id         String  @id @default(cuid())
+  fromPath   String  @unique
+  toPath     String
+  statusCode Int     @default(301) // 301 | 302 | 307 | 308
+  enabled    Boolean @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([enabled])
+}
+
+model MediaAsset {
+  id         String  @id @default(cuid())
+  url        String
+  type       String  @default("image") // image | video
+  name       String
+  alt        String?
+  width      Int?
+  height     Int?
+  size       Int? // bytes
+  mime       String?
+  uploadedBy String?
+  createdAt  DateTime @default(now())
+
+  @@index([type])
+  @@index([createdAt])
+}
+
+model MarketingAuditLog {
+  id        String  @id @default(cuid())
+  actorId   String?
+  actorName String?
+  action    String // create | update | publish | rollback | delete | schedule
+  entity    String // page | section | plan | redirect | media | settings
+  entityId  String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([entity])
+  @@index([createdAt])
+}
+
+model MarketingPlan {
+  id           String  @id @default(cuid())
+  key          String  @unique // e.g. "start" | "professional" | "growth"
+  name         String
+  description  String? @db.Text
+  audience     String? // who it's for
+  priceLabel   String  @default("") // display price, supports "رایگان"
+  period       String  @default("") // "تومان / ماهانه"
+  annualPriceLabel String @default("")
+  badge        String?
+  ctaText      String  @default("شروع کنید")
+  ctaLink      String  @default("/register")
+  features     Json    @default("[]") // string[]
+  highlighted  Boolean @default(false)
+  isActive     Boolean @default(true)
+  order        Int     @default(0)
+  // Optional link to the billing Package that this display plan maps to
+  packageId    String?
+  package      Package? @relation(fields: [packageId], references: [id], onDelete: SetNull)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([isActive, order])
 }

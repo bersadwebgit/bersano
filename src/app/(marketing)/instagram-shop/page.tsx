@@ -1,6 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Sparkles, Check, Store, Heart, AlertCircle, ShoppingCart, Percent, Share2 } from 'lucide-react';
+import { buildMarketingMetadata } from '@/lib/marketing-seo';
+import StructuredData from '@/components/marketing/StructuredData';
+import { breadcrumbSchema } from '@/lib/marketing-schema';
+import RelatedLinks from '@/components/marketing/sections/RelatedLinks';
 
 const InstagramIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
   <svg
@@ -18,10 +22,12 @@ const InstagramIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
   </svg>
 );
 
-export const metadata: Metadata = {
-  title: 'ساخت فروشگاه برای پیج اینستاگرام | برسانا',
-  description: 'تبدیل پیج اینستاگرام به فروشگاه آنلاین هوشمند. از شر دایرکت‌های تکراری، پیگیری فیش کارت‌به‌کارت و مدیریت دستی انبار خلاص شوید و با کارت‌خوان اینترنتی بفروشید.',
-};
+export const metadata: Metadata = buildMarketingMetadata({
+  title: 'ساخت فروشگاه برای پیج اینستاگرام',
+  description:
+    'پیج اینستاگرام خود را به فروشگاه آنلاین هوشمند تبدیل کنید؛ بدون دایرکت‌های تکراری و پیگیری فیش کارت‌به‌کارت، با سبد خرید و پرداخت آنلاین بفروشید.',
+  path: '/instagram-shop',
+});
 
 export default function InstagramShopPage() {
   const pains = [
@@ -40,7 +46,13 @@ export default function InstagramShopPage() {
 
   return (
     <div className="text-right font-sans min-h-screen bg-slate-50 dark:bg-slate-950 pb-20">
-      
+      <StructuredData
+        data={breadcrumbSchema([
+          { name: 'خانه', path: '/' },
+          { name: 'فروشگاه اینستاگرامی', path: '/instagram-shop' },
+        ])}
+      />
+
       {/* Hero Section */}
       <section className="relative pt-16 pb-20 overflow-hidden text-center space-y-6">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-4">
@@ -133,6 +145,14 @@ export default function InstagramShopPage() {
           </div>
         </div>
       </section>
+
+      <RelatedLinks
+        links={[
+          { title: 'مقایسه با فروش در اینستاگرام', desc: 'ببینید چرا سبد خرید و پرداخت خودکار از دایرکت جلوتر است.', href: '/compare/instagram' },
+          { title: 'دیده‌شدن در گوگل', desc: 'با سئو و تولید محتوا مشتری جدید از جست‌وجو جذب کنید.', href: '/seo-content' },
+          { title: 'پرداخت و ارسال', desc: 'درگاه بومی و محاسبه خودکار هزینه ارسال و کد رهگیری.', href: '/payments-shipping' },
+        ]}
+      />
 
       {/* CTA Box */}
       <section className="py-16 text-center">

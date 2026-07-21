@@ -8,7 +8,7 @@ Business Rules & Safety Checks:
 3. Stock must be non-negative (0 or greater).
 4. No bulk deletion of products or categories unless explicitly requested and confirmed.
 5. Ensure no SQL injection, malicious code, or script tags in titles or descriptions.
-6. Verify that the model names are valid ("Product", "Category").
+6. Verify that the model names are valid ("Product", "Category", "ProductVariant", "Story", "DiscountCode").
 
 If the plan is safe and correct, approve it.
 If there are minor issues (e.g. a negative price or missing field), you can correct the plan and return the "correctedPlan".

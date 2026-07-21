@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { fetchJson, normalizeApiPath } from '@/lib/api-fetch';
+import { normalizeErrorMessage } from '@/lib/ai-agent-v2/core/error-normalizer';
 import { ensureThemeColorApplied } from '@/lib/theme-color-from-prompt';
 import { 
   Sparkles, 
@@ -94,7 +95,7 @@ function TypingDots() {
       {[0, 1, 2].map(i => (
         <span
           key={i}
-          className="w-1 h-1 rounded-full bg-indigo-400 animate-bounce"
+          className="w-1 h-1 rounded-full bg-primary-400 animate-bounce"
           style={{ animationDelay: `${i * 0.15}s`, animationDuration: '0.9s' }}
         />
       ))}
@@ -104,7 +105,7 @@ function TypingDots() {
 
 function PulseRing({ color = 'indigo' }: { color?: string }) {
   const colorMap: Record<string, string> = {
-    indigo: 'border-indigo-500/40',
+    indigo: 'border-primary-500/40',
     emerald: 'border-emerald-500/40',
     rose: 'border-rose-500/40',
     amber: 'border-amber-500/40',
@@ -244,7 +245,7 @@ function BlogPreviewCard({ title, summary, imageUrl, compact }: { title: string;
           <div className="w-full h-full flex items-center justify-center"><BookOpen size={24} className="text-gray-200 dark:text-gray-800 opacity-40" /></div>
         )}
       </div>
-      <div className="text-[10px] font-bold text-indigo-500 mb-1">وبلاگ</div>
+      <div className="text-[10px] font-bold text-primary-500 mb-1">وبلاگ</div>
       <h3 className="text-xs font-black text-gray-900 dark:text-white line-clamp-2 leading-normal mb-1">{title}</h3>
       {summary && <p className="text-[10px] text-gray-400 line-clamp-2 leading-relaxed">{summary}</p>}
       <div className="mt-2 pt-2.5 border-t border-gray-50 dark:border-gray-900 flex justify-between text-[9px] text-gray-400">
@@ -286,7 +287,7 @@ function SliderPreviewCard({ title, subtitle, imageUrl, linkText, compact }: { t
         {imageUrl ? (
           <img src={imageUrl} alt="" className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-indigo-500/10"><LayoutGrid size={32} className="text-indigo-500/40" /></div>
+          <div className="w-full h-full flex items-center justify-center bg-primary-500/10"><LayoutGrid size={32} className="text-primary-500/40" /></div>
         )}
         <div className="absolute inset-0 bg-gradient-to-l from-black/40 via-black/10 to-transparent flex flex-col justify-center p-4 text-white">
           <h3 className="text-[11px] font-black leading-tight line-clamp-1 mb-1">{title || 'عنوان اسلایدر'}</h3>
@@ -317,8 +318,8 @@ function DisplayPreviewPanel({ display }: { display: any }) {
 
   return (
     <div className="space-y-4">
-      <div className="bg-indigo-500/5 border border-indigo-500/10 rounded-xl p-4 flex items-center gap-3">
-        <Sparkles className="w-5 h-5 text-indigo-500 animate-pulse shrink-0" />
+      <div className="bg-primary-500/5 border border-primary-500/10 rounded-xl p-4 flex items-center gap-3">
+        <Sparkles className="w-5 h-5 text-primary-500 animate-pulse shrink-0" />
         <p className="text-xs text-slate-700 dark:text-slate-300 font-bold leading-relaxed">
           {summaryText}
         </p>
@@ -373,7 +374,7 @@ function DisplayPreviewPanel({ display }: { display: any }) {
                     </span>
                   </div>
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="p-2 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-500 rounded-xl">
+                    <div className="p-2 bg-primary-50 dark:bg-slate-950/40 text-primary-500 rounded-xl">
                       <Tag size={14} />
                     </div>
                     <span className="text-xs font-black text-slate-800 dark:text-white select-all font-mono tracking-wider bg-slate-50 dark:bg-slate-900/60 px-2 py-1 rounded-lg border border-slate-100 dark:border-slate-800">
@@ -463,7 +464,7 @@ function DisplayPreviewPanel({ display }: { display: any }) {
               return (
                 <div key={item.id || idx} className="bg-white dark:bg-gray-950 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 flex items-center justify-between relative overflow-hidden shadow-sm text-right">
                   <div className="flex items-center gap-2.5">
-                    <div className="p-2 bg-purple-50 dark:bg-indigo-950/40 text-purple-500 rounded-xl">
+                    <div className="p-2 bg-purple-50 dark:bg-slate-950/40 text-purple-500 rounded-xl">
                       <Folder size={14} />
                     </div>
                     <div>
@@ -501,11 +502,11 @@ function OrderPreviewCard({ action, printMode, targets, updates, explanation }: 
   return (
     <div className="w-full max-w-md bg-white dark:bg-gray-950 rounded-2xl border border-gray-100 dark:border-gray-800/80 p-4 shadow-sm text-right select-none space-y-4">
       <div className="flex items-center justify-between border-b border-gray-50 dark:border-gray-900 pb-2">
-        <span className="text-xs font-black text-indigo-500">
+        <span className="text-xs font-black text-primary-500">
           {action === 'update_status' ? 'به‌روزرسانی وضعیت سفارشات' : action === 'print_invoice' ? 'چاپ گروهی فاکتور/لیبل' : 'گزارش سفارشات'}
         </span>
         {printMode && (
-          <span className="text-[9px] font-bold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full">
+          <span className="text-[9px] font-bold bg-primary-50 dark:bg-slate-950/40 text-primary-600 dark:text-primary-400 px-2 py-0.5 rounded-full">
             {printMode === 'invoice' ? 'فاکتور خرید' : printMode === 'label' ? 'برچسب پستی' : 'فاکتور و برچسب'}
           </span>
         )}
@@ -524,19 +525,19 @@ function OrderPreviewCard({ action, printMode, targets, updates, explanation }: 
                 <div className="grid grid-cols-3 gap-1 text-[8px] font-bold text-center">
                   <div className="bg-white dark:bg-slate-950 border border-slate-200/60 dark:border-slate-800/60 p-1 rounded-lg">
                     <span className="text-slate-400 block mb-0.5">وضعیت عمومی</span>
-                    <span className={updates?.status && updates.status !== order.currentStatus ? 'text-indigo-600 dark:text-indigo-400 font-extrabold' : 'text-slate-600 dark:text-slate-400'}>
+                    <span className={updates?.status && updates.status !== order.currentStatus ? 'text-primary-600 dark:text-primary-400 font-extrabold' : 'text-slate-600 dark:text-slate-400'}>
                       {updates?.status || order.currentStatus}
                     </span>
                   </div>
                   <div className="bg-white dark:bg-slate-950 border border-slate-200/60 dark:border-slate-800/60 p-1 rounded-lg">
                     <span className="text-slate-400 block mb-0.5">وضعیت ارسال</span>
-                    <span className={updates?.shippingStatus && updates.shippingStatus !== order.currentShippingStatus ? 'text-indigo-600 dark:text-indigo-400 font-extrabold' : 'text-slate-600 dark:text-slate-400'}>
+                    <span className={updates?.shippingStatus && updates.shippingStatus !== order.currentShippingStatus ? 'text-primary-600 dark:text-primary-400 font-extrabold' : 'text-slate-600 dark:text-slate-400'}>
                       {updates?.shippingStatus || order.currentShippingStatus}
                     </span>
                   </div>
                   <div className="bg-white dark:bg-slate-950 border border-slate-200/60 dark:border-slate-800/60 p-1 rounded-lg">
                     <span className="text-slate-400 block mb-0.5">وضعیت پرداخت</span>
-                    <span className={updates?.paymentStatus && updates.paymentStatus !== order.currentPaymentStatus ? 'text-indigo-600 dark:text-indigo-400 font-extrabold' : 'text-slate-600 dark:text-slate-400'}>
+                    <span className={updates?.paymentStatus && updates.paymentStatus !== order.currentPaymentStatus ? 'text-primary-600 dark:text-primary-400 font-extrabold' : 'text-slate-600 dark:text-slate-400'}>
                       {updates?.paymentStatus || order.currentPaymentStatus}
                     </span>
                   </div>
@@ -612,7 +613,7 @@ function ReviewPreviewCard({ action, data, targetReviewIds, status, explanation,
   return (
     <div className="w-full max-w-md bg-white dark:bg-gray-950 rounded-2xl border border-gray-100 dark:border-gray-800/80 p-4 shadow-sm text-right select-none space-y-4">
       <div className="flex items-center justify-between border-b border-gray-50 dark:border-gray-900 pb-2">
-        <span className="text-xs font-black text-indigo-500">
+        <span className="text-xs font-black text-primary-500">
           {action === 'create' ? 'ایجاد نظر دستی جدید' : action === 'update_status' ? 'تغییر وضعیت نظرات' : action === 'delete' ? 'حذف نظرات' : 'گزارش نظرات'}
         </span>
         {action === 'create' && data?.rating && (
@@ -627,7 +628,7 @@ function ReviewPreviewCard({ action, data, targetReviewIds, status, explanation,
       {action === 'create' && data && (
         <div className="space-y-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-500 font-black text-[10px]">
+            <div className="w-8 h-8 rounded-full bg-primary-500/10 flex items-center justify-center text-primary-500 font-black text-[10px]">
               {data.userName ? data.userName.slice(0, 2) : 'کاربر'}
             </div>
             <div>
@@ -693,7 +694,7 @@ function PromptGuidePanel({ onUseSample }: { onUseSample: (prompt: string) => vo
     { key: 'stories', label: 'استوری', icon: <ImageIcon size={11} className="text-pink-500" />, keywords: 'استوری، تبلیغ، لینک محصول', example: 'استوری تبلیغاتی برای تخفیف ۳۰٪ آخر هفته با لینک به محصولات بساز', url: '/admin/stories' },
     { key: 'blog', label: 'وبلاگ و مقالات', icon: <FileText size={11} className="text-blue-500" />, keywords: 'مقاله، وبلاگ، بلاگ، سئو، دیدگاه، نظر', example: 'مقاله ۶۰۰ کلمه‌ای سئو شده درباره مزایای خرید آنلاین لوازم خانگی با لحن آموزشی و چند تیتر بنویس', url: '/admin/blog' },
     { key: 'discounts', label: 'تخفیف / کوپن', icon: <Tag size={11} className="text-amber-500" />, keywords: 'تخفیف، کوپن، کد تخفیف', example: 'کد تخفیف SUMMER30 با ۳۰٪ تخفیف تا پایان ماه بساز', url: '/admin/discounts' },
-    { key: 'categories', label: 'دسته‌بندی و برند', icon: <Layers size={11} className="text-indigo-500" />, keywords: 'دسته، برند، کتگوری', example: 'دسته‌بندی «لوازم الکترونیکی» با زیردسته موبایل و تبلت بساز', url: '/admin/categories' },
+    { key: 'categories', label: 'دسته‌بندی و برند', icon: <Layers size={11} className="text-primary-500" />, keywords: 'دسته، برند، کتگوری', example: 'دسته‌بندی «لوازم الکترونیکی» با زیردسته موبایل و تبلت بساز', url: '/admin/categories' },
     { key: 'orders', label: 'سفارشات', icon: <ShoppingBag size={11} className="text-violet-500" />, keywords: 'سفارش، فاکتور، پرینت، وضعیت، گزارش فروش', example: 'فاکتور همه سفارش‌های «پرداخت‌شده» دیروز را چاپ کن و وضعیتشان را به «در حال آماده‌سازی» تغییر بده', url: '/admin/orders' },
     { key: 'reviews', label: 'نظرات مشتریان', icon: <MessageSquare size={11} className="text-pink-500" />, keywords: 'نظر، نظرات، کامنت، تایید نظر، ثبت نظر', example: 'نظرات در انتظار تایید را تایید کن یا برای اسپیکر سونی یک نظر ۵ ستاره ثبت کن', url: '/admin/reviews' },
     { key: 'settings', label: 'تنظیمات عمومی', icon: <Settings size={11} className="text-rose-500" />, keywords: 'تنظیمات، تم، رنگ، ارز، نام فروشگاه، زبان، درگاه', example: 'رنگ تم اصلی سایت را قهوه‌ای (#6f4e37) قرار بده و واحد پول را تومان کن', url: '/admin/settings' },
@@ -704,7 +705,7 @@ function PromptGuidePanel({ onUseSample }: { onUseSample: (prompt: string) => vo
     { key: 'footer', label: 'تنظیمات فوتر', icon: <Layout size={11} className="text-rose-500" />, keywords: 'فوتر، کپی‌رایت، ستون لینک، نماد اعتماد، درباره ما', example: 'در فوتر سایت، بخش درباره ما را آپدیت کن و لینک کانال تلگرام را قرار بده', url: '/admin/footer' },
     { key: 'header', label: 'تنظیمات هدر', icon: <Layout size={11} className="text-blue-500" />, keywords: 'هدر، منو، بنر هدر، منوی بالا، منوی ناوبری', example: 'بنر بالای هدر سایت را با متن «ارسال رایگان برای خریدهای بالای ۵۰۰ هزار تومان» فعال و رنگش را قرمز کن', url: '/admin/header' },
     { key: 'users', label: 'مشتریان / باشگاه مشتریان', icon: <Users size={11} className="text-amber-500" />, keywords: 'کاربر، مشتری، بلاک، امتیاز، باشگاه مشتریان، گروه', example: 'امتیاز باشگاه مشتریان آقای علی علوی را ۵۰۰ امتیاز افزایش بده و او را به گروه VIP منتقل کن', url: '/admin/users' },
-    { key: 'tickets', label: 'تیکت‌های مشتریان', icon: <MessageSquare size={11} className="text-indigo-500" />, keywords: 'تیکت، تیکت‌ها، پشتیبانی، پیام، پاسخ', example: 'به آخرین تیکت دریافتی مشتری پاسخ بده و بگو مشکل بررسی و فاکتور لغو شد', url: '/admin/tickets' },
+    { key: 'tickets', label: 'تیکت‌های مشتریان', icon: <MessageSquare size={11} className="text-primary-500" />, keywords: 'تیکت، تیکت‌ها، پشتیبانی، پیام، پاسخ', example: 'به آخرین تیکت دریافتی مشتری پاسخ بده و بگو مشکل بررسی و فاکتور لغو شد', url: '/admin/tickets' },
     { key: 'system_tickets', label: 'تیکت به پشتیبانی کل', icon: <MessageSquare size={11} className="text-purple-500" />, keywords: 'پشتیبانی کل، تیکت سیستم، فنی، تیکت به پلتفرم', example: 'یک تیکت فنی به پشتیبانی کل بفرست و بنویس نیاز به درگاه پرداخت جدید دارم', url: '/admin/system-tickets' },
     { key: 'staff', label: 'مدیریت همکاران', icon: <Users size={11} className="text-slate-500" />, keywords: 'همکار، پرسنل، کارمند، ادمین، پشتیبان، دسترسی', example: 'یک همکار جدید با دسترسی پشتیبان (support) با شماره همراه ۰۹۱۲۳۴۵۶۷۸۹ و رمز ۱۲۳۴۵۶ بساز', url: '/admin/staff' },
     { key: 'profile', label: 'پروفایل مدیر', icon: <User size={11} className="text-rose-500" />, keywords: 'پروفایل، رمز من، آواتار، ایمیل من، نام ادمین', example: 'نام من را در پروفایل به علی علوی تغییر بده و شماره موبایلم را ویرایش کن', url: '/admin/profile' },
@@ -820,9 +821,9 @@ function PromptGuidePanel({ onUseSample }: { onUseSample: (prompt: string) => vo
                   </div>
                 </div>
               ))}
-              <div className="bg-indigo-500/5 border border-indigo-500/15 rounded-xl p-3 flex items-start gap-2">
-                <Info size={13} className="text-indigo-500 shrink-0 mt-0.5" />
-                <p className="text-[10px] text-indigo-700 dark:text-indigo-300 font-bold leading-relaxed">
+              <div className="bg-primary-500/5 border border-primary-500/15 rounded-xl p-3 flex items-start gap-2">
+                <Info size={13} className="text-primary-500 shrink-0 mt-0.5" />
+                <p className="text-[10px] text-primary-700 dark:text-primary-300 font-bold leading-relaxed">
                   پس از ارسال دستور، طرح اجرایی گام‌به‌گام نمایش داده می‌شود. هر گام را پیش‌نمایش کنید، ویرایش کنید و سپس ثبت نهایی را بزنید.
                 </p>
               </div>
@@ -841,7 +842,7 @@ function PromptGuidePanel({ onUseSample }: { onUseSample: (prompt: string) => vo
                     {domain.url && (
                       <a
                         href={domain.url}
-                        className="text-[9px] text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 font-black transition-colors"
+                        className="text-[9px] text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 font-black transition-colors"
                       >
                         ورود به بخش ←
                       </a>
@@ -973,8 +974,8 @@ function SmartBrainPanel({
 }) {
   if (isLoading && !memory) {
     return (
-      <div className="bg-white/80 dark:bg-[#0d1527]/80 backdrop-blur-md border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 shadow-sm min-h-[200px]">
-        <Loader2 size={24} className="animate-spin text-purple-500" />
+      <div className="bg-white/80 dark:bg-[#0d1527]/80 backdrop-blur-md border border-slate-200/50 dark:border-slate-800/60 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 shadow-xs min-h-[200px]">
+        <Loader2 size={24} className="animate-spin text-primary-500" />
         <span className="text-[11px] text-slate-500 font-bold">در حال بارگذاری حافظه هوشمند...</span>
       </div>
     );
@@ -988,11 +989,11 @@ function SmartBrainPanel({
   const hasDomains = Object.values(domains).some((arr: any) => arr && arr.length > 0);
 
   return (
-    <div className="bg-white/80 dark:bg-[#0d1527]/80 backdrop-blur-md border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 space-y-4 shadow-sm text-right">
+    <div className="bg-white/80 dark:bg-[#0d1527]/80 backdrop-blur-md border border-slate-200/50 dark:border-slate-800/60 rounded-2xl p-4 space-y-4 shadow-xs text-right">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/60 pb-3">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-xl bg-purple-500/15 text-purple-500 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-xl bg-primary-500/15 text-primary-500 flex items-center justify-center">
             <Brain size={14} className="animate-pulse" />
           </div>
           <div>
@@ -1063,14 +1064,14 @@ function SmartBrainPanel({
       {/* Top Patterns Section */}
       <div className="space-y-2 border-t border-slate-100 dark:border-slate-800/60 pt-3">
         <span className="text-[10px] font-black text-slate-800 dark:text-white flex items-center gap-1.5">
-          <Activity size={11} className="text-indigo-500" />
+          <Activity size={11} className="text-primary-500" />
           الگوهای رفتاری پرتکرار
         </span>
         {patterns.length > 0 ? (
           <ul className="space-y-1.5">
             {patterns.map((p: string, i: number) => (
               <li key={i} className="text-[10px] text-slate-600 dark:text-slate-400 font-bold flex items-start gap-2 bg-slate-50 dark:bg-slate-950/30 p-2 rounded-xl border border-slate-100 dark:border-slate-800/30">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500/70 mt-1.5 shrink-0" />
+                <span className="w-1.5 h-1.5 rounded-full bg-primary-500/70 mt-1.5 shrink-0" />
                 <span>{p}</span>
               </li>
             ))}
@@ -1086,7 +1087,7 @@ function SmartBrainPanel({
       {hasDomains && (
         <div className="space-y-2 border-t border-slate-100 dark:border-slate-800/60 pt-3">
           <span className="text-[10px] font-black text-slate-800 dark:text-white flex items-center gap-1.5">
-            <Folder size={11} className="text-purple-500" />
+            <Folder size={11} className="text-primary-500" />
             الگوهای تفکیک‌شده حوزه‌ها
           </span>
           <div className="space-y-2 max-h-[160px] overflow-y-auto custom-scrollbar pr-0.5">
@@ -1103,13 +1104,13 @@ function SmartBrainPanel({
               };
               return (
                 <div key={domain} className="space-y-1">
-                  <span className="text-[9px] font-black text-purple-600 dark:text-purple-400 block bg-purple-500/5 px-2 py-0.5 rounded-md w-fit">
+                  <span className="text-[9px] font-black text-primary-600 dark:text-primary-400 block bg-primary-500/5 px-2 py-0.5 rounded-md w-fit">
                     حوزه {domainLabels[domain] || domain}
                   </span>
                   <ul className="space-y-1">
                     {arr.map((p: string, i: number) => (
                       <li key={i} className="text-[9px] text-slate-600 dark:text-slate-400 font-bold flex items-start gap-1.5 pl-1">
-                        <span className="w-1 h-1 rounded-full bg-purple-500/50 mt-1.5 shrink-0" />
+                        <span className="w-1 h-1 rounded-full bg-primary-500/50 mt-1.5 shrink-0" />
                         <span>{p}</span>
                       </li>
                     ))}
@@ -1660,7 +1661,10 @@ export default function AgentPage() {
         }),
       });
       const data = rawData as any;
-      if (!res.ok) throw new Error(data.error || 'خطا در تحلیل دستور توسط هوش مصنوعی مرکزی.');
+      if (!res.ok) {
+        const errorMsg = data.error?.message || (typeof data.error === 'string' ? data.error : null) || 'خطا در تحلیل دستور توسط هوش مصنوعی مرکزی.';
+        throw new Error(errorMsg);
+      }
       
       if (data.success && data.responseMode === 'display' && data.display) {
         // Refresh memory in case the AI learned something new
@@ -1789,7 +1793,7 @@ export default function AgentPage() {
         throw new Error('طرح اجرایی معتبری یافت نشد. لطفاً دستور واضح‌تری بنویسید.');
       }
     } catch (err: any) {
-      const errMsg = err.message || 'خطای شبکه در ارتباط با سرور.';
+      const errMsg = normalizeErrorMessage(err);
       setErrorPlan(errMsg);
 
       // Append error message to chat
@@ -2210,7 +2214,10 @@ export default function AgentPage() {
 
       const { res, data } = await fetchJson(normalizeApiPath(task.aiControlEndpoint), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bodyPayload) });
       const output = data as any;
-      if (!res.ok) throw new Error(output.error || `خطا در پردازش توسط هوش مصنوعی زیرمجموعه ${task.title}`);
+      if (!res.ok) {
+        const errorMsg = output.error?.message || (typeof output.error === 'string' ? output.error : null) || `خطا در پردازش توسط هوش مصنوعی زیرمجموعه ${task.title}`;
+        throw new Error(errorMsg);
+      }
 
       // Apply default images if none are present
       if (task.target === 'products') {
@@ -2639,7 +2646,10 @@ export default function AgentPage() {
           body: saveMethod !== 'DELETE' ? JSON.stringify(savePayload) : undefined 
         });
         saveData = saveDataResult;
-        if (!saveRes.ok) throw new Error(saveData.error || `خطا در ذخیره نهایی اطلاعات در ${task.title}`);
+        if (!saveRes.ok) {
+          const errorMsg = saveData.error?.message || (typeof saveData.error === 'string' ? saveData.error : null) || `خطا در ذخیره نهایی اطلاعات در ${task.title}`;
+          throw new Error(errorMsg);
+        }
         setTaskStatuses(prev => ({ ...prev, [task.id]: 'completed' }));
         if (task.target === 'settings' || task.target === 'about_us' || task.target === 'contact_us') {
           fetchAiMemory();
@@ -3260,13 +3270,13 @@ export default function AgentPage() {
       blog: <FileText {...props} className="text-blue-400" />,
       stories: <ImageIcon {...props} className="text-pink-400" />,
       discounts: <Tag {...props} className="text-amber-400" />,
-      categories: <Layers {...props} className="text-indigo-400" />,
+      categories: <Layers {...props} className="text-primary-400" />,
       orders: <ShoppingBag {...props} className="text-violet-400" />,
       reviews: <MessageSquare {...props} className="text-pink-400" />,
       settings: <Settings {...props} className="text-rose-400" />,
       custom_home: <Home {...props} className="text-orange-400" />,
       media: <ImageIcon {...props} className="text-teal-400" />,
-      shoppable: <ExternalLink {...props} className="text-indigo-400" />,
+      shoppable: <ExternalLink {...props} className="text-primary-400" />,
       footer: <LayoutGrid {...props} className="text-slate-400" />,
       header: <Layout {...props} className="text-teal-400" />,
       users: <Users {...props} className="text-emerald-400" />,
@@ -3301,18 +3311,20 @@ export default function AgentPage() {
       {showIntroSweep && <div className="ai-light-sweep-overlay" aria-hidden="true" />}
 
       {/* 1. NEW BEAUTIFUL HIGH-TECH HEADER */}
-      <header className="flex items-center justify-between gap-3 px-4 md:px-6 py-3 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-[#0d1527]/80 backdrop-blur-md relative z-50 transition-colors duration-500 shrink-0">
+      <header className="flex items-center justify-between gap-3 px-4 md:px-6 py-3 border-b border-slate-200/50 dark:border-slate-800/60 bg-white/75 dark:bg-[#0d1527]/75 backdrop-blur-md relative z-50 shrink-0">
         {/* Right (RTL start): brand + stage indicator */}
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 rounded-xl flex items-center justify-center font-black text-sm text-white shadow-lg shadow-indigo-500/20 shrink-0">
-            AI
+          <div className="relative w-10 h-10 rounded-xl bg-gradient-to-tr from-primary-500 to-primary-600 flex items-center justify-center font-black text-sm text-white shadow-md shadow-primary-500/20 shrink-0 overflow-hidden group">
+            <span className="relative z-10 font-black tracking-wider text-xs">AI</span>
+            <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="absolute -inset-1 rounded-xl border border-primary-400/30 animate-pulse" />
           </div>
           <div className="flex flex-col text-right min-w-0">
-            <span className="text-sm font-black text-slate-800 dark:text-white leading-tight truncate">دستیار فوق‌هوشمند ایجنت</span>
+            <span className="text-xs font-black text-slate-800 dark:text-white leading-tight truncate">دستیار فوق‌هوشمند ایجنت</span>
             <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold mt-0.5 flex items-center gap-1.5">
               <span className="truncate">{profile?.shopName || 'فروشگاه'}</span>
               {plan && (
-                <span className="px-1.5 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[9px] font-black">
+                <span className="px-1.5 py-0.5 rounded-md bg-primary-500/10 text-primary-600 dark:text-primary-400 text-[9px] font-black">
                   مرحله {wizardStep === 1 ? '۱' : wizardStep === 2 ? '۲' : '۳'} از ۳
                 </span>
               )}
@@ -3326,15 +3338,15 @@ export default function AgentPage() {
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             title={isSidebarOpen ? "بستن تاریخچه گفتگوها" : "مشاهده تاریخچه گفتگوها"}
-            className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-all text-xs font-black shadow-sm cursor-pointer ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all text-[11px] font-black shadow-xs cursor-pointer ${
               isSidebarOpen
-                ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-600 dark:text-indigo-400'
-                : 'bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700/80 border-slate-200 dark:border-slate-700/40 text-slate-700 dark:text-slate-200'
+                ? 'bg-primary-500/10 border-primary-500/20 text-primary-600 dark:text-primary-400'
+                : 'bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-700/60 border-slate-200/50 dark:border-slate-800/40 text-slate-700 dark:text-slate-300'
             }`}
           >
-            <MessageSquare size={14} className={isSidebarOpen ? 'text-indigo-500' : 'text-slate-500'} />
+            <MessageSquare size={13} className={isSidebarOpen ? 'text-primary-500' : 'text-slate-500'} />
             <span className="hidden sm:inline">تاریخچه</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-200 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 font-black">
+            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-black">
               {sessions.length.toLocaleString('fa-IR')}
             </span>
           </button>
@@ -3343,9 +3355,9 @@ export default function AgentPage() {
           <button
             onClick={handleCreateNewSession}
             title="شروع گفتگوی جدید (پاک کردن طرح فعلی)"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition-all text-xs font-black shadow-sm border border-indigo-600/20 cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary-500 hover:bg-primary-600 active:scale-[0.98] text-white transition-all text-[11px] font-black shadow-xs border border-primary-500/10 cursor-pointer"
           >
-            <Plus size={14} />
+            <Plus size={13} />
             <span>چت جدید</span>
           </button>
 
@@ -3353,10 +3365,10 @@ export default function AgentPage() {
           <Link
             href="/admin/dashboard"
             title="خروج از حالت ایجنت و بازگشت به داشبورد"
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-all text-xs font-black shadow-sm border border-slate-200 dark:border-slate-700/40"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-700/60 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all text-[11px] font-black shadow-xs border border-slate-200/50 dark:border-slate-800/40"
           >
-            <LayoutDashboard size={14} />
-            <span className="hidden sm:inline">خروج از ایجنت</span>
+            <LayoutDashboard size={13} />
+            <span className="hidden sm:inline">خروج</span>
           </Link>
         </div>
       </header>
@@ -3368,58 +3380,63 @@ export default function AgentPage() {
       {isSidebarOpen && (
         <>
           <div
-            className="fixed inset-0 bg-black/40 z-[60] lg:hidden"
+            className="fixed inset-0 bg-black/30 backdrop-blur-xs z-[60] lg:hidden"
             onClick={() => setIsSidebarOpen(false)}
             aria-hidden="true"
           />
-          <div className="fixed inset-y-0 right-0 z-[70] w-64 lg:relative lg:inset-auto lg:z-auto bg-white/95 dark:bg-[#0d1527]/95 lg:bg-transparent lg:dark:bg-transparent p-4 lg:p-0 lg:pl-4 lg:pr-1 lg:w-52 flex flex-col gap-3 shadow-lg lg:shadow-none shrink-0 lg:border-l lg:border-slate-200/50 lg:dark:border-slate-850">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase flex items-center gap-1.5 select-none">
-              <MessageSquare size={11} />
-              تاریخچه گفتگوها
-            </span>
-            <button
-              onClick={handleCreateNewSession}
-              className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/50 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-all cursor-pointer"
-              title="گفتگوی جدید"
-            >
-              <Plus size={12} />
-            </button>
-          </div>
+          <div className="fixed inset-y-0 right-0 z-[70] w-64 lg:relative lg:inset-auto lg:z-auto bg-white/95 dark:bg-[#0d1527]/95 lg:bg-transparent lg:dark:bg-transparent p-4 lg:p-0 lg:pl-4 lg:pr-1 lg:w-52 flex flex-col gap-3 shadow-lg lg:shadow-none shrink-0 lg:border-l lg:border-slate-200/40 lg:dark:border-slate-800/50">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[9px] font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase flex items-center gap-1.5 select-none">
+                <MessageSquare size={11} />
+                تاریخچه گفتگوها
+              </span>
+              <button
+                onClick={handleCreateNewSession}
+                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/50 text-slate-450 hover:text-slate-700 dark:hover:text-slate-200 transition-all cursor-pointer"
+                title="گفتگوی جدید"
+              >
+                <Plus size={11} />
+              </button>
+            </div>
 
-          {/* Sessions List */}
-          <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar pr-1">
-            {sessions.map(s => {
-              const isActive = s.id === activeSessionId;
-              return (
-                <div
-                  key={s.id}
-                  onClick={() => {
-                    setActiveSessionId(s.id);
-                    if (window.matchMedia('(max-width: 1023px)').matches) setIsSidebarOpen(false);
-                  }}
-                  title={s.title}
-                  className={`group flex items-center justify-between p-2 px-2.5 rounded-xl border transition-all cursor-pointer ${
-                    isActive
-                      ? 'bg-slate-100 dark:bg-slate-800/50 border-slate-200/50 dark:border-slate-700/30 text-slate-800 dark:text-slate-200 font-bold'
-                      : 'bg-transparent border-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/20 hover:text-slate-700 dark:hover:text-slate-300'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <MessageSquare size={11} className={`shrink-0 transition-colors ${isActive ? 'text-indigo-500' : 'text-slate-400 dark:text-slate-500'}`} />
-                    <span className="text-[11px] truncate">{s.title}</span>
-                  </div>
-                  <button
-                    onClick={(e) => handleDeleteSession(s.id, e)}
-                    className="p-1 rounded-md text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-all opacity-0 group-hover:opacity-100"
-                    title="حذف گفتگو"
+            {/* Sessions List */}
+            <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar pr-1">
+              {sessions.map(s => {
+                const isActive = s.id === activeSessionId;
+                return (
+                  <div
+                    key={s.id}
+                    onClick={() => {
+                      setActiveSessionId(s.id);
+                      if (window.matchMedia('(max-width: 1023px)').matches) setIsSidebarOpen(false);
+                    }}
+                    title={s.title}
+                    className={`group flex items-center justify-between p-2 px-2.5 rounded-xl border transition-all cursor-pointer ${
+                      isActive
+                        ? 'bg-primary-500/5 dark:bg-primary-500/10 border-primary-500/20 dark:border-primary-500/10 text-primary-600 dark:text-primary-400 font-bold border-r-2 border-r-primary-500 rounded-r-none'
+                        : 'bg-transparent border-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/10 hover:text-slate-700 dark:hover:text-slate-300'
+                    }`}
                   >
-                    <Trash2 size={11} />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="relative shrink-0">
+                        <MessageSquare size={11} className={`transition-colors ${isActive ? 'text-primary-500' : 'text-slate-400 dark:text-slate-500'}`} />
+                        {isActive && (
+                          <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-primary-500 rounded-full animate-ping" />
+                        )}
+                      </div>
+                      <span className="text-[11px] truncate leading-none mt-0.5">{s.title}</span>
+                    </div>
+                    <button
+                      onClick={(e) => handleDeleteSession(s.id, e)}
+                      className="p-1 rounded-md text-slate-405 hover:text-rose-500 hover:bg-rose-500/10 transition-all opacity-0 group-hover:opacity-100"
+                      title="حذف گفتگو"
+                    >
+                      <Trash2 size={11} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </>
       )}
@@ -3436,84 +3453,92 @@ export default function AgentPage() {
         ) : (
           <>
             {/* Wizard Stepper Header */}
-            <div className="bg-white dark:bg-[#0d1527] border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 mb-5 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-sm shadow-blue-500/20">
-              <Brain className="w-5 h-5 animate-pulse" />
+            <div className="bg-white dark:bg-[#0d1527] border border-slate-200/50 dark:border-slate-800/60 rounded-2xl p-4 mb-5 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-xs shadow-primary-500/10">
+                  <Brain className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <h1 className="text-xs font-black text-slate-800 dark:text-white leading-tight">
+                    {activeSession?.title || 'دستیار هوشمند فروشگاه'}
+                  </h1>
+                  <p className="text-[9px] text-slate-500 dark:text-slate-400 font-bold mt-0.5">
+                    کنترل کامل فروشگاه و تولید محتوا با قدرت هوش مصنوعی
+                  </p>
+                </div>
+              </div>
+
+              {/* Stepper Steps */}
+              <div className="flex items-center gap-2 md:gap-4 select-none">
+                {/* Step 1 */}
+                <button
+                  onClick={() => {
+                    if (plan) setWizardStep(1);
+                  }}
+                  disabled={!plan}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-xs font-bold cursor-pointer ${
+                    wizardStep === 1
+                      ? 'bg-primary-500 border-primary-500 text-white shadow-md shadow-primary-500/10'
+                      : wizardStep > 1
+                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                      : 'bg-slate-50 dark:bg-slate-900 border-slate-200/50 dark:border-slate-800/55 text-slate-400 dark:text-slate-500'
+                  }`}
+                >
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
+                    wizardStep === 1 ? 'bg-white text-primary-600' : wizardStep > 1 ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-600'
+                  }`}>
+                    {wizardStep > 1 ? <Check size={10} /> : '۱'}
+                  </span>
+                  <span>توضیح طرح</span>
+                </button>
+
+                {/* Line */}
+                <div className={`h-[2px] w-6 transition-colors duration-300 ${wizardStep > 1 ? 'bg-emerald-500/50' : 'bg-slate-200 dark:bg-slate-800'}`} />
+
+                {/* Step 2 */}
+                <button
+                  onClick={() => {
+                    if (plan) setWizardStep(2);
+                  }}
+                  disabled={!plan}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-xs font-bold cursor-pointer ${
+                    wizardStep === 2
+                      ? 'bg-primary-500 border-primary-500 text-white shadow-md shadow-primary-500/10'
+                      : wizardStep > 2
+                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                      : 'bg-slate-50 dark:bg-slate-900 border-slate-200/50 dark:border-slate-800/55 text-slate-400 dark:text-slate-500'
+                  }`}
+                >
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
+                    wizardStep === 2 ? 'bg-white text-primary-600' : wizardStep > 2 ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-600'
+                  }`}>
+                    {wizardStep > 2 ? <Check size={10} /> : '۲'}
+                  </span>
+                  <span>پیش‌نمایش و ویرایش</span>
+                </button>
+
+                {/* Line */}
+                <div className={`h-[2px] w-6 transition-colors duration-300 ${wizardStep > 2 ? 'bg-emerald-500/50' : 'bg-slate-200 dark:bg-slate-800'}`} />
+
+                {/* Step 3 */}
+                <button
+                  onClick={() => {
+                    if (plan && anyTaskCompleted) setWizardStep(3);
+                  }}
+                  disabled={!plan || !anyTaskCompleted}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-xs font-bold cursor-pointer ${
+                    wizardStep === 3
+                      ? 'bg-primary-500 border-primary-500 text-white shadow-md shadow-primary-500/10'
+                      : 'bg-slate-50 dark:bg-slate-900 border-slate-200/50 dark:border-slate-800/55 text-slate-450 dark:text-slate-500'
+                  }`}
+                >
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
+                    wizardStep === 3 ? 'bg-white text-primary-600' : 'bg-slate-200 dark:bg-slate-800 text-slate-600'
+                  }`}>۳</span>
+                  <span>ثبت نهایی و اجرا</span>
+                </button>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xs font-black text-slate-800 dark:text-white leading-tight">
-                {activeSession?.title || 'دستیار هوشمند فروشگاه'}
-              </h1>
-              <p className="text-[9px] text-slate-500 dark:text-slate-400 font-bold mt-0.5">
-                کنترل کامل فروشگاه و تولید محتوا با قدرت هوش مصنوعی
-              </p>
-            </div>
-          </div>
-
-          {/* Stepper Steps */}
-          <div className="flex items-center gap-2 md:gap-4 select-none">
-            {/* Step 1 */}
-            <button
-              onClick={() => {
-                if (plan) setWizardStep(1);
-              }}
-              disabled={!plan}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all text-xs font-bold ${
-                wizardStep === 1
-                  ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/15'
-                  : 'bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'
-              }`}
-            >
-              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
-                wizardStep === 1 ? 'bg-white text-blue-600' : 'bg-slate-200 dark:bg-slate-800 text-slate-600'
-              }`}>۱</span>
-              <span>توضیح طرح</span>
-            </button>
-
-            {/* Line */}
-            <div className="h-px w-6 bg-slate-200 dark:bg-slate-800" />
-
-            {/* Step 2 */}
-            <button
-              onClick={() => {
-                if (plan) setWizardStep(2);
-              }}
-              disabled={!plan}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all text-xs font-bold ${
-                wizardStep === 2
-                  ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/15'
-                  : 'bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'
-              }`}
-            >
-              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
-                wizardStep === 2 ? 'bg-white text-blue-600' : 'bg-slate-200 dark:bg-slate-800 text-slate-600'
-              }`}>۲</span>
-              <span>پیش‌نمایش و ویرایش</span>
-            </button>
-
-            {/* Line */}
-            <div className="h-px w-6 bg-slate-200 dark:bg-slate-800" />
-
-            {/* Step 3 */}
-            <button
-              onClick={() => {
-                if (plan && anyTaskCompleted) setWizardStep(3);
-              }}
-              disabled={!plan || !anyTaskCompleted}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all text-xs font-bold ${
-                wizardStep === 3
-                  ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/15'
-                  : 'bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'
-              }`}
-            >
-              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
-                wizardStep === 3 ? 'bg-white text-blue-600' : 'bg-slate-200 dark:bg-slate-800 text-slate-600'
-              }`}>۳</span>
-              <span>ثبت نهایی و اجرا</span>
-            </button>
-          </div>
-        </div>
 
         {/* Wizard Content Body */}
         <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0">
@@ -3566,7 +3591,7 @@ export default function AgentPage() {
                           <div className="max-w-[85%] bg-white dark:bg-[#0d1527] border border-slate-200 dark:border-slate-800 rounded-2xl rounded-tl-sm px-4 py-2.5 shadow-sm">
                             <p className="text-[12px] font-bold text-slate-700 dark:text-slate-200 leading-relaxed whitespace-pre-wrap break-words">{m.text}</p>
                             {isDisplay && (
-                              <span className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[9px] font-black">
+                              <span className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-lg bg-primary-500/10 text-primary-600 dark:text-primary-400 text-[9px] font-black">
                                 <Eye size={10} /> نمایش {(planAny.display?.items?.length || 0).toLocaleString('fa-IR')} آیتم
                               </span>
                             )}
@@ -3621,7 +3646,7 @@ export default function AgentPage() {
                           return (
                             <div key={m.id} className="flex justify-start" dir="rtl">
                               <div className="max-w-[85%] bg-white dark:bg-[#0d1527] border border-slate-200 dark:border-slate-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-xs">
-                                <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 mb-1">
+                                <div className="flex items-center gap-2 text-primary-600 dark:text-primary-400 mb-1">
                                   <Sparkles size={14} className="animate-pulse" />
                                   <span className="text-[11px] font-black">دستیار هوشمند</span>
                                 </div>
@@ -3651,7 +3676,7 @@ export default function AgentPage() {
                         return (
                           <div key={m.id} className="flex justify-start space-y-3 flex-col" dir="rtl">
                             <div className="max-w-[85%] bg-white dark:bg-[#0d1527] border border-slate-200 dark:border-slate-800 rounded-2xl rounded-tl-sm px-4 py-3 shadow-xs animate-fadeIn">
-                              <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 mb-1">
+                              <div className="flex items-center gap-2 text-primary-600 dark:text-primary-400 mb-1">
                                 <Sparkles size={14} className="animate-pulse" />
                                 <span className="text-[11px] font-black">دستیار هوشمند</span>
                               </div>
@@ -3701,7 +3726,7 @@ export default function AgentPage() {
                     </div>
 
                     {/* Composer at the bottom of the chat history */}
-                    <div className="pt-3 border-t border-slate-200/60 dark:border-slate-800/60 space-y-3 bg-slate-50/50 dark:bg-slate-950/20 p-3 rounded-2xl">
+                    <div className="pt-3 border-t border-slate-200/50 dark:border-slate-800/60 space-y-3 bg-slate-50/50 dark:bg-slate-950/10 p-3 rounded-2xl">
                       {errorPlan && (
                         <div className="bg-rose-500/5 border border-rose-500/20 text-rose-700 dark:text-rose-400 rounded-xl p-3 text-[11px] font-bold leading-relaxed space-y-1 animate-fadeIn" dir="rtl">
                           <div className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400">
@@ -3712,7 +3737,7 @@ export default function AgentPage() {
                         </div>
                       )}
                       <form onSubmit={(e) => handleGeneratePlan(e)}>
-                        <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl focus-within:border-blue-400 dark:focus-within:border-blue-700 focus-within:shadow-xs transition-all overflow-hidden">
+                        <div className="bg-white dark:bg-gray-950 border border-slate-200/55 dark:border-gray-800 rounded-2xl focus-within:border-primary-400 dark:focus-within:border-primary-600 focus-within:shadow-xs transition-all overflow-hidden">
                           <textarea
                             value={prompt}
                             onChange={(e) => setPrompt(e.target.value)}
@@ -3720,15 +3745,15 @@ export default function AgentPage() {
                             placeholder="خواسته‌ات را بنویس..."
                             disabled={isLoadingPlan}
                             rows={2}
-                            className="w-full px-4 pt-3 pb-2 bg-transparent border-0 outline-none focus:ring-0 text-[12px] font-semibold text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 resize-none leading-relaxed"
+                            className="w-full px-4 pt-3 pb-2 bg-transparent border-0 outline-none focus:ring-0 text-[12px] font-semibold text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-650 resize-none leading-relaxed"
                             dir="rtl"
                           />
                           <div className="flex items-center justify-between px-4 py-2 bg-white dark:bg-gray-950 border-t border-slate-100 dark:border-gray-800">
-                            <span className="text-[9px] text-gray-400 dark:text-gray-600 font-bold">Enter برای ارسال — Shift+Enter برای خط جدید</span>
+                            <span className="text-[9px] text-gray-400 dark:text-gray-500 font-bold">Enter برای ارسال — Shift+Enter برای خط جدید</span>
                             <button
                               type="submit"
                               disabled={isLoadingPlan || !prompt.trim()}
-                              className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-[11px] font-black transition-all cursor-pointer"
+                              className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-primary-500 hover:bg-primary-600 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed text-white text-[11px] font-black transition-all cursor-pointer"
                             >
                               {isLoadingPlan ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
                               <span>ارسال</span>
@@ -3743,13 +3768,13 @@ export default function AgentPage() {
                     {/* Minimal AI greeting */}
                     <div className="flex flex-col items-center text-center gap-3 mb-7">
                       <div className="relative">
-                        <div className="absolute inset-0 bg-blue-500/25 blur-xl rounded-full" aria-hidden="true" />
-                        <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
-                          <Sparkles className="w-6 h-6" />
+                        <div className="absolute inset-0 bg-primary-500/20 blur-xl rounded-full" aria-hidden="true" />
+                        <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-650 text-white flex items-center justify-center shadow-md shadow-primary-500/10">
+                          <Sparkles className="w-5 h-5 animate-pulse" />
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <h2 className="text-lg font-black text-gray-900 dark:text-white">چه کاری انجام دهیم؟</h2>
+                        <h2 className="text-sm font-black text-gray-900 dark:text-white">چه کاری انجام دهیم؟</h2>
                         <p className="text-[11px] text-gray-400 dark:text-gray-500 font-bold">خواسته‌ات را ساده بنویس، بقیه‌اش با من.</p>
                       </div>
                     </div>
@@ -3766,7 +3791,7 @@ export default function AgentPage() {
 
                     {/* Composer — single focal input */}
                     <form onSubmit={(e) => handleGeneratePlan(e)}>
-                      <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-3xl shadow-sm focus-within:border-blue-400 dark:focus-within:border-blue-700 focus-within:shadow-md focus-within:shadow-blue-500/5 transition-all overflow-hidden">
+                      <div className="bg-white dark:bg-gray-950 border border-slate-200 dark:border-gray-800 rounded-3xl shadow-sm focus-within:border-primary-400 dark:focus-within:border-primary-600 focus-within:shadow-md focus-within:shadow-primary-500/5 transition-all overflow-hidden">
                         <textarea
                           ref={textareaRef}
                           value={prompt}
@@ -3775,7 +3800,7 @@ export default function AgentPage() {
                           placeholder="مثال: محصول اسپیکر JBL با قیمت ۸۵۰ هزار تومن بساز، دو رنگ سبز و مشکی داشته باشه و یک استوری و مقاله وبلاگ هم براش بنویس..."
                           disabled={isLoadingPlan}
                           rows={3}
-                          className="w-full px-5 pt-4 pb-2 bg-transparent border-0 outline-none focus:ring-0 text-[13px] font-semibold text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 resize-none leading-relaxed"
+                          className="w-full px-5 pt-4 pb-2 bg-transparent border-0 outline-none focus:ring-0 text-[12px] font-semibold text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-650 resize-none leading-relaxed"
                           dir="rtl"
                         />
 
@@ -3789,8 +3814,8 @@ export default function AgentPage() {
                                     key={idx}
                                     className={`relative group w-20 h-20 rounded-2xl border-2 overflow-hidden transition-all ${
                                       isMain
-                                        ? 'border-blue-500 shadow-md shadow-blue-500/10'
-                                        : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'
+                                        ? 'border-primary-500 shadow-md shadow-primary-500/10'
+                                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                                     }`}
                                   >
                                     <img src={imgUrl} className="w-full h-full object-cover" alt={`attached-${idx}`} />
@@ -3807,7 +3832,7 @@ export default function AgentPage() {
 
                                     {/* Main Image Selection Overlay / Badge */}
                                     {isMain ? (
-                                      <div className="absolute bottom-0 inset-x-0 bg-blue-600/90 text-white text-[9px] font-black text-center py-0.5 select-none">
+                                      <div className="absolute bottom-0 inset-x-0 bg-primary-650/90 text-white text-[9px] font-black text-center py-0.5 select-none">
                                         عکس اصلی
                                       </div>
                                     ) : (
@@ -3827,11 +3852,11 @@ export default function AgentPage() {
                         )}
 
                         <div className="flex items-center justify-between gap-3 px-3 py-2.5">
-                          <label className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 cursor-pointer transition-all" title="ضمیمه کردن تصویر">
+                          <label className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 hover:text-primary-500 hover:bg-primary-500/5 dark:hover:bg-primary-500/10 cursor-pointer transition-all" title="ضمیمه کردن تصویر">
                             {isUploadingImage ? (
-                              <Loader2 size={16} className="animate-spin text-blue-500" />
+                              <Loader2 size={16} className="animate-spin text-primary-500" />
                             ) : (
-                              <ImageIcon size={16} />
+                              <ImageIcon size={15} />
                             )}
                             <input
                               type="file"
@@ -3865,13 +3890,13 @@ export default function AgentPage() {
                           <button
                             type="submit"
                             disabled={isLoadingPlan || !prompt.trim()}
-                            className="h-9 w-9 flex items-center justify-center bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 text-white rounded-xl transition-all cursor-pointer shadow-sm shadow-blue-500/20 select-none"
+                            className="h-9 w-9 flex items-center justify-center bg-primary-500 hover:bg-primary-600 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 text-white rounded-xl transition-all cursor-pointer shadow-sm shadow-primary-500/10 select-none active:scale-[0.98]"
                             title="ارسال و طراحی طرح"
                           >
                             {isLoadingPlan ? (
                               <Loader2 size={16} className="animate-spin text-white" />
                             ) : (
-                              <Send size={15} className="transform rotate-180" />
+                              <Send size={14} className="transform rotate-180" />
                             )}
                           </button>
                         </div>
@@ -3933,7 +3958,7 @@ export default function AgentPage() {
                 <div className="bg-white dark:bg-[#0d1527] border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-5 animate-fadeIn">
                   <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/60 pb-4">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-xl bg-primary-500/15 text-primary-600 dark:text-primary-400 flex items-center justify-center">
                         <Eye size={16} />
                       </div>
                       <div>
@@ -3957,12 +3982,12 @@ export default function AgentPage() {
                       refers to the items above (e.g. "فاکتورهاش رو چاپ کن") without
                       having to reset first. Reuses the same prompt state + handler. */}
                   <div className="pt-2 border-t border-slate-100 dark:border-slate-800/60 space-y-3">
-                    <div className="flex items-center gap-1.5 text-[10px] font-black text-indigo-600 dark:text-indigo-400">
+                    <div className="flex items-center gap-1.5 text-[10px] font-black text-primary-600 dark:text-primary-400">
                       <Sparkles size={12} className="shrink-0" />
                       <span>می‌توانی روی همین نتایج ادامه بدهی — مثلاً «فاکتورهاش رو چاپ کن» یا «برای اولی استوری بساز».</span>
                     </div>
                     <form onSubmit={(e) => handleGeneratePlan(e)}>
-                      <div className="bg-slate-50 dark:bg-gray-950 border border-slate-200 dark:border-gray-800 rounded-2xl focus-within:border-indigo-400 dark:focus-within:border-indigo-700 transition-all overflow-hidden">
+                      <div className="bg-slate-50 dark:bg-gray-950 border border-slate-200 dark:border-gray-800 rounded-2xl focus-within:border-primary-400 dark:focus-within:border-primary-700 transition-all overflow-hidden">
                         <textarea
                           value={prompt}
                           onChange={(e) => setPrompt(e.target.value)}
@@ -3978,7 +4003,7 @@ export default function AgentPage() {
                           <button
                             type="submit"
                             disabled={isLoadingPlan || !prompt.trim()}
-                            className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-[11px] font-black transition-all"
+                            className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-primary-600 hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-[11px] font-black transition-all"
                           >
                             {isLoadingPlan ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
                             <span>ادامه</span>
@@ -4076,7 +4101,7 @@ export default function AgentPage() {
                   let iconElement = getTargetIcon(task.target, 12);
 
                   if (isCurrent) {
-                    statusColorClass = 'bg-indigo-600 border-indigo-600 text-white font-black shadow-sm shadow-indigo-500/20';
+                    statusColorClass = 'bg-primary-600 border-primary-600 text-white font-black shadow-sm shadow-primary-500/20';
                   } else if (isCompleted) {
                     statusColorClass = 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400';
                     iconElement = <Check size={12} className="text-emerald-500" />;
@@ -4084,8 +4109,8 @@ export default function AgentPage() {
                     statusColorClass = 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400 animate-pulse';
                     iconElement = <X size={12} className="text-rose-500" />;
                   } else if (isRunning) {
-                    statusColorClass = 'bg-indigo-500/10 border-indigo-500/30 text-indigo-600 dark:text-indigo-400 animate-pulse';
-                    iconElement = <Loader2 size={12} className="animate-spin text-indigo-500" />;
+                    statusColorClass = 'bg-primary-500/10 border-primary-500/30 text-primary-600 dark:text-primary-400 animate-pulse';
+                    iconElement = <Loader2 size={12} className="animate-spin text-primary-500" />;
                   } else if (isSkipped) {
                     statusColorClass = 'bg-slate-100 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800/60 text-slate-400 opacity-60';
                   } else {
@@ -4133,7 +4158,7 @@ export default function AgentPage() {
                       <div className="bg-slate-50/50 dark:bg-slate-950/30 border-b border-slate-200 dark:border-slate-800/60 px-5 py-4 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs border ${
-                            activeStatus === 'running' || activeStatus === 'saving' ? 'bg-indigo-500/15 text-indigo-500 dark:text-indigo-400 border-indigo-500/30' :
+                            activeStatus === 'running' || activeStatus === 'saving' ? 'bg-primary-500/15 text-primary-500 dark:text-primary-400 border-primary-500/30' :
                             activeStatus === 'completed' ? 'bg-emerald-500/15 text-emerald-500 dark:text-emerald-400 border-emerald-500/30' :
                             activeStatus === 'failed' ? 'bg-rose-500/15 text-rose-500 dark:text-rose-400 border-rose-500/20' :
                             'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700/50'
@@ -4151,7 +4176,7 @@ export default function AgentPage() {
 
                         <div className="flex items-center gap-2">
                           {activeStatus === 'running' && (
-                            <div className="flex items-center gap-1.5 text-[9px] font-black text-indigo-500 dark:text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1 rounded-full">
+                            <div className="flex items-center gap-1.5 text-[9px] font-black text-primary-500 dark:text-primary-400 bg-primary-500/10 border border-primary-500/20 px-2.5 py-1 rounded-full">
                               <Cpu size={10} className="animate-pulse" />
                               <span>در حال پردازش</span>
                               <TypingDots />
@@ -4175,7 +4200,7 @@ export default function AgentPage() {
                               <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/50 flex items-center justify-center text-slate-500">
                                 {getTargetIcon(activeTask.target, 24)}
                               </div>
-                              <Sparkles size={12} className="absolute -top-1 -right-1 text-indigo-500 animate-bounce" />
+                              <Sparkles size={12} className="absolute -top-1 -right-1 text-primary-500 animate-bounce" />
                             </div>
                             <div className="space-y-1.5 max-w-md">
                               <h3 className="text-xs font-black text-slate-800 dark:text-white">
@@ -4186,14 +4211,14 @@ export default function AgentPage() {
                               </p>
                             </div>
                             <div className="bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800/60 rounded-xl p-3 text-right w-full max-w-md">
-                              <span className="text-[8px] font-black text-indigo-500 block mb-1">دستور بهینه‌شده ایجنت:</span>
+                              <span className="text-[8px] font-black text-primary-500 block mb-1">دستور بهینه‌شده ایجنت:</span>
                               <p className="text-[9px] text-slate-600 dark:text-slate-300 font-bold leading-relaxed whitespace-pre-line">
                                 {activeTask.improvedPrompt}
                               </p>
                             </div>
                             <button
                               onClick={() => executeTaskAiGeneration(currentTaskIndex)}
-                              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-[10px] font-black shadow-md shadow-indigo-500/10 transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.98]"
+                              className="px-5 py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-[10px] font-black shadow-md shadow-primary-500/10 transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.98]"
                             >
                               <Play size={11} className="fill-current" />
                               <span>تولید پیش‌نویس با هوش مصنوعی</span>
@@ -4205,10 +4230,10 @@ export default function AgentPage() {
                         {activeStatus === 'running' && (
                           <div className="flex flex-col items-center justify-center py-14 space-y-4 text-center">
                             <div className="relative">
-                              <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
-                                <Brain className="w-7 h-7 text-indigo-500 dark:text-indigo-400" />
+                              <div className="w-14 h-14 rounded-2xl bg-primary-500/10 border border-primary-500/20 flex items-center justify-center">
+                                <Brain className="w-7 h-7 text-primary-500 dark:text-primary-400" />
                               </div>
-                              <div className="absolute -inset-1 rounded-2xl border border-indigo-500/30 animate-ping opacity-50" />
+                              <div className="absolute -inset-1 rounded-2xl border border-primary-500/30 animate-ping opacity-50" />
                             </div>
                             <div className="space-y-1">
                               <p className="text-xs font-black text-slate-800 dark:text-white">هوش مصنوعی در حال تحلیل و تولید محتوا</p>
@@ -4224,7 +4249,7 @@ export default function AgentPage() {
                           <div className="space-y-4">
                             {/* AI explanation */}
                             <div className="bg-blue-50/50 dark:bg-[#0d1f38]/60 border border-blue-200 dark:border-blue-500/15 rounded-xl p-3.5 text-right space-y-1">
-                              <div className="flex items-center gap-1.5 text-[9px] font-black text-indigo-500 dark:text-indigo-400">
+                              <div className="flex items-center gap-1.5 text-[9px] font-black text-primary-500 dark:text-primary-400">
                                 <Info size={11} />
                                 <span>گزارش دستیار هوشمند:</span>
                               </div>
@@ -4240,7 +4265,7 @@ export default function AgentPage() {
                                 onClick={() => setStepViewMode('edit')}
                                 className={`flex-1 py-1.5 text-center text-[9px] font-black rounded-lg transition-all cursor-pointer ${
                                   stepViewMode === 'edit'
-                                    ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs font-bold'
+                                    ? 'bg-white dark:bg-slate-900 text-primary-600 dark:text-primary-400 shadow-xs font-bold'
                                     : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                                   }`}
                               >
@@ -4251,7 +4276,7 @@ export default function AgentPage() {
                                 onClick={() => setStepViewMode('preview')}
                                 className={`flex-1 py-1.5 text-center text-[9px] font-black rounded-lg transition-all cursor-pointer ${
                                   stepViewMode === 'preview'
-                                    ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs font-bold'
+                                    ? 'bg-white dark:bg-slate-900 text-primary-600 dark:text-primary-400 shadow-xs font-bold'
                                     : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                                   }`}
                               >
@@ -4353,7 +4378,7 @@ export default function AgentPage() {
                                                 ...prev,
                                                 formData: { ...prev.formData, title: e.target.value }
                                               }))}
-                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             />
                                           </div>
 
@@ -4366,7 +4391,7 @@ export default function AgentPage() {
                                                 ...prev,
                                                 formData: { ...prev.formData, brand: e.target.value }
                                               }))}
-                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             />
                                           </div>
 
@@ -4378,7 +4403,7 @@ export default function AgentPage() {
                                                 ...prev,
                                                 formData: { ...prev.formData, categoryId: e.target.value || null }
                                               }))}
-                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             >
                                               <option value="">بدون دسته‌بندی</option>
                                               {availableCategories.map((cat: any) => (
@@ -4398,7 +4423,7 @@ export default function AgentPage() {
                                                 ...prev,
                                                 formData: { ...prev.formData, price: e.target.value }
                                               }))}
-                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
+                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
                                               dir="ltr"
                                             />
                                           </div>
@@ -4412,7 +4437,7 @@ export default function AgentPage() {
                                                 ...prev,
                                                 formData: { ...prev.formData, discount: e.target.value ? Number(e.target.value) : 0 }
                                               }))}
-                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
+                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
                                               dir="ltr"
                                             />
                                           </div>
@@ -4426,7 +4451,7 @@ export default function AgentPage() {
                                                 ...prev,
                                                 formData: { ...prev.formData, stock: e.target.value }
                                               }))}
-                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
+                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
                                               dir="ltr"
                                             />
                                           </div>
@@ -4439,7 +4464,7 @@ export default function AgentPage() {
                                                 ...prev,
                                                 formData: { ...prev.formData, type: e.target.value }
                                               }))}
-                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             >
                                               <option value="physical">فیزیکی (Physical)</option>
                                               <option value="digital">دیجیتال (Digital)</option>
@@ -4455,7 +4480,7 @@ export default function AgentPage() {
                                                   ...prev,
                                                   formData: { ...prev.formData, isActive: e.target.checked }
                                                 }))}
-                                                className="rounded text-indigo-500 focus:ring-indigo-500 w-4 h-4"
+                                                className="rounded text-primary-500 focus:ring-primary-500 w-4 h-4"
                                               />
                                               <span>محصول در سایت فعال باشد</span>
                                             </label>
@@ -4470,7 +4495,7 @@ export default function AgentPage() {
                                                 formData: { ...prev.formData, description: e.target.value }
                                               }))}
                                               rows={2}
-                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none"
+                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none"
                                             />
                                           </div>
 
@@ -4483,7 +4508,7 @@ export default function AgentPage() {
                                                 formData: { ...prev.formData, fullDescription: e.target.value }
                                               }))}
                                               rows={4}
-                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono"
+                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono"
                                             />
                                           </div>
                                         </div>
@@ -4505,7 +4530,7 @@ export default function AgentPage() {
                                                   ...prev,
                                                   formData: { ...prev.formData, isSpecial: e.target.checked }
                                                 }))}
-                                                className="rounded text-indigo-500 focus:ring-indigo-500 w-4 h-4"
+                                                className="rounded text-primary-500 focus:ring-primary-500 w-4 h-4"
                                               />
                                               <span>محصول به عنوان پیشنهاد شگفت‌انگیز نمایش داده شود</span>
                                             </label>
@@ -4520,7 +4545,7 @@ export default function AgentPage() {
                                                 ...prev,
                                                 formData: { ...prev.formData, specialEndsAt: e.target.value ? new Date(e.target.value).toISOString() : null }
                                               }))}
-                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             />
                                           </div>
                                         </div>
@@ -4543,7 +4568,7 @@ export default function AgentPage() {
                                                   ...prev,
                                                   formData: { ...prev.formData, weight: e.target.value ? Number(e.target.value) : 0 }
                                                 }))}
-                                                className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                               />
                                             </div>
 
@@ -4556,7 +4581,7 @@ export default function AgentPage() {
                                                   ...prev,
                                                   formData: { ...prev.formData, volume: e.target.value ? Number(e.target.value) : 0 }
                                                 }))}
-                                                className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                               />
                                             </div>
                                           </div>
@@ -4579,7 +4604,7 @@ export default function AgentPage() {
                                                   ...prev,
                                                   formData: { ...prev.formData, isWholesaleOnly: e.target.checked }
                                                 }))}
-                                                className="rounded text-indigo-500 focus:ring-indigo-500 w-4 h-4"
+                                                className="rounded text-primary-500 focus:ring-primary-500 w-4 h-4"
                                               />
                                               <span>این کالا فقط به صورت عمده قابل خرید باشد</span>
                                             </label>
@@ -4594,7 +4619,7 @@ export default function AgentPage() {
                                                 ...prev,
                                                 formData: { ...prev.formData, wholesalePrice: e.target.value ? Number(e.target.value) : null }
                                               }))}
-                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
+                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
                                               dir="ltr"
                                             />
                                           </div>
@@ -4608,7 +4633,7 @@ export default function AgentPage() {
                                                 ...prev,
                                                 formData: { ...prev.formData, moq: e.target.value ? Number(e.target.value) : 1 }
                                               }))}
-                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
+                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
                                               dir="ltr"
                                             />
                                           </div>
@@ -4623,7 +4648,7 @@ export default function AgentPage() {
                                                 ...prev,
                                                 formData: { ...prev.formData, wholesaleUnit: e.target.value }
                                               }))}
-                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             />
                                           </div>
 
@@ -4637,7 +4662,7 @@ export default function AgentPage() {
                                                 ...prev,
                                                 formData: { ...prev.formData, wholesaleUnitSize: e.target.value ? Number(e.target.value) : 1 }
                                               }))}
-                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
+                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
                                               dir="ltr"
                                             />
                                           </div>
@@ -4661,7 +4686,7 @@ export default function AgentPage() {
                                                   ...prev,
                                                   formData: { ...prev.formData, fileUrl: e.target.value }
                                                 }))}
-                                                className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
+                                                className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
                                                 dir="ltr"
                                               />
                                             </div>
@@ -4676,7 +4701,7 @@ export default function AgentPage() {
                                                   ...prev,
                                                   formData: { ...prev.formData, fileFormat: e.target.value }
                                                 }))}
-                                                className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left"
+                                                className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left"
                                                 dir="ltr"
                                               />
                                             </div>
@@ -4691,7 +4716,7 @@ export default function AgentPage() {
                                                   ...prev,
                                                   formData: { ...prev.formData, fileSize: e.target.value }
                                                 }))}
-                                                className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left"
+                                                className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left"
                                                 dir="ltr"
                                               />
                                             </div>
@@ -4715,7 +4740,7 @@ export default function AgentPage() {
                                                 ...prev,
                                                 formData: { ...prev.formData, seoTitle: e.target.value }
                                               }))}
-                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             />
                                           </div>
 
@@ -4728,7 +4753,7 @@ export default function AgentPage() {
                                                 formData: { ...prev.formData, seoDescription: e.target.value }
                                               }))}
                                               rows={3}
-                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none"
+                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none"
                                             />
                                           </div>
                                         </div>
@@ -4751,7 +4776,7 @@ export default function AgentPage() {
                                                 ...prev,
                                                 formData: { ...prev.formData, imageUrl: e.target.value }
                                               }))}
-                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
+                                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
                                               dir="ltr"
                                             />
                                           </div>
@@ -4768,7 +4793,7 @@ export default function AgentPage() {
                                                     newList[urlIdx] = e.target.value;
                                                     updateActiveOutput(prev => ({ ...prev, galleryUrls: newList }));
                                                   }}
-                                                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none flex-1 font-mono text-left"
+                                                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none flex-1 font-mono text-left"
                                                   dir="ltr"
                                                 />
                                                 <button
@@ -4820,7 +4845,7 @@ export default function AgentPage() {
                                                     newList[idx] = { ...newList[idx], key: e.target.value };
                                                     updateActiveOutput(prev => ({ ...prev, featuresList: newList }));
                                                   }}
-                                                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-2.5 py-2 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-1/3"
+                                                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-2.5 py-2 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-1/3"
                                                 />
                                                 <input
                                                   type="text"
@@ -4831,7 +4856,7 @@ export default function AgentPage() {
                                                     newList[idx] = { ...newList[idx], value: e.target.value };
                                                     updateActiveOutput(prev => ({ ...prev, featuresList: newList }));
                                                   }}
-                                                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-2.5 py-2 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none flex-1"
+                                                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-2.5 py-2 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none flex-1"
                                                 />
                                                 <button
                                                   type="button"
@@ -4873,7 +4898,7 @@ export default function AgentPage() {
                                                     newList[idx] = { ...newList[idx], key: e.target.value };
                                                     updateActiveOutput(prev => ({ ...prev, specsList: newList }));
                                                   }}
-                                                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-2.5 py-2 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-1/3"
+                                                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-2.5 py-2 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-1/3"
                                                 />
                                                 <input
                                                   type="text"
@@ -4884,7 +4909,7 @@ export default function AgentPage() {
                                                     newList[idx] = { ...newList[idx], value: e.target.value };
                                                     updateActiveOutput(prev => ({ ...prev, specsList: newList }));
                                                   }}
-                                                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-2.5 py-2 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none flex-1"
+                                                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-2.5 py-2 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none flex-1"
                                                 />
                                                 <button
                                                   type="button"
@@ -4924,7 +4949,7 @@ export default function AgentPage() {
                                           {(activeOutput.faqItems || []).map((faq: any, idx: number) => (
                                             <div key={idx} className="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2 relative">
                                               <div className="flex justify-between items-center pb-1 border-b border-slate-100 dark:border-slate-800">
-                                                <span className="text-[9px] font-black text-indigo-500">سوال {idx + 1}:</span>
+                                                <span className="text-[9px] font-black text-primary-500">سوال {idx + 1}:</span>
                                                 <button
                                                   type="button"
                                                   onClick={() => {
@@ -4946,7 +4971,7 @@ export default function AgentPage() {
                                                     newList[idx] = { ...newList[idx], question: e.target.value };
                                                     updateActiveOutput(prev => ({ ...prev, faqItems: newList }));
                                                   }}
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                 />
                                               </div>
                                               <div className="space-y-1">
@@ -4959,7 +4984,7 @@ export default function AgentPage() {
                                                     updateActiveOutput(prev => ({ ...prev, faqItems: newList }));
                                                   }}
                                                   rows={2}
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none"
                                                 />
                                               </div>
                                             </div>
@@ -4989,7 +5014,7 @@ export default function AgentPage() {
                                           {(activeOutput.variants || []).map((vari: any, idx: number) => (
                                             <div key={idx} className="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2 relative">
                                               <div className="flex justify-between items-center pb-1 border-b border-slate-100 dark:border-slate-800">
-                                                <span className="text-[9px] font-black text-indigo-500">تنوع {idx + 1}:</span>
+                                                <span className="text-[9px] font-black text-primary-500">تنوع {idx + 1}:</span>
                                                 <button
                                                   type="button"
                                                   onClick={() => {
@@ -5012,7 +5037,7 @@ export default function AgentPage() {
                                                       newList[idx] = { ...newList[idx], name: e.target.value };
                                                       updateActiveOutput(prev => ({ ...prev, variants: newList }));
                                                     }}
-                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                   />
                                                 </div>
                                                 <div className="space-y-1">
@@ -5026,7 +5051,7 @@ export default function AgentPage() {
                                                       newList[idx] = { ...newList[idx], colorCode: e.target.value };
                                                       updateActiveOutput(prev => ({ ...prev, variants: newList }));
                                                     }}
-                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
+                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
                                                     dir="ltr"
                                                   />
                                                 </div>
@@ -5041,7 +5066,7 @@ export default function AgentPage() {
                                                       newList[idx] = { ...newList[idx], price: e.target.value ? Number(e.target.value) : '' };
                                                       updateActiveOutput(prev => ({ ...prev, variants: newList }));
                                                     }}
-                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
+                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
                                                     dir="ltr"
                                                   />
                                                 </div>
@@ -5056,7 +5081,7 @@ export default function AgentPage() {
                                                       newList[idx] = { ...newList[idx], stock: e.target.value ? Number(e.target.value) : 0 };
                                                       updateActiveOutput(prev => ({ ...prev, variants: newList }));
                                                     }}
-                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
+                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
                                                     dir="ltr"
                                                   />
                                                 </div>
@@ -5094,7 +5119,7 @@ export default function AgentPage() {
                                             type="text"
                                             value={activeOutput.title || ''}
                                             onChange={(e) => updateBlogField('title', e.target.value)}
-                                            className="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                            className="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                           />
                                         </div>
 
@@ -5104,7 +5129,7 @@ export default function AgentPage() {
                                             value={activeOutput.summary || ''}
                                             onChange={(e) => updateBlogField('summary', e.target.value)}
                                             rows={2}
-                                            className="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none"
+                                            className="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none"
                                           />
                                         </div>
 
@@ -5114,7 +5139,7 @@ export default function AgentPage() {
                                             value={activeOutput.content || ''}
                                             onChange={(e) => updateBlogField('content', e.target.value)}
                                             rows={5}
-                                            className="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono"
+                                            className="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono"
                                           />
                                         </div>
                                       </div>
@@ -5144,7 +5169,7 @@ export default function AgentPage() {
                                           const cat = op.data || {};
                                           return (
                                             <div key={opIdx} className="p-4 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-3">
-                                              <span className="text-[10px] font-black text-indigo-500 block">
+                                              <span className="text-[10px] font-black text-primary-500 block">
                                                 {op.type === 'create_category' ? '➕ ایجاد دسته‌بندی جدید وبلاگ' : '📝 ویرایش دسته‌بندی وبلاگ'}
                                               </span>
                                               <div className="space-y-1">
@@ -5153,7 +5178,7 @@ export default function AgentPage() {
                                                   type="text"
                                                   value={cat.name || ''}
                                                   onChange={(e) => updateBlogOpField(opIdx, 'name', e.target.value)}
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                 />
                                               </div>
                                               <div className="space-y-1">
@@ -5162,7 +5187,7 @@ export default function AgentPage() {
                                                   type="text"
                                                   value={cat.slug || ''}
                                                   onChange={(e) => updateBlogOpField(opIdx, 'slug', e.target.value)}
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
                                                   dir="ltr"
                                                 />
                                               </div>
@@ -5172,7 +5197,7 @@ export default function AgentPage() {
                                                   value={cat.description || ''}
                                                   onChange={(e) => updateBlogOpField(opIdx, 'description', e.target.value)}
                                                   rows={2}
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none"
                                                 />
                                               </div>
                                             </div>
@@ -5183,13 +5208,13 @@ export default function AgentPage() {
                                           const comm = op.data || {};
                                           return (
                                             <div key={opIdx} className="p-4 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-3">
-                                              <span className="text-[10px] font-black text-indigo-500 block">💬 پاسخ یا ویرایش دیدگاه وبلاگ</span>
+                                              <span className="text-[10px] font-black text-primary-500 block">💬 پاسخ یا ویرایش دیدگاه وبلاگ</span>
                                               <div className="space-y-1">
                                                 <label className="text-[9px] text-slate-500 font-black uppercase tracking-wider">وضعیت دیدگاه</label>
                                                 <select
                                                   value={comm.status || 'approved'}
                                                   onChange={(e) => updateBlogOpField(opIdx, 'status', e.target.value)}
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                 >
                                                   <option value="approved">تایید شده (Approved)</option>
                                                   <option value="pending">در انتظار تایید (Pending)</option>
@@ -5203,7 +5228,7 @@ export default function AgentPage() {
                                                   value={comm.content || ''}
                                                   onChange={(e) => updateBlogOpField(opIdx, 'content', e.target.value)}
                                                   rows={3}
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono"
                                                 />
                                               </div>
                                             </div>
@@ -5230,7 +5255,7 @@ export default function AgentPage() {
 
                                           return (
                                             <div key={opIdx} className="p-4 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-4">
-                                              <span className="text-[10px] font-black text-indigo-500 block">
+                                              <span className="text-[10px] font-black text-primary-500 block">
                                                 {op.type?.startsWith('create') ? '📝 ایجاد مقاله جدید' : '📝 ویرایش مقاله وبلاگ'}
                                               </span>
                                               
@@ -5242,7 +5267,7 @@ export default function AgentPage() {
                                                     type="text"
                                                     value={post.title || ''}
                                                     onChange={(e) => updateBlogOpField(opIdx, 'title', e.target.value)}
-                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                   />
                                                 </div>
 
@@ -5253,7 +5278,7 @@ export default function AgentPage() {
                                                     type="text"
                                                     value={post.slug || ''}
                                                     onChange={(e) => updateBlogOpField(opIdx, 'slug', e.target.value)}
-                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
+                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
                                                     dir="ltr"
                                                   />
                                                 </div>
@@ -5264,7 +5289,7 @@ export default function AgentPage() {
                                                   <select
                                                     value={post.status || 'draft'}
                                                     onChange={(e) => updateBlogOpField(opIdx, 'status', e.target.value)}
-                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                   >
                                                     <option value="draft">پیش‌نویس (Draft)</option>
                                                     <option value="published">منتشر شده (Published)</option>
@@ -5279,7 +5304,7 @@ export default function AgentPage() {
                                                     type="text"
                                                     value={post.featuredImage || ''}
                                                     onChange={(e) => updateBlogOpField(opIdx, 'featuredImage', e.target.value)}
-                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
+                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
                                                     dir="ltr"
                                                     placeholder="https://..."
                                                   />
@@ -5292,7 +5317,7 @@ export default function AgentPage() {
                                                     type="text"
                                                     value={post.authorName || ''}
                                                     onChange={(e) => updateBlogOpField(opIdx, 'authorName', e.target.value)}
-                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                     placeholder="پیش‌فرض: ادمین سیستم"
                                                   />
                                                 </div>
@@ -5303,7 +5328,7 @@ export default function AgentPage() {
                                                   <select
                                                     value={post.categoryId || ''}
                                                     onChange={(e) => updateBlogOpField(opIdx, 'categoryId', e.target.value || null)}
-                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                   >
                                                     <option value="">-- بدون دسته‌بندی خاص --</option>
                                                     {availableBlogCategories.map((c: any) => (
@@ -5319,7 +5344,7 @@ export default function AgentPage() {
                                                     type="text"
                                                     value={tagsList.join(', ')}
                                                     onChange={(e) => handleTagsChange(e.target.value)}
-                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                     placeholder="مثلا: تکنولوژی, موبایل, سامسونگ"
                                                   />
                                                 </div>
@@ -5332,7 +5357,7 @@ export default function AgentPage() {
                                                   value={post.summary || ''}
                                                   onChange={(e) => updateBlogOpField(opIdx, 'summary', e.target.value)}
                                                   rows={2}
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none leading-relaxed"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none leading-relaxed"
                                                   placeholder="توضیحاتی خلاصه برای نمایش در لیست وبلاگ..."
                                                 />
                                               </div>
@@ -5344,7 +5369,7 @@ export default function AgentPage() {
                                                   value={post.content || ''}
                                                   onChange={(e) => updateBlogOpField(opIdx, 'content', e.target.value)}
                                                   rows={8}
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono leading-relaxed"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono leading-relaxed"
                                                 />
                                               </div>
 
@@ -5362,7 +5387,7 @@ export default function AgentPage() {
                                                       type="text"
                                                       value={post.seoTitle || ''}
                                                       onChange={(e) => updateBlogOpField(opIdx, 'seoTitle', e.target.value)}
-                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                       placeholder="عنوان دلخواه برای سرچ گوگل"
                                                     />
                                                   </div>
@@ -5374,7 +5399,7 @@ export default function AgentPage() {
                                                       value={post.seoDescription || ''}
                                                       onChange={(e) => updateBlogOpField(opIdx, 'seoDescription', e.target.value)}
                                                       rows={2}
-                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none leading-normal"
+                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none leading-normal"
                                                       placeholder="۱۶۰ کاراکتر خلاصه برای موتورهای جستجو..."
                                                     />
                                                   </div>
@@ -5386,7 +5411,7 @@ export default function AgentPage() {
                                                         type="checkbox"
                                                         checked={post.allowComments !== false}
                                                         onChange={(e) => updateBlogOpField(opIdx, 'allowComments', e.target.checked)}
-                                                        className="rounded text-indigo-500 focus:ring-indigo-500 w-4 h-4"
+                                                        className="rounded text-primary-500 focus:ring-primary-500 w-4 h-4"
                                                       />
                                                       <span>کاربران مجاز به ثبت نظر روی این مقاله باشند</span>
                                                     </label>
@@ -5430,7 +5455,7 @@ export default function AgentPage() {
                                             type="text"
                                             value={story.title || ''}
                                             onChange={(e) => updateStoryField('title', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             placeholder="عنوان تبلیغاتی استوری"
                                           />
                                         </div>
@@ -5442,7 +5467,7 @@ export default function AgentPage() {
                                             type="text"
                                             value={story.mediaUrl || ''}
                                             onChange={(e) => updateStoryField('mediaUrl', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
                                             dir="ltr"
                                             placeholder="https://..."
                                           />
@@ -5454,7 +5479,7 @@ export default function AgentPage() {
                                           <select
                                             value={story.mediaType || 'image'}
                                             onChange={(e) => updateStoryField('mediaType', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                           >
                                             <option value="image">تصویر ثابت (Image)</option>
                                             <option value="video">ویدیو کلیپ (Video)</option>
@@ -5470,7 +5495,7 @@ export default function AgentPage() {
                                             max="30"
                                             value={story.duration || 5}
                                             onChange={(e) => updateStoryField('duration', Number(e.target.value))}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-center font-mono"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-center font-mono"
                                           />
                                         </div>
 
@@ -5481,7 +5506,7 @@ export default function AgentPage() {
                                             type="text"
                                             value={story.thumbnailUrl || ''}
                                             onChange={(e) => updateStoryField('thumbnailUrl', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
                                             dir="ltr"
                                             placeholder="پیش‌فرض: همان رسانه اصلی"
                                           />
@@ -5494,7 +5519,7 @@ export default function AgentPage() {
                                             type="text"
                                             value={story.linkText || ''}
                                             onChange={(e) => updateStoryField('linkText', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             placeholder="مثلا: خرید آنلاین 🛍️"
                                           />
                                         </div>
@@ -5506,7 +5531,7 @@ export default function AgentPage() {
                                             type="text"
                                             value={story.linkUrl || ''}
                                             onChange={(e) => updateStoryField('linkUrl', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
                                             dir="ltr"
                                             placeholder="/products/shoes"
                                           />
@@ -5518,7 +5543,7 @@ export default function AgentPage() {
                                           <select
                                             value={story.displayLocation || 'both'}
                                             onChange={(e) => updateStoryField('displayLocation', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                           >
                                             <option value="both">هر دو مورد (فروشگاه + لندینگ)</option>
                                             <option value="shop">فقط در صفحه فروشگاه (Shop)</option>
@@ -5533,7 +5558,7 @@ export default function AgentPage() {
                                             type="text"
                                             value={story.category || ''}
                                             onChange={(e) => updateStoryField('category', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-center"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-center"
                                             placeholder="مثلا: یلدا"
                                           />
                                         </div>
@@ -5545,7 +5570,7 @@ export default function AgentPage() {
                                             type="datetime-local"
                                             value={formatDateForInput(story.expiresAt)}
                                             onChange={(e) => updateStoryField('expiresAt', e.target.value ? new Date(e.target.value).toISOString() : null)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-center"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-center"
                                           />
                                         </div>
                                       </div>
@@ -5557,7 +5582,7 @@ export default function AgentPage() {
                                           value={story.text || ''}
                                           onChange={(e) => updateStoryField('text', e.target.value)}
                                           rows={2.5}
-                                          className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none leading-relaxed"
+                                          className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none leading-relaxed"
                                           placeholder="جمله‌ای کوتاه، بولد و جذاب جهت ترغیب مشتری..."
                                         />
                                       </div>
@@ -5569,7 +5594,7 @@ export default function AgentPage() {
                                             type="checkbox"
                                             checked={story.isActive !== false}
                                             onChange={(e) => updateStoryField('isActive', e.target.checked)}
-                                            className="rounded text-indigo-500 focus:ring-indigo-500 w-4 h-4"
+                                            className="rounded text-primary-500 focus:ring-primary-500 w-4 h-4"
                                           />
                                           <span>استوری از همین لحظه فعال و منتشر شود</span>
                                         </label>
@@ -5600,7 +5625,7 @@ export default function AgentPage() {
                                             type="text"
                                             value={cat.name || ''}
                                             onChange={(e) => updateFn('name', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                           />
                                         </div>
 
@@ -5611,7 +5636,7 @@ export default function AgentPage() {
                                             type="text"
                                             value={cat.slug || ''}
                                             onChange={(e) => updateFn('slug', e.target.value.toLowerCase().replace(/\s+/g, '-'))}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-850 dark:text-white focus:outline-none w-full text-left font-mono"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-850 dark:text-white focus:outline-none w-full text-left font-mono"
                                             dir="ltr"
                                           />
                                         </div>
@@ -5622,7 +5647,7 @@ export default function AgentPage() {
                                           <select
                                             value={cat.parentId || ''}
                                             onChange={(e) => updateFn('parentId', e.target.value || null)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                           >
                                             <option value="">-- بدون دسته‌بندی مادر (ریشه) --</option>
                                             {availableCategories.filter(c => c.id !== cat.id).map((c: any) => (
@@ -5641,7 +5666,7 @@ export default function AgentPage() {
                                             value={cat.icon || ''}
                                             placeholder="مثال: 🛍️ یا layout"
                                             onChange={(e) => updateFn('icon', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-center"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-center"
                                           />
                                         </div>
 
@@ -5652,7 +5677,7 @@ export default function AgentPage() {
                                             type="text"
                                             value={cat.imageUrl || ''}
                                             onChange={(e) => updateFn('imageUrl', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-855 dark:text-white focus:outline-none w-full text-left font-mono"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-855 dark:text-white focus:outline-none w-full text-left font-mono"
                                             dir="ltr"
                                           />
                                         </div>
@@ -5664,7 +5689,7 @@ export default function AgentPage() {
                                             type="text"
                                             value={cat.seoTitle || ''}
                                             onChange={(e) => updateFn('seoTitle', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                           />
                                         </div>
 
@@ -5675,7 +5700,7 @@ export default function AgentPage() {
                                             value={cat.seoDescription || ''}
                                             onChange={(e) => updateFn('seoDescription', e.target.value)}
                                             rows={2}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none"
                                           />
                                         </div>
 
@@ -5686,7 +5711,7 @@ export default function AgentPage() {
                                             value={cat.description || ''}
                                             onChange={(e) => updateFn('description', e.target.value)}
                                             rows={3}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none"
                                           />
                                         </div>
 
@@ -5697,7 +5722,7 @@ export default function AgentPage() {
                                               type="checkbox"
                                               checked={cat.isActive !== false}
                                               onChange={(e) => updateFn('isActive', e.target.checked)}
-                                              className="rounded text-indigo-500 focus:ring-indigo-500 w-4 h-4"
+                                              className="rounded text-primary-500 focus:ring-primary-500 w-4 h-4"
                                             />
                                             <span>دسته‌بندی در منوها و سایت فعال باشد</span>
                                           </label>
@@ -5730,7 +5755,7 @@ export default function AgentPage() {
                                         const cat = op.data || {};
                                         return (
                                           <div key={opIdx} className="p-4 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-4">
-                                            <span className="text-[10px] font-black text-indigo-500 block">
+                                            <span className="text-[10px] font-black text-primary-500 block">
                                               {op.type === 'create' || op.type === 'create_category' ? '➕ ایجاد دسته‌بندی جدید' : '📝 ویرایش دسته‌بندی'}
                                             </span>
                                             {renderCategoryFields(cat, opIdx)}
@@ -5752,7 +5777,7 @@ export default function AgentPage() {
                                       {operations.map((op: any, i: number) => (
                                         <div key={i} className={`p-3 rounded-xl border text-xs font-black flex items-center gap-2 ${op.type === 'delete' ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' : 'bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white'}`}>
                                           <span>{op.type === 'create' ? '➕ ایجاد برند' : op.type === 'update' ? '📝 ویرایش برند' : '❌ حذف برند'}</span>
-                                          <span className="text-indigo-500">{op.data?.name || op.id}</span>
+                                          <span className="text-primary-500">{op.data?.name || op.id}</span>
                                         </div>
                                       ))}
                                     </div>
@@ -5772,7 +5797,7 @@ export default function AgentPage() {
                                         <div key={i} className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 space-y-1">
                                           <div className="flex items-center justify-between gap-2">
                                             <span className="text-[11px] font-black text-slate-800 dark:text-white line-clamp-1">{it.title}</span>
-                                            <span className="text-[8px] font-black text-indigo-500 shrink-0">{it.type === 'story' ? 'استوری' : it.type === 'discount' ? 'کمپین تخفیف' : 'مقاله'}</span>
+                                            <span className="text-[8px] font-black text-primary-500 shrink-0">{it.type === 'story' ? 'استوری' : it.type === 'discount' ? 'کمپین تخفیف' : 'مقاله'}</span>
                                           </div>
                                           {it.occasion && <span className="text-[9px] text-slate-500 font-bold block">{it.occasion}{it.occasionDateJalali ? ` — ${it.occasionDateJalali}` : ''}</span>}
                                           {it.summary && <p className="text-[10px] text-slate-600 dark:text-slate-400 font-bold line-clamp-2">{it.summary}</p>}
@@ -5845,7 +5870,7 @@ export default function AgentPage() {
                                               type="text"
                                               value={disc.code || ''}
                                               onChange={(e) => updateDiscountField('code', e.target.value.toUpperCase())}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
                                               dir="ltr"
                                             />
                                           </div>
@@ -5857,7 +5882,7 @@ export default function AgentPage() {
                                               type="number"
                                               value={disc.discount || ''}
                                               onChange={(e) => updateDiscountField('discount', Number(e.target.value))}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             />
                                           </div>
 
@@ -5867,7 +5892,7 @@ export default function AgentPage() {
                                             <select
                                               value={disc.type || 'percentage'}
                                               onChange={(e) => updateDiscountField('type', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             >
                                               <option value="percentage">درصدی (Percentage)</option>
                                               <option value="flat">مبلغ ثابت (Flat)</option>
@@ -5880,7 +5905,7 @@ export default function AgentPage() {
                                             <select
                                               value={disc.allowedGender || 'all'}
                                               onChange={(e) => updateDiscountField('allowedGender', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             >
                                               <option value="all">همه کاربران (زن و مرد)</option>
                                               <option value="male">فقط آقایان</option>
@@ -5896,7 +5921,7 @@ export default function AgentPage() {
                                               value={disc.maxUses || ''}
                                               onChange={(e) => updateDiscountField('maxUses', e.target.value ? Number(e.target.value) : null)}
                                               placeholder="بدون محدودیت"
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             />
                                           </div>
 
@@ -5908,7 +5933,7 @@ export default function AgentPage() {
                                               value={disc.maxUsesPerUser || ''}
                                               onChange={(e) => updateDiscountField('maxUsesPerUser', e.target.value ? Number(e.target.value) : null)}
                                               placeholder="مثال: ۱"
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             />
                                           </div>
 
@@ -5919,7 +5944,7 @@ export default function AgentPage() {
                                               type="number"
                                               value={disc.minOrderAmount || ''}
                                               onChange={(e) => updateDiscountField('minOrderAmount', e.target.value ? Number(e.target.value) : null)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             />
                                           </div>
 
@@ -5931,7 +5956,7 @@ export default function AgentPage() {
                                               value={disc.minQuantity || ''}
                                               onChange={(e) => updateDiscountField('minQuantity', e.target.value ? Number(e.target.value) : null)}
                                               placeholder="بدون محدودیت تعداد"
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             />
                                           </div>
 
@@ -5943,7 +5968,7 @@ export default function AgentPage() {
                                               value={disc.maxDiscountAmount || ''}
                                               onChange={(e) => updateDiscountField('maxDiscountAmount', e.target.value ? Number(e.target.value) : null)}
                                               placeholder="بدون سقف"
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             />
                                           </div>
 
@@ -5954,7 +5979,7 @@ export default function AgentPage() {
                                               type="datetime-local"
                                               value={formatDateForInput(disc.startDate)}
                                               onChange={(e) => updateDiscountField('startDate', e.target.value ? new Date(e.target.value).toISOString() : null)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             />
                                           </div>
 
@@ -5965,7 +5990,7 @@ export default function AgentPage() {
                                               type="datetime-local"
                                               value={formatDateForInput(disc.expiresAt)}
                                               onChange={(e) => updateDiscountField('expiresAt', e.target.value ? new Date(e.target.value).toISOString() : null)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             />
                                           </div>
 
@@ -5976,7 +6001,7 @@ export default function AgentPage() {
                                                 type="checkbox"
                                                 checked={disc.firstOrderOnly || false}
                                                 onChange={(e) => updateDiscountField('firstOrderOnly', e.target.checked)}
-                                                className="rounded text-indigo-500 focus:ring-indigo-500 w-4 h-4"
+                                                className="rounded text-primary-500 focus:ring-primary-500 w-4 h-4"
                                               />
                                               <span>فقط برای اولین خرید مشتری</span>
                                             </label>
@@ -5986,7 +6011,7 @@ export default function AgentPage() {
                                                 type="checkbox"
                                                 checked={disc.isActive !== false}
                                                 onChange={(e) => updateDiscountField('isActive', e.target.checked)}
-                                                className="rounded text-indigo-500 focus:ring-indigo-500 w-4 h-4"
+                                                className="rounded text-primary-500 focus:ring-primary-500 w-4 h-4"
                                               />
                                               <span>کد فعال باشد</span>
                                             </label>
@@ -5998,7 +6023,7 @@ export default function AgentPage() {
                                             <select
                                               value={disc.targetUserId || ''}
                                               onChange={(e) => updateDiscountField('targetUserId', e.target.value || null)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             >
                                               <option value="">همه مشتریان (بدون محدودیت کاربر)</option>
                                               {availableUsers.map((u: any) => (
@@ -6030,7 +6055,7 @@ export default function AgentPage() {
                                                             : [...currentList, cat.id];
                                                           updateDiscountField('targetCategoryIds', JSON.stringify(newList));
                                                         }}
-                                                        className="rounded text-indigo-500 focus:ring-indigo-500"
+                                                        className="rounded text-primary-500 focus:ring-primary-500"
                                                       />
                                                       {cat.name}
                                                     </label>
@@ -6061,7 +6086,7 @@ export default function AgentPage() {
                                                             : [...currentList, prod.id];
                                                           updateDiscountField('targetProductIds', JSON.stringify(newList));
                                                         }}
-                                                        className="rounded text-indigo-500 focus:ring-indigo-500"
+                                                        className="rounded text-primary-500 focus:ring-primary-500"
                                                       />
                                                       {prod.title}
                                                     </label>
@@ -6090,7 +6115,7 @@ export default function AgentPage() {
                                         const disc = op.data || {};
                                         return (
                                           <div key={opIdx} className="p-4 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-4">
-                                            <span className="text-[10px] font-black text-indigo-500 block">
+                                            <span className="text-[10px] font-black text-primary-500 block">
                                               {op.type === 'create' ? '➕ ایجاد کد تخفیف جدید' : '📝 ویرایش کد تخفیف'}
                                             </span>
 
@@ -6102,7 +6127,7 @@ export default function AgentPage() {
                                                   type="text"
                                                   value={disc.code || ''}
                                                   onChange={(e) => updateDiscountOpField(opIdx, 'code', e.target.value.toUpperCase())}
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
                                                   dir="ltr"
                                                 />
                                               </div>
@@ -6114,7 +6139,7 @@ export default function AgentPage() {
                                                   type="number"
                                                   value={disc.discount || ''}
                                                   onChange={(e) => updateDiscountOpField(opIdx, 'discount', Number(e.target.value))}
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                 />
                                               </div>
 
@@ -6124,7 +6149,7 @@ export default function AgentPage() {
                                                 <select
                                                   value={disc.type || 'percentage'}
                                                   onChange={(e) => updateDiscountOpField(opIdx, 'type', e.target.value)}
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                 >
                                                   <option value="percentage">درصدی (Percentage)</option>
                                                   <option value="flat">مبلغ ثابت (Flat)</option>
@@ -6137,7 +6162,7 @@ export default function AgentPage() {
                                                 <select
                                                   value={disc.allowedGender || 'all'}
                                                   onChange={(e) => updateDiscountOpField(opIdx, 'allowedGender', e.target.value)}
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                 >
                                                   <option value="all">همه کاربران (زن و مرد)</option>
                                                   <option value="male">فقط آقایان</option>
@@ -6153,7 +6178,7 @@ export default function AgentPage() {
                                                   value={disc.maxUses || ''}
                                                   onChange={(e) => updateDiscountOpField(opIdx, 'maxUses', e.target.value ? Number(e.target.value) : null)}
                                                   placeholder="بدون محدودیت"
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                 />
                                               </div>
 
@@ -6165,7 +6190,7 @@ export default function AgentPage() {
                                                   value={disc.maxUsesPerUser || ''}
                                                   onChange={(e) => updateDiscountOpField(opIdx, 'maxUsesPerUser', e.target.value ? Number(e.target.value) : null)}
                                                   placeholder="مثال: ۱"
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                 />
                                               </div>
 
@@ -6176,7 +6201,7 @@ export default function AgentPage() {
                                                   type="number"
                                                   value={disc.minOrderAmount || ''}
                                                   onChange={(e) => updateDiscountOpField(opIdx, 'minOrderAmount', e.target.value ? Number(e.target.value) : null)}
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                 />
                                               </div>
 
@@ -6188,7 +6213,7 @@ export default function AgentPage() {
                                                   value={disc.minQuantity || ''}
                                                   onChange={(e) => updateDiscountOpField(opIdx, 'minQuantity', e.target.value ? Number(e.target.value) : null)}
                                                   placeholder="بدون محدودیت تعداد"
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                 />
                                               </div>
 
@@ -6200,7 +6225,7 @@ export default function AgentPage() {
                                                   value={disc.maxDiscountAmount || ''}
                                                   onChange={(e) => updateDiscountOpField(opIdx, 'maxDiscountAmount', e.target.value ? Number(e.target.value) : null)}
                                                   placeholder="بدون سقف"
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                 />
                                               </div>
 
@@ -6211,7 +6236,7 @@ export default function AgentPage() {
                                                   type="datetime-local"
                                                   value={formatDateForInput(disc.startDate)}
                                                   onChange={(e) => updateDiscountOpField(opIdx, 'startDate', e.target.value ? new Date(e.target.value).toISOString() : null)}
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                 />
                                               </div>
 
@@ -6222,7 +6247,7 @@ export default function AgentPage() {
                                                   type="datetime-local"
                                                   value={formatDateForInput(disc.expiresAt)}
                                                   onChange={(e) => updateDiscountOpField(opIdx, 'expiresAt', e.target.value ? new Date(e.target.value).toISOString() : null)}
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                 />
                                               </div>
 
@@ -6233,7 +6258,7 @@ export default function AgentPage() {
                                                     type="checkbox"
                                                     checked={disc.firstOrderOnly || false}
                                                     onChange={(e) => updateDiscountOpField(opIdx, 'firstOrderOnly', e.target.checked)}
-                                                    className="rounded text-indigo-500 focus:ring-indigo-500 w-4 h-4"
+                                                    className="rounded text-primary-500 focus:ring-primary-500 w-4 h-4"
                                                   />
                                                   <span>فقط برای اولین خرید مشتری</span>
                                                 </label>
@@ -6243,7 +6268,7 @@ export default function AgentPage() {
                                                     type="checkbox"
                                                     checked={disc.isActive !== false}
                                                     onChange={(e) => updateDiscountOpField(opIdx, 'isActive', e.target.checked)}
-                                                    className="rounded text-indigo-500 focus:ring-indigo-500 w-4 h-4"
+                                                    className="rounded text-primary-500 focus:ring-primary-500 w-4 h-4"
                                                   />
                                                   <span>کد فعال باشد</span>
                                                 </label>
@@ -6255,7 +6280,7 @@ export default function AgentPage() {
                                                 <select
                                                   value={disc.targetUserId || ''}
                                                   onChange={(e) => updateDiscountOpField(opIdx, 'targetUserId', e.target.value || null)}
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                 >
                                                   <option value="">همه مشتریان (بدون محدودیت کاربر)</option>
                                                   {availableUsers.map((u: any) => (
@@ -6287,7 +6312,7 @@ export default function AgentPage() {
                                                                 : [...currentList, cat.id];
                                                               updateDiscountOpField(opIdx, 'targetCategoryIds', JSON.stringify(newList));
                                                             }}
-                                                            className="rounded text-indigo-500 focus:ring-indigo-500"
+                                                            className="rounded text-primary-500 focus:ring-primary-500"
                                                           />
                                                           {cat.name}
                                                         </label>
@@ -6318,7 +6343,7 @@ export default function AgentPage() {
                                                                 : [...currentList, prod.id];
                                                               updateDiscountOpField(opIdx, 'targetProductIds', JSON.stringify(newList));
                                                             }}
-                                                            className="rounded text-indigo-500 focus:ring-indigo-500"
+                                                            className="rounded text-primary-500 focus:ring-primary-500"
                                                           />
                                                           {prod.title}
                                                         </label>
@@ -6362,7 +6387,7 @@ export default function AgentPage() {
                                             {targets.map((t: any, idx: number) => (
                                               <div key={idx} className="flex justify-between items-center text-[10px] text-slate-700 dark:text-slate-300 font-bold bg-white dark:bg-slate-950 p-2 rounded-lg border border-slate-100 dark:border-slate-900">
                                                 <span>{t.customerName} ({t.shortId || t.id?.slice(0,8)})</span>
-                                                <span className="font-mono text-indigo-500">{(t.finalAmount || 0).toLocaleString('fa-IR')} ت</span>
+                                                <span className="font-mono text-primary-500">{(t.finalAmount || 0).toLocaleString('fa-IR')} ت</span>
                                               </div>
                                             ))}
                                           </div>
@@ -6376,7 +6401,7 @@ export default function AgentPage() {
                                           <select
                                             value={updates.status || ''}
                                             onChange={(e) => updateOrderField('status', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                           >
                                             <option value="">تغییر نکند</option>
                                             <option value="pending">در انتظار پرداخت</option>
@@ -6393,7 +6418,7 @@ export default function AgentPage() {
                                           <select
                                             value={updates.shippingStatus || ''}
                                             onChange={(e) => updateOrderField('shippingStatus', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                           >
                                             <option value="">تغییر نکند</option>
                                             <option value="new">جدید</option>
@@ -6409,7 +6434,7 @@ export default function AgentPage() {
                                           <select
                                             value={updates.paymentStatus || ''}
                                             onChange={(e) => updateOrderField('paymentStatus', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                           >
                                             <option value="">تغییر نکند</option>
                                             <option value="pending">در انتظار پرداخت</option>
@@ -6425,7 +6450,7 @@ export default function AgentPage() {
                                           <select
                                             value={updates.printMode || ''}
                                             onChange={(e) => updateOrderField('printMode', e.target.value || null)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                           >
                                             <option value="">-- بدون پرینت اتوماتیک --</option>
                                             <option value="invoice">فاکتور فروش خریدار (Invoice)</option>
@@ -6442,7 +6467,7 @@ export default function AgentPage() {
                                             placeholder="کد ۲۴ رقمی پست یا تیپاکس"
                                             value={updates.trackingCode || ''}
                                             onChange={(e) => updateOrderField('trackingCode', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
                                             dir="ltr"
                                           />
                                         </div>
@@ -6454,7 +6479,7 @@ export default function AgentPage() {
                                             value={updates.notes || ''}
                                             onChange={(e) => updateOrderField('notes', e.target.value)}
                                             rows={2}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none"
                                             placeholder="توضیحات داخلی یا علت تغییرات سفارش..."
                                           />
                                         </div>
@@ -6499,7 +6524,7 @@ export default function AgentPage() {
                                               type="text"
                                               value={rData.userName || ''}
                                               onChange={(e) => updateReviewField('userName', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             />
                                           </div>
 
@@ -6509,7 +6534,7 @@ export default function AgentPage() {
                                             <select
                                               value={rData.userId || ''}
                                               onChange={(e) => updateReviewField('userId', e.target.value || null)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             >
                                               <option value="">-- بدون اتصال به کاربر خاص --</option>
                                               {availableUsers.map((u: any) => (
@@ -6524,7 +6549,7 @@ export default function AgentPage() {
                                             <select
                                               value={rData.rating || 5}
                                               onChange={(e) => updateReviewField('rating', Number(e.target.value))}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             >
                                               {[5, 4, 3, 2, 1].map(num => (
                                                 <option key={num} value={num}>{num} ستاره</option>
@@ -6538,7 +6563,7 @@ export default function AgentPage() {
                                             <select
                                               value={rData.productId || ''}
                                               onChange={(e) => updateReviewField('productId', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             >
                                               <option value="">-- انتخاب محصول مرتبط --</option>
                                               {availableProducts.map((p: any) => (
@@ -6553,7 +6578,7 @@ export default function AgentPage() {
                                             <select
                                               value={rData.status || 'approved'}
                                               onChange={(e) => updateReviewField('status', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             >
                                               <option value="approved">تایید شده (انتشار عمومی)</option>
                                               <option value="pending">در انتظار بررسی</option>
@@ -6569,7 +6594,7 @@ export default function AgentPage() {
                                               min="0"
                                               value={rData.likes !== undefined ? rData.likes : 0}
                                               onChange={(e) => updateReviewField('likes', Number(e.target.value))}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-center font-mono"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-center font-mono"
                                             />
                                           </div>
 
@@ -6581,7 +6606,7 @@ export default function AgentPage() {
                                               min="0"
                                               value={rData.dislikes !== undefined ? rData.dislikes : 0}
                                               onChange={(e) => updateReviewField('dislikes', Number(e.target.value))}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-center font-mono"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-center font-mono"
                                             />
                                           </div>
                                         </div>
@@ -6593,7 +6618,7 @@ export default function AgentPage() {
                                             value={rData.comment || ''}
                                             onChange={(e) => updateReviewField('comment', e.target.value)}
                                             rows={3}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none leading-relaxed"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none leading-relaxed"
                                           />
                                         </div>
 
@@ -6605,7 +6630,7 @@ export default function AgentPage() {
                                               type="checkbox"
                                               checked={!!rData.showOnHomepage}
                                               onChange={(e) => updateReviewField('showOnHomepage', e.target.checked)}
-                                              className="rounded text-indigo-500 focus:ring-indigo-500 w-4 h-4"
+                                              className="rounded text-primary-500 focus:ring-primary-500 w-4 h-4"
                                             />
                                             <span>نمایش ویژه در صفحه اصلی</span>
                                           </label>
@@ -6616,7 +6641,7 @@ export default function AgentPage() {
                                               type="checkbox"
                                               checked={rData.isBuyer !== false}
                                               onChange={(e) => updateReviewField('isBuyer', e.target.checked)}
-                                              className="rounded text-indigo-500 focus:ring-indigo-500 w-4 h-4"
+                                              className="rounded text-primary-500 focus:ring-primary-500 w-4 h-4"
                                             />
                                             <span>تگ «خریدار محصول» داشته باشد</span>
                                           </label>
@@ -6629,7 +6654,7 @@ export default function AgentPage() {
                                             <button
                                               type="button"
                                               onClick={addReviewImage}
-                                              className="bg-indigo-500/10 hover:bg-indigo-500/15 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-md text-[8px] font-black cursor-pointer transition-all"
+                                              className="bg-primary-500/10 hover:bg-primary-500/15 border border-primary-500/20 text-primary-600 dark:text-primary-400 px-2 py-0.5 rounded-md text-[8px] font-black cursor-pointer transition-all"
                                             >
                                               ➕ افزودن تصویر
                                             </button>
@@ -6644,7 +6669,7 @@ export default function AgentPage() {
                                                     value={img}
                                                     placeholder="آدرس تصویر (URL)"
                                                     onChange={(e) => updateReviewImageUrl(imgIdx, e.target.value)}
-                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-800 dark:text-white focus:outline-none flex-1 text-left font-mono"
+                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-800 dark:text-white focus:outline-none flex-1 text-left font-mono"
                                                     dir="ltr"
                                                   />
                                                   <button
@@ -6671,7 +6696,7 @@ export default function AgentPage() {
                                           <select
                                             value={activeOutput.status || 'approved'}
                                             onChange={(e) => updateReviewField('status', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                           >
                                             <option value="approved">تایید شده</option>
                                             <option value="rejected">رد شده</option>
@@ -6680,7 +6705,7 @@ export default function AgentPage() {
                                         </div>
                                         <div className="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-lg border border-slate-100 dark:border-slate-900">
                                           <span className="text-[9px] text-slate-500 font-bold block mb-1">شناسه‌های نظرات هدف:</span>
-                                          <span className="font-mono text-[8px] text-indigo-500 break-all">{JSON.stringify(activeOutput.targetReviewIds || [])}</span>
+                                          <span className="font-mono text-[8px] text-primary-500 break-all">{JSON.stringify(activeOutput.targetReviewIds || [])}</span>
                                         </div>
                                       </div>
                                     );
@@ -6711,7 +6736,7 @@ export default function AgentPage() {
                                   return (
                                     <div className="space-y-4 text-right" dir="rtl">
                                       <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
-                                        <div className="text-[10px] font-black text-indigo-500 mb-1">تیکت پشتیبانی مشتری</div>
+                                        <div className="text-[10px] font-black text-primary-500 mb-1">تیکت پشتیبانی مشتری</div>
                                         <div className="text-[9px] text-slate-500 font-bold">شناسه تیکت: {activeOutput.ticketId || 'نامشخص'}</div>
                                       </div>
 
@@ -6722,7 +6747,7 @@ export default function AgentPage() {
                                             value={activeOutput.message || ''}
                                             onChange={(e) => updateTicketsField('message', e.target.value)}
                                             rows={4}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             placeholder="متن پاسخ خود را وارد کنید..."
                                           />
                                         </div>
@@ -6734,7 +6759,7 @@ export default function AgentPage() {
                                           <select
                                             value={activeOutput.status || 'closed'}
                                             onChange={(e) => updateTicketsField('status', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                           >
                                             <option value="new">جدید (New)</option>
                                             <option value="in_progress">در حال بررسی (In Progress)</option>
@@ -6761,7 +6786,7 @@ export default function AgentPage() {
                                               type="text"
                                               value={activeOutput.subject || ''}
                                               onChange={(e) => updateSystemTicketsField('subject', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             />
                                           </div>
                                           <div className="space-y-1">
@@ -6770,7 +6795,7 @@ export default function AgentPage() {
                                               value={activeOutput.description || ''}
                                               onChange={(e) => updateSystemTicketsField('description', e.target.value)}
                                               rows={4}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none"
                                             />
                                           </div>
                                           <div className="space-y-1">
@@ -6778,7 +6803,7 @@ export default function AgentPage() {
                                             <select
                                               value={activeOutput.priority || 'normal'}
                                               onChange={(e) => updateSystemTicketsField('priority', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             >
                                               <option value="low">کم (Low)</option>
                                               <option value="normal">عادی (Normal)</option>
@@ -6797,7 +6822,7 @@ export default function AgentPage() {
                                             value={activeOutput.message || ''}
                                             onChange={(e) => updateSystemTicketsField('message', e.target.value)}
                                             rows={4}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                           />
                                         </div>
                                       )}
@@ -6812,7 +6837,7 @@ export default function AgentPage() {
                                   return (
                                     <div className="space-y-4 text-right" dir="rtl">
                                       <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
-                                        <div className="text-[10px] font-black text-indigo-500 mb-1">مدیریت همکاران و دسترسی‌ها</div>
+                                        <div className="text-[10px] font-black text-primary-500 mb-1">مدیریت همکاران و دسترسی‌ها</div>
                                         <div className="text-[9px] text-slate-500 font-bold">نوع عملیات: {action === 'create' ? 'ایجاد همکار جدید' : action === 'update' ? 'ویرایش همکار' : action === 'delete' ? 'حذف همکار' : 'گزارش‌گیری'}</div>
                                       </div>
 
@@ -6824,7 +6849,7 @@ export default function AgentPage() {
                                               type="text"
                                               value={staffData.name || ''}
                                               onChange={(e) => updateStaffField('name', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                               placeholder="مثال: علی محمدی"
                                             />
                                           </div>
@@ -6834,7 +6859,7 @@ export default function AgentPage() {
                                               type="email"
                                               value={staffData.email || ''}
                                               onChange={(e) => updateStaffField('email', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left"
                                               placeholder="example@gmail.com"
                                               dir="ltr"
                                             />
@@ -6845,7 +6870,7 @@ export default function AgentPage() {
                                               type="text"
                                               value={staffData.phone || ''}
                                               onChange={(e) => updateStaffField('phone', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left"
                                               placeholder="09123456789"
                                               dir="ltr"
                                             />
@@ -6856,7 +6881,7 @@ export default function AgentPage() {
                                               type="text"
                                               value={staffData.password || ''}
                                               onChange={(e) => updateStaffField('password', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left"
                                               placeholder="حداقل ۶ کاراکتر"
                                               dir="ltr"
                                             />
@@ -6866,7 +6891,7 @@ export default function AgentPage() {
                                             <select
                                               value={staffData.role || 'support'}
                                               onChange={(e) => updateStaffField('role', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             >
                                               <option value="admin">مدیر کل (Admin)</option>
                                               <option value="editor">نویسنده/ویرایشگر (Editor)</option>
@@ -6880,7 +6905,7 @@ export default function AgentPage() {
                                               <select
                                                 value={staffData.isBlocked ? 'true' : 'false'}
                                                 onChange={(e) => updateStaffField('isBlocked', e.target.value === 'true')}
-                                                className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                               >
                                                 <option value="false">فعال و مجاز (Active)</option>
                                                 <option value="true">مسدود شده (Blocked)</option>
@@ -6906,7 +6931,7 @@ export default function AgentPage() {
                                   return (
                                     <div className="space-y-4 text-right" dir="rtl">
                                       <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
-                                        <div className="text-[10px] font-black text-indigo-500 mb-1">پروفایل و حساب کاربری مدیر</div>
+                                        <div className="text-[10px] font-black text-primary-500 mb-1">پروفایل و حساب کاربری مدیر</div>
                                         <div className="text-[9px] text-slate-500 font-bold">نوع تنظیمات: {action === 'update_profile' ? 'ویرایش اطلاعات عمومی' : action === 'change_password' ? 'تغییر کلمه عبور امن' : 'نمایش وضعیت حساب ادمین'}</div>
                                       </div>
 
@@ -6918,7 +6943,7 @@ export default function AgentPage() {
                                               type="text"
                                               value={profileData.name || ''}
                                               onChange={(e) => updateProfileField('name', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             />
                                           </div>
                                           <div className="space-y-1">
@@ -6927,7 +6952,7 @@ export default function AgentPage() {
                                               type="email"
                                               value={profileData.email || ''}
                                               onChange={(e) => updateProfileField('email', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left"
                                               dir="ltr"
                                             />
                                           </div>
@@ -6937,7 +6962,7 @@ export default function AgentPage() {
                                               type="text"
                                               value={profileData.avatarUrl || ''}
                                               onChange={(e) => updateProfileField('avatarUrl', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left"
                                               dir="ltr"
                                             />
                                           </div>
@@ -6952,7 +6977,7 @@ export default function AgentPage() {
                                               type="password"
                                               value={activeOutput.currentPassword || ''}
                                               onChange={(e) => updateProfileField('currentPassword', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left"
                                               placeholder="رمز عبور کنونی را وارد کنید"
                                               dir="ltr"
                                             />
@@ -6963,7 +6988,7 @@ export default function AgentPage() {
                                               type="password"
                                               value={activeOutput.newPassword || ''}
                                               onChange={(e) => updateProfileField('newPassword', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left"
                                               placeholder="حداقل ۶ کاراکتر امن"
                                               dir="ltr"
                                             />
@@ -6980,7 +7005,7 @@ export default function AgentPage() {
                                   return (
                                     <div className="space-y-4 text-right" dir="rtl">
                                       <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
-                                        <div className="text-[10px] font-black text-indigo-500 mb-1">ورودی و خروجی پیشرفته داده‌ها</div>
+                                        <div className="text-[10px] font-black text-primary-500 mb-1">ورودی و خروجی پیشرفته داده‌ها</div>
                                         <div className="text-[9px] text-slate-500 font-bold">نوع کارتابل: {action === 'export' ? 'تهیه نسخه پشتیبان / اکسپورت' : 'ایمپورت و درون‌ریزی داده‌ها'}</div>
                                       </div>
 
@@ -6991,7 +7016,7 @@ export default function AgentPage() {
                                             <select
                                               value={activeOutput.exportType || 'products'}
                                               onChange={(e) => updateImportExportField('exportType', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             >
                                               <option value="products">محصولات فروشگاه (Products)</option>
                                               <option value="categories">دسته‌بندی‌های کاتالوگ (Categories)</option>
@@ -7004,7 +7029,7 @@ export default function AgentPage() {
                                             <select
                                               value={activeOutput.format || 'csv'}
                                               onChange={(e) => updateImportExportField('format', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             >
                                               <option value="csv">فرمت اکسل / CSV</option>
                                               <option value="json">فرمت برنامه نویسان / JSON</option>
@@ -7016,7 +7041,7 @@ export default function AgentPage() {
                                                 href={activeOutput.downloadUrl}
                                                 target="_blank"
                                                 rel="noreferrer"
-                                                className="block text-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2 px-4 rounded-xl shadow-md transition-all"
+                                                className="block text-center bg-primary-600 hover:bg-primary-700 text-white font-bold text-xs py-2 px-4 rounded-xl shadow-md transition-all"
                                               >
                                                 📥 دانلود مستقیم فایل خروجی
                                               </a>
@@ -7029,7 +7054,7 @@ export default function AgentPage() {
                                         <div className="space-y-3">
                                           {activeOutput.products && activeOutput.products.length > 0 && (
                                             <div className="space-y-1.5">
-                                              <span className="text-[10px] font-black text-indigo-500">📋 پیش‌نمایش محصولات استخراج شده ({activeOutput.products.length})</span>
+                                              <span className="text-[10px] font-black text-primary-500">📋 پیش‌نمایش محصولات استخراج شده ({activeOutput.products.length})</span>
                                               <div className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 max-h-40 overflow-y-auto space-y-1.5">
                                                 {activeOutput.products.map((p: any, idx: number) => (
                                                   <div key={idx} className="flex justify-between items-center text-[10px] border-b border-slate-100 dark:border-slate-900 pb-1.5 last:border-0 last:pb-0">
@@ -7066,7 +7091,7 @@ export default function AgentPage() {
                                   return (
                                     <div className="space-y-4">
                                       <div className="bg-slate-50 dark:bg-slate-900/40 p-3 rounded-xl text-right">
-                                        <span className="text-[10px] font-black text-indigo-500 block mb-1">پردازش تصاویر گالری</span>
+                                        <span className="text-[10px] font-black text-primary-500 block mb-1">پردازش تصاویر گالری</span>
                                         <p className="text-[9px] text-slate-500 font-bold">
                                           تعداد {activeOutput.selectedMediaIds?.length || activeOutput.rawResult?.selectedMediaIds?.length || 0} تصویر برای اعمال افکت‌ها و پردازش هوشمند انتخاب شده است.
                                         </p>
@@ -7079,7 +7104,7 @@ export default function AgentPage() {
                                           <select
                                             value={settings.dimensions || 'original'}
                                             onChange={(e) => updateMediaField('dimensions', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                           >
                                             <option value="original">ابعاد اصلی</option>
                                             <option value="square">مربع (۱:۱)</option>
@@ -7102,7 +7127,7 @@ export default function AgentPage() {
                                               type="text"
                                               value={settings.bgColor || '#ffffff'}
                                               onChange={(e) => updateMediaField('bgColor', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-white focus:outline-none flex-1 font-mono text-left"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-white focus:outline-none flex-1 font-mono text-left"
                                               dir="ltr"
                                             />
                                           </div>
@@ -7112,7 +7137,7 @@ export default function AgentPage() {
                                         <div className="space-y-1 col-span-2">
                                           <div className="flex justify-between items-center">
                                             <label className="text-[9px] text-slate-500 font-black uppercase tracking-wider">مقیاس و اندازه سوژه ({settings.subjectScale || 85}٪)</label>
-                                            <span className="text-[9px] font-mono text-indigo-500 font-bold">{settings.subjectScale || 85}%</span>
+                                            <span className="text-[9px] font-mono text-primary-500 font-bold">{settings.subjectScale || 85}%</span>
                                           </div>
                                           <input
                                             type="range"
@@ -7120,7 +7145,7 @@ export default function AgentPage() {
                                             max="100"
                                             value={settings.subjectScale || 85}
                                             onChange={(e) => updateMediaField('subjectScale', Number(e.target.value))}
-                                            className="w-full accent-indigo-500 h-1 bg-slate-200 dark:bg-slate-800 rounded-lg cursor-pointer"
+                                            className="w-full accent-primary-500 h-1 bg-slate-200 dark:bg-slate-800 rounded-lg cursor-pointer"
                                           />
                                         </div>
 
@@ -7130,7 +7155,7 @@ export default function AgentPage() {
                                           <select
                                             value={settings.watermarkType || 'none'}
                                             onChange={(e) => updateMediaField('watermarkType', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                           >
                                             <option value="none">بدون واتر‌مارک</option>
                                             <option value="text">واتر‌مارک متنی</option>
@@ -7144,7 +7169,7 @@ export default function AgentPage() {
                                           <select
                                             value={settings.watermarkPosition || 'center'}
                                             onChange={(e) => updateMediaField('watermarkPosition', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                           >
                                             <option value="center">وسط تصویر</option>
                                             <option value="bottom-right">پایین راست</option>
@@ -7162,7 +7187,7 @@ export default function AgentPage() {
                                               type="text"
                                               value={settings.watermarkText || ''}
                                               onChange={(e) => updateMediaField('watermarkText', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             />
                                           </div>
                                         )}
@@ -7172,7 +7197,7 @@ export default function AgentPage() {
                                           <div className="space-y-1 col-span-2">
                                             <div className="flex justify-between items-center">
                                               <label className="text-[9px] text-slate-500 font-black uppercase tracking-wider">شفافیت و غلظت واتر‌مارک ({settings.watermarkOpacity || 40}٪)</label>
-                                              <span className="text-[9px] font-mono text-indigo-500 font-bold">{settings.watermarkOpacity || 40}%</span>
+                                              <span className="text-[9px] font-mono text-primary-500 font-bold">{settings.watermarkOpacity || 40}%</span>
                                             </div>
                                             <input
                                               type="range"
@@ -7180,7 +7205,7 @@ export default function AgentPage() {
                                               max="100"
                                               value={settings.watermarkOpacity || 40}
                                               onChange={(e) => updateMediaField('watermarkOpacity', Number(e.target.value))}
-                                              className="w-full accent-indigo-500 h-1 bg-slate-200 dark:bg-slate-800 rounded-lg cursor-pointer"
+                                              className="w-full accent-primary-500 h-1 bg-slate-200 dark:bg-slate-800 rounded-lg cursor-pointer"
                                             />
                                           </div>
                                         )}
@@ -7193,7 +7218,7 @@ export default function AgentPage() {
                                               type="checkbox"
                                               checked={!!settings.removeBg}
                                               onChange={(e) => updateMediaField('removeBg', e.target.checked)}
-                                              className="rounded text-indigo-500 focus:ring-indigo-500 w-4 h-4"
+                                              className="rounded text-primary-500 focus:ring-primary-500 w-4 h-4"
                                             />
                                             <span>حذف اتوماتیک پس‌زمینه (AI)</span>
                                           </label>
@@ -7204,7 +7229,7 @@ export default function AgentPage() {
                                               type="checkbox"
                                               checked={!!settings.autoCropFace}
                                               onChange={(e) => updateMediaField('autoCropFace', e.target.checked)}
-                                              className="rounded text-indigo-500 focus:ring-indigo-500 w-4 h-4"
+                                              className="rounded text-primary-500 focus:ring-primary-500 w-4 h-4"
                                             />
                                             <span>برش هوشمند بر اساس چهره</span>
                                           </label>
@@ -7224,7 +7249,7 @@ export default function AgentPage() {
                                                   return updated;
                                                 });
                                               }}
-                                              className="rounded text-indigo-500 focus:ring-indigo-500 w-4 h-4"
+                                              className="rounded text-primary-500 focus:ring-primary-500 w-4 h-4"
                                             />
                                             <span>جایگزینی روی تصویر اصلی</span>
                                           </label>
@@ -7235,7 +7260,7 @@ export default function AgentPage() {
                                               type="checkbox"
                                               checked={settings.compressImage !== false}
                                               onChange={(e) => updateMediaField('compressImage', e.target.checked)}
-                                              className="rounded text-indigo-500 focus:ring-indigo-500 w-4 h-4"
+                                              className="rounded text-primary-500 focus:ring-primary-500 w-4 h-4"
                                             />
                                             <span>بهینه‌سازی حجم (فرمت WebP)</span>
                                           </label>
@@ -7285,7 +7310,7 @@ export default function AgentPage() {
 
                                         return (
                                           <div key={actionIdx} className="p-4 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-4 text-right">
-                                            <span className="text-xs font-black text-indigo-500 block">
+                                            <span className="text-xs font-black text-primary-500 block">
                                               {action.type === 'create' ? 'ایجاد پکیج شاپبل جدید' : 'ویرایش پکیج شاپبل'}
                                             </span>
 
@@ -7297,7 +7322,7 @@ export default function AgentPage() {
                                                   type="text"
                                                   value={set.name || ''}
                                                   onChange={(e) => updateShoppableField(actionIdx, 'name', e.target.value)}
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                 />
                                               </div>
 
@@ -7308,7 +7333,7 @@ export default function AgentPage() {
                                                   type="text"
                                                   value={set.slug || ''}
                                                   onChange={(e) => updateShoppableField(actionIdx, 'slug', e.target.value.toLowerCase().replace(/\s+/g, '-'))}
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
                                                   dir="ltr"
                                                 />
                                               </div>
@@ -7322,7 +7347,7 @@ export default function AgentPage() {
                                                   max="100"
                                                   value={set.discount !== undefined ? set.discount : ''}
                                                   onChange={(e) => updateShoppableField(actionIdx, 'discount', Number(e.target.value))}
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-center"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-center"
                                                 />
                                               </div>
 
@@ -7333,7 +7358,7 @@ export default function AgentPage() {
                                                   type="text"
                                                   value={set.imageUrl || ''}
                                                   onChange={(e) => updateShoppableField(actionIdx, 'imageUrl', e.target.value)}
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-850 dark:text-white focus:outline-none w-full text-left font-mono"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-850 dark:text-white focus:outline-none w-full text-left font-mono"
                                                   dir="ltr"
                                                 />
                                               </div>
@@ -7341,11 +7366,11 @@ export default function AgentPage() {
                                               {/* 5. Interactive Hotspot Tags */}
                                               <div className="col-span-2 space-y-2 border-t border-slate-200 dark:border-slate-800 pt-3">
                                                 <div className="flex justify-between items-center select-none mb-1">
-                                                  <span className="text-[10px] text-indigo-500 font-black uppercase tracking-wider">📍 تگ‌های محصولات تعاملی ({itemsList.length} عدد)</span>
+                                                  <span className="text-[10px] text-primary-500 font-black uppercase tracking-wider">📍 تگ‌های محصولات تعاملی ({itemsList.length} عدد)</span>
                                                   <button
                                                     type="button"
                                                     onClick={addTagItem}
-                                                    className="bg-indigo-500/10 hover:bg-indigo-500/15 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded-lg text-[9px] font-black flex items-center gap-1 transition-all cursor-pointer"
+                                                    className="bg-primary-500/10 hover:bg-primary-500/15 border border-primary-500/20 text-primary-600 dark:text-primary-400 px-2 py-1 rounded-lg text-[9px] font-black flex items-center gap-1 transition-all cursor-pointer"
                                                   >
                                                     ➕ افزودن تگ جدید
                                                   </button>
@@ -7359,7 +7384,7 @@ export default function AgentPage() {
                                                       <div key={itemIdx} className="p-3 bg-white dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800/80 rounded-xl space-y-2.5 relative shadow-2xs">
                                                         {/* Number index and remove button */}
                                                         <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-900 pb-1.5 select-none">
-                                                          <span className="bg-indigo-600 text-white w-4.5 h-4.5 rounded-full flex items-center justify-center text-[9px] font-black">
+                                                          <span className="bg-primary-600 text-white w-4.5 h-4.5 rounded-full flex items-center justify-center text-[9px] font-black">
                                                             {itemIdx + 1}
                                                           </span>
                                                           <button
@@ -7404,7 +7429,7 @@ export default function AgentPage() {
                                                                   max="100"
                                                                   value={item.x || 50}
                                                                   onChange={(e) => updateTagItem(itemIdx, 'x', Number(e.target.value))}
-                                                                  className="w-full h-1 accent-indigo-500 bg-slate-100 dark:bg-slate-900 rounded-lg cursor-pointer"
+                                                                  className="w-full h-1 accent-primary-500 bg-slate-100 dark:bg-slate-900 rounded-lg cursor-pointer"
                                                                 />
                                                               </div>
                                                               <div className="flex-1 flex flex-col gap-0.5">
@@ -7415,7 +7440,7 @@ export default function AgentPage() {
                                                                   max="100"
                                                                   value={item.y || 50}
                                                                   onChange={(e) => updateTagItem(itemIdx, 'y', Number(e.target.value))}
-                                                                  className="w-full h-1 accent-indigo-500 bg-slate-100 dark:bg-slate-900 rounded-lg cursor-pointer"
+                                                                  className="w-full h-1 accent-primary-500 bg-slate-100 dark:bg-slate-900 rounded-lg cursor-pointer"
                                                                 />
                                                               </div>
                                                             </div>
@@ -7446,7 +7471,7 @@ export default function AgentPage() {
                                             type="text"
                                             value={settings.shopName || ''}
                                             onChange={(e) => updateSettingsField('shopName', e.target.value)}
-                                            className="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                            className="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                           />
                                         </div>
                                       )}
@@ -7457,7 +7482,7 @@ export default function AgentPage() {
                                             value={settings.description || ''}
                                             onChange={(e) => updateSettingsField('description', e.target.value)}
                                             rows={2}
-                                            className="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none"
+                                            className="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none"
                                           />
                                         </div>
                                       )}
@@ -7476,7 +7501,7 @@ export default function AgentPage() {
                                                 type="text"
                                                 value={settings.themeColor || ''}
                                                 onChange={(e) => updateSettingsField('themeColor', e.target.value)}
-                                                className="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-white focus:outline-none flex-1 font-mono text-left"
+                                                className="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-white focus:outline-none flex-1 font-mono text-left"
                                                 dir="ltr"
                                               />
                                             </div>
@@ -7488,7 +7513,7 @@ export default function AgentPage() {
                                             <select
                                               value={settings.currency || ''}
                                               onChange={(e) => updateSettingsField('currency', e.target.value)}
-                                              className="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             >
                                               <option value="IRT">تومان (IRT)</option>
                                               <option value="IRR">ریال (IRR)</option>
@@ -7501,7 +7526,7 @@ export default function AgentPage() {
                                             <select
                                               value={settings.language || ''}
                                               onChange={(e) => updateSettingsField('language', e.target.value)}
-                                              className="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             >
                                               <option value="fa">فارسی</option>
                                               <option value="en">English</option>
@@ -7524,7 +7549,7 @@ export default function AgentPage() {
                                                   type="checkbox"
                                                   checked={!!val}
                                                   onChange={(e) => updateSettingsField(key, e.target.checked)}
-                                                  className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                                                  className="w-4 h-4 rounded text-primary-600 focus:ring-primary-500 border-gray-300"
                                                 />
                                                 <span className="text-xs text-slate-600 dark:text-slate-300">{val ? 'فعال / روشن' : 'غیرفعال / خاموش'}</span>
                                               </div>
@@ -7533,7 +7558,7 @@ export default function AgentPage() {
                                                 type={typeof val === 'number' ? 'number' : 'text'}
                                                 value={val === null || val === undefined ? '' : String(val)}
                                                 onChange={(e) => updateSettingsField(key, typeof val === 'number' ? Number(e.target.value) : e.target.value)}
-                                                className="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                className="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                               />
                                             )}
                                           </div>
@@ -7553,7 +7578,7 @@ export default function AgentPage() {
                                     <div className="space-y-6 text-right">
                                       {/* Brand Story Section */}
                                       <div className="space-y-3 p-4 bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-slate-800/50">
-                                        <h4 className="text-xs font-black text-indigo-600 dark:text-indigo-400">داستان برند (Brand Story)</h4>
+                                        <h4 className="text-xs font-black text-primary-600 dark:text-primary-400">داستان برند (Brand Story)</h4>
                                         <div className="grid grid-cols-2 gap-3">
                                           <div className="space-y-1">
                                             <label className="text-[9px] text-slate-500 font-black">عنوان داستان</label>
@@ -7561,7 +7586,7 @@ export default function AgentPage() {
                                               type="text"
                                               value={brandStory.title || ''}
                                               onChange={(e) => updateAboutUsField('brandStory', 'title', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             />
                                           </div>
                                           <div className="space-y-1">
@@ -7570,7 +7595,7 @@ export default function AgentPage() {
                                               type="text"
                                               value={brandStory.foundingYear || ''}
                                               onChange={(e) => updateAboutUsField('brandStory', 'foundingYear', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             />
                                           </div>
                                         </div>
@@ -7580,7 +7605,7 @@ export default function AgentPage() {
                                             value={brandStory.storyText || ''}
                                             onChange={(e) => updateAboutUsField('brandStory', 'storyText', e.target.value)}
                                             rows={4}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none leading-relaxed"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none leading-relaxed"
                                           />
                                         </div>
                                         <div className="grid grid-cols-2 gap-3">
@@ -7590,7 +7615,7 @@ export default function AgentPage() {
                                               value={brandStory.visionText || ''}
                                               onChange={(e) => updateAboutUsField('brandStory', 'visionText', e.target.value)}
                                               rows={2}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none leading-relaxed"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none leading-relaxed"
                                             />
                                           </div>
                                           <div className="space-y-1">
@@ -7599,7 +7624,7 @@ export default function AgentPage() {
                                               value={brandStory.missionText || ''}
                                               onChange={(e) => updateAboutUsField('brandStory', 'missionText', e.target.value)}
                                               rows={2}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none leading-relaxed"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none leading-relaxed"
                                             />
                                           </div>
                                         </div>
@@ -7607,14 +7632,14 @@ export default function AgentPage() {
 
                                       {/* Core Values Section */}
                                       <div className="space-y-3 p-4 bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-slate-800/50">
-                                        <h4 className="text-xs font-black text-indigo-600 dark:text-indigo-400">ارزش‌های محوری (Core Values)</h4>
+                                        <h4 className="text-xs font-black text-primary-600 dark:text-primary-400">ارزش‌های محوری (Core Values)</h4>
                                         <div className="space-y-1 mb-2">
                                           <label className="text-[9px] text-slate-500 font-black">عنوان بخش ارزش‌ها</label>
                                           <input
                                             type="text"
                                             value={coreValues.title || ''}
                                             onChange={(e) => updateAboutUsField('coreValues', 'title', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                           />
                                         </div>
                                         <div className="space-y-3 max-h-[200px] overflow-y-auto pr-1">
@@ -7629,14 +7654,14 @@ export default function AgentPage() {
                                                   placeholder="عنوان ارزش"
                                                   value={item.title || ''}
                                                   onChange={(e) => updateAboutUsListField('coreValues', item.id, 'title', e.target.value)}
-                                                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                 />
                                                 <input
                                                   type="text"
                                                   placeholder="توضیح کوتاه ارزش"
                                                   value={item.description || ''}
                                                   onChange={(e) => updateAboutUsListField('coreValues', item.id, 'description', e.target.value)}
-                                                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                 />
                                               </div>
                                             </div>
@@ -7646,14 +7671,14 @@ export default function AgentPage() {
 
                                       {/* Contact Section */}
                                       <div className="space-y-3 p-4 bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-slate-800/50">
-                                        <h4 className="text-xs font-black text-indigo-600 dark:text-indigo-400">اطلاعات تماس مرکزی</h4>
+                                        <h4 className="text-xs font-black text-primary-600 dark:text-primary-400">اطلاعات تماس مرکزی</h4>
                                         <div className="space-y-1">
                                           <label className="text-[9px] text-slate-500 font-black">عنوان بخش تماس</label>
                                           <input
                                             type="text"
                                             value={contact.title || ''}
                                             onChange={(e) => updateAboutUsField('contact', 'title', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                           />
                                         </div>
                                         <div className="grid grid-cols-2 gap-3">
@@ -7663,7 +7688,7 @@ export default function AgentPage() {
                                               type="text"
                                               value={contact.phone || ''}
                                               onChange={(e) => updateAboutUsField('contact', 'phone', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
                                               dir="ltr"
                                             />
                                           </div>
@@ -7673,7 +7698,7 @@ export default function AgentPage() {
                                               type="text"
                                               value={contact.email || ''}
                                               onChange={(e) => updateAboutUsField('contact', 'email', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
                                               dir="ltr"
                                             />
                                           </div>
@@ -7684,7 +7709,7 @@ export default function AgentPage() {
                                             value={contact.address || ''}
                                             onChange={(e) => updateAboutUsField('contact', 'address', e.target.value)}
                                             rows={2}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none leading-relaxed"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none leading-relaxed"
                                           />
                                         </div>
                                       </div>
@@ -7703,7 +7728,7 @@ export default function AgentPage() {
                                     <div className="space-y-6 text-right">
                                       {/* Hero Section */}
                                       <div className="space-y-3 p-4 bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-slate-800/50">
-                                        <h4 className="text-xs font-black text-indigo-600 dark:text-indigo-400">بخش هیرو تماس با ما (Hero Section)</h4>
+                                        <h4 className="text-xs font-black text-primary-600 dark:text-primary-400">بخش هیرو تماس با ما (Hero Section)</h4>
                                         <div className="grid grid-cols-2 gap-3">
                                           <div className="space-y-1">
                                             <label className="text-[9px] text-slate-500 font-black">عنوان اصلی</label>
@@ -7711,7 +7736,7 @@ export default function AgentPage() {
                                               type="text"
                                               value={hero.title || ''}
                                               onChange={(e) => updateContactUsField('hero', 'title', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             />
                                           </div>
                                           <div className="space-y-1">
@@ -7720,7 +7745,7 @@ export default function AgentPage() {
                                               type="text"
                                               value={hero.subtitle || ''}
                                               onChange={(e) => updateContactUsField('hero', 'subtitle', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             />
                                           </div>
                                         </div>
@@ -7730,21 +7755,21 @@ export default function AgentPage() {
                                             value={hero.description || ''}
                                             onChange={(e) => updateContactUsField('hero', 'description', e.target.value)}
                                             rows={3}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none leading-relaxed"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none leading-relaxed"
                                           />
                                         </div>
                                       </div>
 
                                       {/* Departments Section */}
                                       <div className="space-y-3 p-4 bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-slate-800/50">
-                                        <h4 className="text-xs font-black text-indigo-600 dark:text-indigo-400">دپارتمان‌ها (Departments)</h4>
+                                        <h4 className="text-xs font-black text-primary-600 dark:text-primary-400">دپارتمان‌ها (Departments)</h4>
                                         <div className="space-y-1 mb-2">
                                           <label className="text-[9px] text-slate-500 font-black">عنوان بخش دپارتمان‌ها</label>
                                           <input
                                             type="text"
                                             value={departments.title || ''}
                                             onChange={(e) => updateContactUsField('departments', 'title', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                           />
                                         </div>
                                         <div className="space-y-3 max-h-[200px] overflow-y-auto pr-1">
@@ -7756,14 +7781,14 @@ export default function AgentPage() {
                                                   placeholder="نام دپارتمان"
                                                   value={item.name || ''}
                                                   onChange={(e) => updateContactUsListField('departments', item.id, 'name', e.target.value)}
-                                                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                 />
                                                 <input
                                                   type="text"
                                                   placeholder="تلفن دپارتمان"
                                                   value={item.phone || ''}
                                                   onChange={(e) => updateContactUsListField('departments', item.id, 'phone', e.target.value)}
-                                                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                 />
                                               </div>
                                               <div className="grid grid-cols-2 gap-2">
@@ -7772,14 +7797,14 @@ export default function AgentPage() {
                                                   placeholder="ایمیل دپارتمان"
                                                   value={item.email || ''}
                                                   onChange={(e) => updateContactUsListField('departments', item.id, 'email', e.target.value)}
-                                                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                 />
                                                 <input
                                                   type="text"
                                                   placeholder="مسئول دپارتمان"
                                                   value={item.responsiblePerson || ''}
                                                   onChange={(e) => updateContactUsListField('departments', item.id, 'responsiblePerson', e.target.value)}
-                                                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                 />
                                               </div>
                                             </div>
@@ -7789,14 +7814,14 @@ export default function AgentPage() {
 
                                       {/* Opening Hours Section */}
                                       <div className="space-y-3 p-4 bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-slate-800/50">
-                                        <h4 className="text-xs font-black text-indigo-600 dark:text-indigo-400">ساعات کاری (Opening Hours)</h4>
+                                        <h4 className="text-xs font-black text-primary-600 dark:text-primary-400">ساعات کاری (Opening Hours)</h4>
                                         <div className="space-y-1 mb-2">
                                           <label className="text-[9px] text-slate-500 font-black">عنوان بخش ساعات کاری</label>
                                           <input
                                             type="text"
                                             value={openingHours.title || ''}
                                             onChange={(e) => updateContactUsField('openingHours', 'title', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                           />
                                         </div>
                                         <div className="space-y-2 max-h-[150px] overflow-y-auto pr-1">
@@ -7807,14 +7832,14 @@ export default function AgentPage() {
                                                 placeholder="بازه روزها"
                                                 value={item.dayRange || ''}
                                                 onChange={(e) => updateContactUsListField('openingHours', item.id, 'dayRange', e.target.value)}
-                                                className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                               />
                                               <input
                                                 type="text"
                                                 placeholder="ساعت کار"
                                                 value={item.hours || ''}
                                                 onChange={(e) => updateContactUsListField('openingHours', item.id, 'hours', e.target.value)}
-                                                className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                               />
                                             </div>
                                           ))}
@@ -7823,14 +7848,14 @@ export default function AgentPage() {
 
                                       {/* Map Settings */}
                                       <div className="space-y-3 p-4 bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-slate-800/50">
-                                        <h4 className="text-xs font-black text-indigo-600 dark:text-indigo-400">تنظیمات نقشه (Map Settings)</h4>
+                                        <h4 className="text-xs font-black text-primary-600 dark:text-primary-400">تنظیمات نقشه (Map Settings)</h4>
                                         <div className="flex items-center justify-between p-2 bg-white dark:bg-slate-950 rounded-xl border border-slate-100 dark:border-slate-800 mb-2">
                                           <span className="text-xs font-bold text-slate-800 dark:text-white">نمایش نقشه</span>
                                           <button
                                             type="button"
                                             onClick={() => updateContactUsField('map', 'enabled', !map.enabled)}
                                             className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                                              map.enabled ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-800'
+                                              map.enabled ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-800'
                                             }`}
                                           >
                                             <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${map.enabled ? 'translate-x-5 rtl:-translate-x-5' : 'translate-x-0'}`} />
@@ -7844,7 +7869,7 @@ export default function AgentPage() {
                                                 type="text"
                                                 value={map.embedUrl || ''}
                                                 onChange={(e) => updateContactUsField('map', 'embedUrl', e.target.value)}
-                                                className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                               />
                                             </div>
                                             <div className="space-y-1">
@@ -7853,7 +7878,7 @@ export default function AgentPage() {
                                                 value={map.addressDescription || ''}
                                                 onChange={(e) => updateContactUsField('map', 'addressDescription', e.target.value)}
                                                 rows={2}
-                                                className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none leading-relaxed"
+                                                className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none leading-relaxed"
                                               />
                                             </div>
                                           </div>
@@ -7899,7 +7924,7 @@ export default function AgentPage() {
                                           <select
                                             value={home.homePageType || 'custom'}
                                             onChange={(e) => updateSettingsField('homePageType', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                           >
                                             <option value="custom">لندینگ اختصاصی چیدمان (Custom)</option>
                                             <option value="shop">فروشگاه مستقیم محصولات (Shop)</option>
@@ -7911,7 +7936,7 @@ export default function AgentPage() {
                                               type="checkbox"
                                               checked={home.isLandingActive !== false}
                                               onChange={(e) => updateSettingsField('isLandingActive', e.target.checked)}
-                                              className="rounded text-indigo-500 focus:ring-indigo-500 w-4 h-4"
+                                              className="rounded text-primary-500 focus:ring-primary-500 w-4 h-4"
                                             />
                                             <span>صفحه فرود لندینگ فعال باشد</span>
                                           </label>
@@ -7922,13 +7947,13 @@ export default function AgentPage() {
                                       {home.heroTitle !== undefined && (
                                         <div className="space-y-3 border-t border-slate-100 dark:border-slate-800/60 pt-3">
                                           <div className="flex justify-between items-center select-none">
-                                            <span className="text-[10px] font-black text-indigo-500 block">⚡ بنر خوش‌آمدگویی بالای صفحه (Hero)</span>
+                                            <span className="text-[10px] font-black text-primary-500 block">⚡ بنر خوش‌آمدگویی بالای صفحه (Hero)</span>
                                             <label className="flex items-center gap-1.5 cursor-pointer text-[10px] font-black text-slate-600 dark:text-slate-400">
                                               <input
                                                 type="checkbox"
                                                 checked={home.showHero !== false}
                                                 onChange={(e) => updateSettingsField('showHero', e.target.checked)}
-                                                className="rounded text-indigo-500 focus:ring-indigo-500 w-3.5 h-3.5"
+                                                className="rounded text-primary-500 focus:ring-primary-500 w-3.5 h-3.5"
                                               />
                                               <span>نمایش هیرو</span>
                                             </label>
@@ -7942,7 +7967,7 @@ export default function AgentPage() {
                                                   type="text"
                                                   value={home.heroTitle || ''}
                                                   onChange={(e) => updateSettingsField('heroTitle', e.target.value)}
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-850 dark:text-white focus:outline-none w-full"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-850 dark:text-white focus:outline-none w-full"
                                                 />
                                               </div>
                                               <div className="space-y-1">
@@ -7951,7 +7976,7 @@ export default function AgentPage() {
                                                   type="text"
                                                   value={home.heroSubtitle || ''}
                                                   onChange={(e) => updateSettingsField('heroSubtitle', e.target.value)}
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-855 dark:text-white focus:outline-none w-full"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-855 dark:text-white focus:outline-none w-full"
                                                 />
                                               </div>
                                               <div className="grid grid-cols-2 gap-3">
@@ -7961,7 +7986,7 @@ export default function AgentPage() {
                                                     type="text"
                                                     value={home.heroCtaText || ''}
                                                     onChange={(e) => updateSettingsField('heroCtaText', e.target.value)}
-                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-center"
+                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-center"
                                                   />
                                                 </div>
                                                 <div className="space-y-1">
@@ -7970,7 +7995,7 @@ export default function AgentPage() {
                                                     type="text"
                                                     value={home.heroCtaUrl || ''}
                                                     onChange={(e) => updateSettingsField('heroCtaUrl', e.target.value)}
-                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
+                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
                                                     dir="ltr"
                                                   />
                                                 </div>
@@ -7982,7 +8007,7 @@ export default function AgentPage() {
 
                                       {/* Switches for Home Layout Sections visibility */}
                                       <div className="space-y-2 border-t border-slate-100 dark:border-slate-800/60 pt-3 select-none">
-                                        <span className="text-[10px] font-black text-indigo-500 block">🛠️ وضعیت قطعات صفحه اصلی (نمایش/عدم نمایش)</span>
+                                        <span className="text-[10px] font-black text-primary-500 block">🛠️ وضعیت قطعات صفحه اصلی (نمایش/عدم نمایش)</span>
                                         <div className="grid grid-cols-2 gap-2 bg-white dark:bg-slate-950/20 border border-slate-100 dark:border-slate-900/60 p-3 rounded-xl">
                                           {[
                                             { key: 'showStories', label: '📱 استوری‌ها' },
@@ -7999,7 +8024,7 @@ export default function AgentPage() {
                                                 type="checkbox"
                                                 checked={home[sw.key] !== false}
                                                 onChange={(e) => updateSettingsField(sw.key, e.target.checked)}
-                                                className="rounded text-indigo-500 focus:ring-indigo-500 w-4 h-4"
+                                                className="rounded text-primary-500 focus:ring-primary-500 w-4 h-4"
                                               />
                                               <span>{sw.label}</span>
                                             </label>
@@ -8010,7 +8035,7 @@ export default function AgentPage() {
                                       {/* Interactive Order of sections */}
                                       {sectionOrderList.length > 0 && (
                                         <div className="space-y-2 border-t border-slate-100 dark:border-slate-800/60 pt-3">
-                                          <label className="text-[10px] font-black text-indigo-500 block">↕️ چیدمان عمودی و رتبه‌بندی المان‌ها (ترتیب نمایش)</label>
+                                          <label className="text-[10px] font-black text-primary-500 block">↕️ چیدمان عمودی و رتبه‌بندی المان‌ها (ترتیب نمایش)</label>
                                           <p className="text-[8px] text-slate-400 font-bold block mb-1">با کلیک روی دکمه‌های فلش، چیدمان لندینگ را بالا یا پایین ببرید:</p>
                                           
                                           <div className="space-y-1.5">
@@ -8022,7 +8047,7 @@ export default function AgentPage() {
                                                   className="flex justify-between items-center bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-2.5 rounded-xl text-xs font-bold text-slate-800 dark:text-slate-200 shadow-2xs"
                                                 >
                                                   <div className="flex items-center gap-2">
-                                                    <span className="bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 w-5 h-5 rounded-lg flex items-center justify-center text-[9px] font-mono font-black border border-indigo-500/10">
+                                                    <span className="bg-primary-50 dark:bg-slate-950 text-primary-600 dark:text-primary-400 w-5 h-5 rounded-lg flex items-center justify-center text-[9px] font-mono font-black border border-primary-500/10">
                                                       #{idx + 1}
                                                     </span>
                                                     <span className="text-[10px] font-black">{label}</span>
@@ -8069,7 +8094,7 @@ export default function AgentPage() {
                                           value={footer.aboutText || ''}
                                           onChange={(e) => updateFooterField('aboutText', e.target.value)}
                                           rows={3}
-                                          className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none leading-relaxed"
+                                          className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full resize-none leading-relaxed"
                                           placeholder="متنی درباره اهداف و پیشینه فروشگاه..."
                                         />
                                       </div>
@@ -8081,7 +8106,7 @@ export default function AgentPage() {
                                           type="text"
                                           value={footer.copyrightText || ''}
                                           onChange={(e) => updateFooterField('copyrightText', e.target.value)}
-                                          className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                          className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                         />
                                       </div>
 
@@ -8093,7 +8118,7 @@ export default function AgentPage() {
                                             type="text"
                                             value={footer.contactPhone || ''}
                                             onChange={(e) => updateFooterField('contactPhone', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
                                             dir="ltr"
                                           />
                                         </div>
@@ -8103,7 +8128,7 @@ export default function AgentPage() {
                                             type="text"
                                             value={footer.contactEmail || ''}
                                             onChange={(e) => updateFooterField('contactEmail', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full font-mono text-left"
                                             dir="ltr"
                                           />
                                         </div>
@@ -8116,7 +8141,7 @@ export default function AgentPage() {
                                           type="text"
                                           value={footer.contactAddress || ''}
                                           onChange={(e) => updateFooterField('contactAddress', e.target.value)}
-                                          className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                          className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                         />
                                       </div>
 
@@ -8129,7 +8154,7 @@ export default function AgentPage() {
                                             placeholder="instagram.com/shop"
                                             value={footer.socialInstagram || ''}
                                             onChange={(e) => updateFooterField('socialInstagram', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
                                             dir="ltr"
                                           />
                                         </div>
@@ -8140,7 +8165,7 @@ export default function AgentPage() {
                                             placeholder="t.me/shop"
                                             value={footer.socialTelegram || ''}
                                             onChange={(e) => updateFooterField('socialTelegram', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
                                             dir="ltr"
                                           />
                                         </div>
@@ -8151,7 +8176,7 @@ export default function AgentPage() {
                                             placeholder="wa.me/989..."
                                             value={footer.socialWhatsapp || ''}
                                             onChange={(e) => updateFooterField('socialWhatsapp', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
                                             dir="ltr"
                                           />
                                         </div>
@@ -8164,7 +8189,7 @@ export default function AgentPage() {
                                             type="checkbox"
                                             checked={footer.showNewsletter !== false}
                                             onChange={(e) => updateFooterField('showNewsletter', e.target.checked)}
-                                            className="rounded text-indigo-500 focus:ring-indigo-500 w-4 h-4"
+                                            className="rounded text-primary-500 focus:ring-primary-500 w-4 h-4"
                                           />
                                           <span>نمایش خبرنامه ایمیلی در فوتر</span>
                                         </label>
@@ -8176,7 +8201,7 @@ export default function AgentPage() {
                                               type="text"
                                               value={footer.newsletterTitle || 'عضویت در خبرنامه'}
                                               onChange={(e) => updateFooterField('newsletterTitle', e.target.value)}
-                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                              className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                             />
                                           </div>
                                         )}
@@ -8189,7 +8214,7 @@ export default function AgentPage() {
                                           <select
                                             value={footer.theme || 'custom'}
                                             onChange={(e) => updateFooterField('theme', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                           >
                                             <option value="light">روشن (Light)</option>
                                             <option value="dark">تیره (Dark)</option>
@@ -8211,7 +8236,7 @@ export default function AgentPage() {
                                                 type="text"
                                                 value={footer.bgColor || ''}
                                                 onChange={(e) => updateFooterField('bgColor', e.target.value)}
-                                                className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-1 text-xs font-bold text-slate-800 dark:text-white focus:outline-none flex-1 font-mono text-left"
+                                                className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-1 text-xs font-bold text-slate-800 dark:text-white focus:outline-none flex-1 font-mono text-left"
                                                 dir="ltr"
                                               />
                                             </div>
@@ -8232,7 +8257,7 @@ export default function AgentPage() {
                                                 type="text"
                                                 value={footer.textColor || ''}
                                                 onChange={(e) => updateFooterField('textColor', e.target.value)}
-                                                className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-1 text-xs font-bold text-slate-800 dark:text-white focus:outline-none flex-1 font-mono text-left"
+                                                className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-1 text-xs font-bold text-slate-800 dark:text-white focus:outline-none flex-1 font-mono text-left"
                                                 dir="ltr"
                                               />
                                             </div>
@@ -8256,7 +8281,7 @@ export default function AgentPage() {
                                             type="checkbox"
                                             checked={!!header.showCategories}
                                             onChange={(e) => updateHeaderField('showCategories', e.target.checked)}
-                                            className="rounded text-indigo-500 focus:ring-indigo-500 w-4 h-4"
+                                            className="rounded text-primary-500 focus:ring-primary-500 w-4 h-4"
                                           />
                                           <span>📁 نمایش منوی دسته‌بندی‌ها</span>
                                         </label>
@@ -8266,7 +8291,7 @@ export default function AgentPage() {
                                             type="checkbox"
                                             checked={!!header.showSearch}
                                             onChange={(e) => updateHeaderField('showSearch', e.target.checked)}
-                                            className="rounded text-indigo-500 focus:ring-indigo-500 w-4 h-4"
+                                            className="rounded text-primary-500 focus:ring-primary-500 w-4 h-4"
                                           />
                                           <span>🔍 نمایش نوار جستجو محصولات</span>
                                         </label>
@@ -8276,7 +8301,7 @@ export default function AgentPage() {
                                             type="checkbox"
                                             checked={!!header.showCart}
                                             onChange={(e) => updateHeaderField('showCart', e.target.checked)}
-                                            className="rounded text-indigo-500 focus:ring-indigo-500 w-4 h-4"
+                                            className="rounded text-primary-500 focus:ring-primary-500 w-4 h-4"
                                           />
                                           <span>🛒 نمایش آیکون سبد خرید</span>
                                         </label>
@@ -8286,7 +8311,7 @@ export default function AgentPage() {
                                             type="checkbox"
                                             checked={!!header.sticky}
                                             onChange={(e) => updateHeaderField('sticky', e.target.checked)}
-                                            className="rounded text-indigo-500 focus:ring-indigo-500 w-4 h-4"
+                                            className="rounded text-primary-500 focus:ring-primary-500 w-4 h-4"
                                           />
                                           <span>📌 هدر چسبان (Sticky Header)</span>
                                         </label>
@@ -8296,7 +8321,7 @@ export default function AgentPage() {
                                             type="checkbox"
                                             checked={header.showUser !== false}
                                             onChange={(e) => updateHeaderField('showUser', e.target.checked)}
-                                            className="rounded text-indigo-500 focus:ring-indigo-500 w-4 h-4"
+                                            className="rounded text-primary-500 focus:ring-primary-500 w-4 h-4"
                                           />
                                           <span>👤 نمایش دکمه پروفایل کاربری</span>
                                         </label>
@@ -8311,7 +8336,7 @@ export default function AgentPage() {
                                             value={header.logoText || ''}
                                             placeholder="نام فروشگاه در هدر"
                                             onChange={(e) => updateHeaderField('logoText', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                           />
                                         </div>
                                         <div className="space-y-1">
@@ -8321,7 +8346,7 @@ export default function AgentPage() {
                                             value={header.logoUrl || ''}
                                             placeholder="آدرس تصویر لوگو"
                                             onChange={(e) => updateHeaderField('logoUrl', e.target.value)}
-                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
+                                            className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
                                             dir="ltr"
                                           />
                                         </div>
@@ -8330,13 +8355,13 @@ export default function AgentPage() {
                                       {/* Banner Details */}
                                       <div className="space-y-4 border-t border-slate-100 dark:border-slate-800/60 pt-3">
                                         <div className="flex justify-between items-center select-none">
-                                          <span className="text-[10px] font-black text-indigo-500 block">📣 بنر اعلان بالای هدر (Announcement Banner)</span>
+                                          <span className="text-[10px] font-black text-primary-500 block">📣 بنر اعلان بالای هدر (Announcement Banner)</span>
                                           <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-300">
                                             <input
                                               type="checkbox"
                                               checked={!!banner.enabled}
                                               onChange={(e) => updateHeaderBannerField('enabled', e.target.checked)}
-                                              className="rounded text-indigo-500 focus:ring-indigo-500 w-4 h-4"
+                                              className="rounded text-primary-500 focus:ring-primary-500 w-4 h-4"
                                             />
                                             <span>فعال بودن بنر</span>
                                           </label>
@@ -8350,7 +8375,7 @@ export default function AgentPage() {
                                                 type="text"
                                                 value={banner.text || ''}
                                                 onChange={(e) => updateHeaderBannerField('text', e.target.value)}
-                                                className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                 placeholder="به عنوان مثال: جشنواره خرید ویژه بهاره شروع شد!"
                                               />
                                             </div>
@@ -8362,7 +8387,7 @@ export default function AgentPage() {
                                                   type="text"
                                                   value={banner.tagText || ''}
                                                   onChange={(e) => updateHeaderBannerField('tagText', e.target.value)}
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                   placeholder="کد: SPRING"
                                                 />
                                               </div>
@@ -8372,7 +8397,7 @@ export default function AgentPage() {
                                                   type="text"
                                                   value={banner.link || ''}
                                                   onChange={(e) => updateHeaderBannerField('link', e.target.value)}
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
                                                   dir="ltr"
                                                   placeholder="/discounts"
                                                 />
@@ -8393,7 +8418,7 @@ export default function AgentPage() {
                                                     type="text"
                                                     value={banner.bgColor || ''}
                                                     onChange={(e) => updateHeaderBannerField('bgColor', e.target.value)}
-                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-1 text-xs font-bold text-slate-850 dark:text-white focus:outline-none flex-1 font-mono text-left"
+                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-1 text-xs font-bold text-slate-850 dark:text-white focus:outline-none flex-1 font-mono text-left"
                                                     dir="ltr"
                                                   />
                                                 </div>
@@ -8411,7 +8436,7 @@ export default function AgentPage() {
                                                     type="text"
                                                     value={banner.textColor || ''}
                                                     onChange={(e) => updateHeaderBannerField('textColor', e.target.value)}
-                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-1 text-xs font-bold text-slate-850 dark:text-white focus:outline-none flex-1 font-mono text-left"
+                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-1 text-xs font-bold text-slate-850 dark:text-white focus:outline-none flex-1 font-mono text-left"
                                                     dir="ltr"
                                                   />
                                                 </div>
@@ -8450,7 +8475,7 @@ export default function AgentPage() {
                                       return (
                                         <div key={actionIdx} className="p-4 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-4">
                                           <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800/60 pb-2">
-                                            <span className="text-xs font-black text-indigo-500">
+                                            <span className="text-xs font-black text-primary-500">
                                               {action.type === 'create' ? 'ایجاد اسلاید جدید' : 'ویرایش اسلاید'}
                                             </span>
                                             <button
@@ -8479,7 +8504,7 @@ export default function AgentPage() {
                                                   };
                                                   updateActiveOutput(prev => ({ ...prev, actions: updatedActions }));
                                                 }}
-                                                className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                               />
                                             </div>
 
@@ -8496,7 +8521,7 @@ export default function AgentPage() {
                                                   };
                                                   updateActiveOutput(prev => ({ ...prev, actions: updatedActions }));
                                                 }}
-                                                className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                               />
                                             </div>
 
@@ -8513,7 +8538,7 @@ export default function AgentPage() {
                                                   };
                                                   updateActiveOutput(prev => ({ ...prev, actions: updatedActions }));
                                                 }}
-                                                className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
+                                                className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
                                                 dir="ltr"
                                               />
                                             </div>
@@ -8531,7 +8556,7 @@ export default function AgentPage() {
                                                   };
                                                   updateActiveOutput(prev => ({ ...prev, actions: updatedActions }));
                                                 }}
-                                                className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                               />
                                             </div>
 
@@ -8548,7 +8573,7 @@ export default function AgentPage() {
                                                   };
                                                   updateActiveOutput(prev => ({ ...prev, actions: updatedActions }));
                                                 }}
-                                                className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
+                                                className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
                                                 dir="ltr"
                                               />
                                             </div>
@@ -8578,7 +8603,7 @@ export default function AgentPage() {
                                         return (
                                           <div key={actionIdx} className="p-4 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-4 text-right" dir="rtl">
                                             <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800/60 pb-2">
-                                              <span className="text-xs font-black text-indigo-500">
+                                              <span className="text-xs font-black text-primary-500">
                                                 {isUpdateSettings && '⚙️ بروزرسانی تنظیمات باشگاه مشتریان'}
                                                 {isUpdateUserGroup && `👥 تغییر گروه کاربر: ${action.userName || 'کاربر مشخص'}`}
                                                 {isAdjustUserPoints && `🪙 تنظیم امتیاز کاربر: ${action.userName || 'کاربر مشخص'}`}
@@ -8601,7 +8626,7 @@ export default function AgentPage() {
                                                       id={`club_enabled_${actionIdx}`}
                                                       checked={!!sData.customerClubEnabled}
                                                       onChange={(e) => updateUsersField(actionIdx, 'customerClubEnabled', e.target.checked)}
-                                                      className="rounded border-slate-300 dark:border-slate-800 focus:ring-indigo-500 h-4 w-4 text-indigo-600 bg-white dark:bg-slate-950 cursor-pointer"
+                                                      className="rounded border-slate-300 dark:border-slate-800 focus:ring-primary-500 h-4 w-4 text-primary-600 bg-white dark:bg-slate-950 cursor-pointer"
                                                     />
                                                     <label htmlFor={`club_enabled_${actionIdx}`} className="text-xs text-slate-600 dark:text-slate-300 font-bold cursor-pointer">فعال بودن باشگاه مشتریان</label>
                                                   </div>
@@ -8611,7 +8636,7 @@ export default function AgentPage() {
                                                       type="number"
                                                       value={sData.loyaltyPointsRate || ''}
                                                       onChange={(e) => updateUsersField(actionIdx, 'loyaltyPointsRate', Number(e.target.value))}
-                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                     />
                                                   </div>
                                                   <div className="space-y-1">
@@ -8620,7 +8645,7 @@ export default function AgentPage() {
                                                       type="number"
                                                       value={sData.loyaltyPointValue || ''}
                                                       onChange={(e) => updateUsersField(actionIdx, 'loyaltyPointValue', Number(e.target.value))}
-                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                     />
                                                   </div>
                                                   <div className="space-y-1">
@@ -8629,7 +8654,7 @@ export default function AgentPage() {
                                                       type="number"
                                                       value={sData.loyaltyDiscountThreshold || ''}
                                                       onChange={(e) => updateUsersField(actionIdx, 'loyaltyDiscountThreshold', Number(e.target.value))}
-                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                     />
                                                   </div>
                                                   <div className="space-y-1">
@@ -8638,7 +8663,7 @@ export default function AgentPage() {
                                                       type="number"
                                                       value={sData.loyaltyDiscountAmount || ''}
                                                       onChange={(e) => updateUsersField(actionIdx, 'loyaltyDiscountAmount', Number(e.target.value))}
-                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                     />
                                                   </div>
                                                   <div className="space-y-1">
@@ -8646,7 +8671,7 @@ export default function AgentPage() {
                                                     <select
                                                       value={sData.loyaltyDiscountType || 'flat'}
                                                       onChange={(e) => updateUsersField(actionIdx, 'loyaltyDiscountType', e.target.value)}
-                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                     >
                                                       <option value="flat">مبلغ ثابت (flat)</option>
                                                       <option value="percentage">درصدی (percentage)</option>
@@ -8663,7 +8688,7 @@ export default function AgentPage() {
                                                   type="text"
                                                   value={action.group || ''}
                                                   onChange={(e) => updateUsersField(actionIdx, 'group', e.target.value)}
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                 />
                                               </div>
                                             )}
@@ -8676,7 +8701,7 @@ export default function AgentPage() {
                                                     type="number"
                                                     value={action.points !== undefined ? action.points : ''}
                                                     onChange={(e) => updateUsersField(actionIdx, 'points', Number(e.target.value))}
-                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left"
+                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left"
                                                     dir="ltr"
                                                   />
                                                 </div>
@@ -8686,7 +8711,7 @@ export default function AgentPage() {
                                                     type="text"
                                                     value={action.reason || ''}
                                                     onChange={(e) => updateUsersField(actionIdx, 'reason', e.target.value)}
-                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                    className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                   />
                                                 </div>
                                               </div>
@@ -8699,7 +8724,7 @@ export default function AgentPage() {
                                                   id={`is_blocked_${actionIdx}`}
                                                   checked={!!action.isBlocked}
                                                   onChange={(e) => updateUsersField(actionIdx, 'isBlocked', e.target.checked)}
-                                                  className="rounded border-slate-300 dark:border-slate-800 focus:ring-indigo-500 h-4 w-4 text-indigo-600 bg-white dark:bg-slate-950 cursor-pointer"
+                                                  className="rounded border-slate-300 dark:border-slate-800 focus:ring-primary-500 h-4 w-4 text-primary-600 bg-white dark:bg-slate-950 cursor-pointer"
                                                 />
                                                 <label htmlFor={`is_blocked_${actionIdx}`} className="text-xs text-slate-600 dark:text-slate-300 font-bold cursor-pointer">کاربر مسدود باشد</label>
                                               </div>
@@ -8712,7 +8737,7 @@ export default function AgentPage() {
                                                   type="text"
                                                   value={action.password || ''}
                                                   onChange={(e) => updateUsersField(actionIdx, 'password', e.target.value)}
-                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
+                                                  className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
                                                   dir="ltr"
                                                 />
                                               </div>
@@ -8728,7 +8753,7 @@ export default function AgentPage() {
                                                       type="text"
                                                       value={dData.name || ''}
                                                       onChange={(e) => updateUsersField(actionIdx, 'name', e.target.value)}
-                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                     />
                                                   </div>
                                                   <div className="space-y-1">
@@ -8737,7 +8762,7 @@ export default function AgentPage() {
                                                       type="text"
                                                       value={dData.phone || ''}
                                                       onChange={(e) => updateUsersField(actionIdx, 'phone', e.target.value)}
-                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left"
+                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left"
                                                       dir="ltr"
                                                     />
                                                   </div>
@@ -8747,7 +8772,7 @@ export default function AgentPage() {
                                                       type="text"
                                                       value={dData.email || ''}
                                                       onChange={(e) => updateUsersField(actionIdx, 'email', e.target.value)}
-                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
+                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
                                                       dir="ltr"
                                                     />
                                                   </div>
@@ -8765,7 +8790,7 @@ export default function AgentPage() {
                                                       type="text"
                                                       value={dData.name || ''}
                                                       onChange={(e) => updateUsersField(actionIdx, 'name', e.target.value)}
-                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                     />
                                                   </div>
                                                   <div className="space-y-1">
@@ -8774,7 +8799,7 @@ export default function AgentPage() {
                                                       type="text"
                                                       value={dData.email || ''}
                                                       onChange={(e) => updateUsersField(actionIdx, 'email', e.target.value)}
-                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
+                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
                                                       dir="ltr"
                                                     />
                                                   </div>
@@ -8784,7 +8809,7 @@ export default function AgentPage() {
                                                       type="text"
                                                       value={dData.phone || ''}
                                                       onChange={(e) => updateUsersField(actionIdx, 'phone', e.target.value)}
-                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left"
+                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left"
                                                       dir="ltr"
                                                     />
                                                   </div>
@@ -8794,7 +8819,7 @@ export default function AgentPage() {
                                                       type="text"
                                                       value={dData.password || ''}
                                                       onChange={(e) => updateUsersField(actionIdx, 'password', e.target.value)}
-                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
+                                                      className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left font-mono"
                                                       dir="ltr"
                                                     />
                                                   </div>
@@ -8814,7 +8839,7 @@ export default function AgentPage() {
                                                         type="text"
                                                         value={filt.group || ''}
                                                         onChange={(e) => updateUsersField(actionIdx, 'group', e.target.value)}
-                                                        className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
+                                                        className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full"
                                                       />
                                                     </div>
                                                     <div className="space-y-1">
@@ -8823,7 +8848,7 @@ export default function AgentPage() {
                                                         type="number"
                                                         value={filt.minPoints !== undefined ? filt.minPoints : ''}
                                                         onChange={(e) => updateUsersField(actionIdx, 'minPoints', e.target.value ? Number(e.target.value) : undefined)}
-                                                        className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left"
+                                                        className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-primary-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none w-full text-left"
                                                         dir="ltr"
                                                       />
                                                     </div>
@@ -8908,14 +8933,14 @@ export default function AgentPage() {
                                   <div className="flex flex-col items-center gap-3 border-b border-slate-200/60 dark:border-slate-800/50 pb-5 w-full animate-fadeIn">
                                     <span className="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">پیش‌نمایش سایت</span>
                                     <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 text-right space-y-4 shadow-sm animate-fadeIn">
-                                      <div className="flex items-center gap-2 text-xs font-black text-indigo-500 border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                                      <div className="flex items-center gap-2 text-xs font-black text-primary-500 border-b border-slate-100 dark:border-slate-800 pb-2.5">
                                         <FileText size={16} />
                                         <span>📊 گزارش و پاسخ دستیار هوشمند</span>
                                       </div>
                                       <p className="text-[11px] text-slate-700 dark:text-slate-300 font-bold leading-relaxed whitespace-pre-line bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-100 dark:border-slate-900">
                                         {activeOutput.explanation}
                                       </p>
-                                      <div className="bg-indigo-500/5 border border-indigo-500/10 rounded-xl p-3 text-[9px] text-indigo-500 font-bold flex items-center gap-2 justify-center">
+                                      <div className="bg-primary-500/5 border border-primary-500/10 rounded-xl p-3 text-[9px] text-primary-500 font-bold flex items-center gap-2 justify-center">
                                         <Lightbulb size={12} className="shrink-0" />
                                         <span>این یک گزارش اطلاعاتی است و تغییری در اطلاعات فروشگاه ایجاد نمی‌کند.</span>
                                       </div>
@@ -9169,7 +9194,7 @@ export default function AgentPage() {
                                               <span className="text-slate-500">🎨 تنوع‌ها (رنگ/سایز):</span>
                                               <div className="flex flex-wrap gap-1 mt-0.5 justify-end">
                                                 {activeOutput.variants.map((v: any, idx: number) => (
-                                                  <span key={idx} className="bg-indigo-500/10 text-indigo-500 border border-indigo-500/10 px-1.5 py-0.5 rounded text-[8px] font-black flex items-center gap-1">
+                                                  <span key={idx} className="bg-primary-500/10 text-primary-500 border border-primary-500/10 px-1.5 py-0.5 rounded text-[8px] font-black flex items-center gap-1">
                                                     {v.colorCode && (
                                                       <span className="w-1.5 h-1.5 rounded-full inline-block border border-slate-400" style={{ backgroundColor: v.colorCode }} />
                                                     )}
@@ -9214,7 +9239,7 @@ export default function AgentPage() {
                                         <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-right text-[10px] space-y-1.5 font-bold text-slate-600 dark:text-slate-400">
                                           <div className="text-slate-900 dark:text-slate-200 text-[10px] font-black border-b border-slate-100 dark:border-slate-800 pb-1 flex justify-between items-center">
                                             <span>📝 اطلاعات کلی مقاله</span>
-                                            <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-indigo-500/10 text-indigo-500">منسوخ / ساده</span>
+                                            <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-primary-500/10 text-primary-500">منسوخ / ساده</span>
                                           </div>
                                           <div>عنوان: <span className="text-slate-800 dark:text-slate-200">{activeOutput.title || '—'}</span></div>
                                           {activeOutput.summary && <div className="line-clamp-2 leading-relaxed font-normal">خلاصه: {activeOutput.summary}</div>}
@@ -9249,12 +9274,12 @@ export default function AgentPage() {
                                           const cat = op.data || {};
                                           return (
                                             <div key={opIdx} className="w-[240px] flex flex-col items-center gap-2">
-                                              <span className="text-[8px] font-black text-indigo-500 bg-indigo-500/10 px-2 py-0.5 rounded-full mb-1">
+                                              <span className="text-[8px] font-black text-primary-500 bg-primary-500/10 px-2 py-0.5 rounded-full mb-1">
                                                 {op.type === 'create_category' ? '✨ ایجاد دسته‌بندی جدید وبلاگ' : '📝 ویرایش دسته‌بندی وبلاگ'}
                                               </span>
                                               <div className="w-full bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 flex flex-col gap-2.5 shadow-sm">
                                                 <div className="flex items-center gap-2.5">
-                                                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 shrink-0 border border-indigo-500/10">
+                                                  <div className="w-10 h-10 rounded-xl bg-primary-500/10 flex items-center justify-center text-primary-500 shrink-0 border border-primary-500/10">
                                                     <Folder size={18} />
                                                   </div>
                                                   <div className="flex flex-col gap-0.5 overflow-hidden">
@@ -9274,7 +9299,7 @@ export default function AgentPage() {
                                           const comm = op.data || {};
                                           return (
                                             <div key={opIdx} className="w-[240px] flex flex-col items-center gap-2">
-                                              <span className="text-[8px] font-black text-indigo-500 bg-indigo-500/10 px-2 py-0.5 rounded-full mb-1">
+                                              <span className="text-[8px] font-black text-primary-500 bg-primary-500/10 px-2 py-0.5 rounded-full mb-1">
                                                 💬 ویرایش/پاسخ دیدگاه وبلاگ
                                               </span>
                                               <div className="w-full bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 flex flex-col gap-3 shadow-sm">
@@ -9311,7 +9336,7 @@ export default function AgentPage() {
 
                                           return (
                                             <div key={opIdx} className="w-[240px] flex flex-col items-center gap-1.5">
-                                              <span className="text-[8px] font-black text-indigo-500 bg-indigo-500/10 px-2 py-0.5 rounded-full select-none mb-1">
+                                              <span className="text-[8px] font-black text-primary-500 bg-primary-500/10 px-2 py-0.5 rounded-full select-none mb-1">
                                                 {op.type?.startsWith('create') ? '✨ مقاله جدید وبلاگ' : '✏️ دستور ویرایش مقاله'}
                                               </span>
                                               
@@ -9338,7 +9363,7 @@ export default function AgentPage() {
                                                   {/* Slug URL */}
                                                   <div className="flex flex-col gap-0.5 border-b border-slate-50 dark:border-slate-950 pb-1 text-slate-500">
                                                     <span>🔗 آدرس یکتای پست (Slug):</span>
-                                                    <span className="text-indigo-500 font-mono text-[9px] text-left select-all truncate" dir="ltr">
+                                                    <span className="text-primary-500 font-mono text-[9px] text-left select-all truncate" dir="ltr">
                                                       /blog/{post.slug || 'slug-placeholder'}
                                                     </span>
                                                   </div>
@@ -9408,21 +9433,21 @@ export default function AgentPage() {
                                   if (replies.length === 0) return null;
                                   return (
                                     <div className="w-[240px] flex flex-col gap-3 items-center animate-fadeIn text-right" dir="rtl">
-                                      <span className="text-[8px] font-black text-indigo-500 bg-indigo-500/10 px-2 py-0.5 rounded-full select-none">
+                                      <span className="text-[8px] font-black text-primary-500 bg-primary-500/10 px-2 py-0.5 rounded-full select-none">
                                         💬 پاسخ‌های هوشمند به نظرات وبلاگ
                                       </span>
                                       {replies.map((r: any, idx: number) => (
                                         <div key={idx} className="w-full bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 flex flex-col gap-2.5 shadow-sm text-right relative">
                                           <div className="flex items-center justify-between border-b border-slate-50 dark:border-slate-950 pb-1.5">
                                             <div className="flex items-center gap-1.5">
-                                              <div className="w-6 h-6 rounded-full bg-indigo-50 dark:bg-indigo-950 flex items-center justify-center text-[9px] font-black text-indigo-500">
+                                              <div className="w-6 h-6 rounded-full bg-primary-50 dark:bg-slate-950 flex items-center justify-center text-[9px] font-black text-primary-500">
                                                 {r.name?.slice(0, 1) || 'U'}
                                               </div>
                                               <span className="text-[9px] font-black text-slate-800 dark:text-white">{r.name}</span>
                                             </div>
                                             <span className="text-[7px] font-black bg-emerald-500/10 text-emerald-500 px-1 py-0.5 rounded">آماده پاسخ</span>
                                           </div>
-                                          <p className="text-[9px] text-slate-500 font-bold leading-normal border-r-2 border-indigo-500/30 pr-1.5 line-clamp-2">{r.content}</p>
+                                          <p className="text-[9px] text-slate-500 font-bold leading-normal border-r-2 border-primary-500/30 pr-1.5 line-clamp-2">{r.content}</p>
                                           <div className="bg-slate-50 dark:bg-slate-950 p-2 rounded-xl text-[9px] text-slate-800 dark:text-slate-250 leading-relaxed font-black">
                                             ↩️ پاسخ ادمین: {r.suggestedReply}
                                           </div>
@@ -9515,7 +9540,7 @@ export default function AgentPage() {
                                           {story.category && (
                                             <div className="flex justify-between items-center border-b border-slate-50 dark:border-slate-950 pb-1">
                                               <span>📁 دسته‌بندی استوری:</span>
-                                              <span className="bg-indigo-50 dark:bg-indigo-950 text-indigo-500 px-1.5 py-0.5 rounded text-[8px] font-black">
+                                              <span className="bg-primary-50 dark:bg-slate-950 text-primary-500 px-1.5 py-0.5 rounded text-[8px] font-black">
                                                 {story.category}
                                               </span>
                                             </div>
@@ -9525,7 +9550,7 @@ export default function AgentPage() {
                                           {story.linkUrl && (
                                             <div className="flex flex-col gap-0.5 text-slate-500">
                                               <span>🔗 لینک هدایت دکمه:</span>
-                                              <span className="text-indigo-500 font-mono text-[9px] text-left select-all truncate" dir="ltr">
+                                              <span className="text-primary-500 font-mono text-[9px] text-left select-all truncate" dir="ltr">
                                                 {story.linkUrl}
                                               </span>
                                             </div>
@@ -9554,7 +9579,7 @@ export default function AgentPage() {
                                       const slide = action.data || {};
                                       return (
                                         <div key={actionIdx} className="w-full flex flex-col items-center gap-1">
-                                          <span className="text-[8px] font-black text-indigo-500 bg-indigo-500/10 px-2 py-0.5 rounded-full select-none mb-1">
+                                          <span className="text-[8px] font-black text-primary-500 bg-primary-500/10 px-2 py-0.5 rounded-full select-none mb-1">
                                             {action.type === 'create' ? '✨ اسلاید جدید سفارشی' : '✏️ دستور ویرایش اسلاید'}
                                           </span>
                                           
@@ -9570,7 +9595,7 @@ export default function AgentPage() {
                                           <div className="w-[240px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-right text-[10px] space-y-2 font-bold text-slate-600 dark:text-slate-400 shadow-2xs">
                                             <div className="border-b border-slate-100 dark:border-slate-800 pb-1.5 flex justify-between items-center">
                                               <span className="text-slate-900 dark:text-slate-200 text-[10px] font-black">⚙️ فیلدهای اسلاید {actionIdx + 1}</span>
-                                              <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-indigo-500/10 text-indigo-500">
+                                              <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-primary-500/10 text-primary-500">
                                                 اسلایدر صفحه اول
                                               </span>
                                             </div>
@@ -9592,7 +9617,7 @@ export default function AgentPage() {
                                               {slide.linkText && (
                                                 <div className="flex justify-between items-center border-b border-slate-50 dark:border-slate-950 pb-1">
                                                   <span>🔗 دکمه و لینک:</span>
-                                                  <span className="text-indigo-500 font-mono text-[9px] select-all">
+                                                  <span className="text-primary-500 font-mono text-[9px] select-all">
                                                     {slide.linkText} ({slide.linkUrl || '#'})
                                                   </span>
                                                 </div>
@@ -9710,8 +9735,8 @@ export default function AgentPage() {
                                     }
                                     return (
                                       <div className="w-[240px] flex flex-col items-center animate-fadeIn">
-                                        <div className="w-[180px] bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 rounded-2xl p-4 flex flex-col items-center text-center shadow-sm">
-                                          <div className="w-12 h-12 rounded-xl bg-indigo-500/15 flex items-center justify-center text-indigo-500 mb-2">
+                                        <div className="w-[180px] bg-primary-50 dark:bg-slate-950/20 border border-primary-100 dark:border-slate-900/30 rounded-2xl p-4 flex flex-col items-center text-center shadow-sm">
+                                          <div className="w-12 h-12 rounded-xl bg-primary-500/15 flex items-center justify-center text-primary-500 mb-2">
                                             {cat.icon && cat.icon.length === 1 ? (
                                               <span className="text-2xl">{cat.icon}</span>
                                             ) : (
@@ -9719,7 +9744,7 @@ export default function AgentPage() {
                                             )}
                                           </div>
                                           <span className="text-xs font-black text-gray-800 dark:text-gray-200 truncate w-full">{cat.name || 'دسته‌بندی جدید'}</span>
-                                          {cat.slug && <span className="text-[8px] text-indigo-500 font-mono">/{cat.slug}</span>}
+                                          {cat.slug && <span className="text-[8px] text-primary-500 font-mono">/{cat.slug}</span>}
                                           <span className="text-[10px] text-gray-400 font-bold mt-1">۰ محصول</span>
                                         </div>
                                         {renderCategoryDetails(cat)}
@@ -9760,9 +9785,9 @@ export default function AgentPage() {
 
                                         return (
                                           <div key={opIdx} className="w-[240px] flex flex-col items-center">
-                                            <div className="w-[180px] bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 rounded-2xl p-4 flex flex-col items-center text-center shadow-sm">
-                                              <span className="text-[8px] font-black text-indigo-500 mb-2">{op.type === 'create' || op.type === 'create_category' ? 'دسته‌بندی جدید' : 'ویرایش دسته'}</span>
-                                              <div className="w-10 h-10 rounded-xl bg-indigo-500/15 flex items-center justify-center text-indigo-500 mb-2">
+                                            <div className="w-[180px] bg-primary-50 dark:bg-slate-950/20 border border-primary-100 dark:border-slate-900/30 rounded-2xl p-4 flex flex-col items-center text-center shadow-sm">
+                                              <span className="text-[8px] font-black text-primary-500 mb-2">{op.type === 'create' || op.type === 'create_category' ? 'دسته‌بندی جدید' : 'ویرایش دسته'}</span>
+                                              <div className="w-10 h-10 rounded-xl bg-primary-500/15 flex items-center justify-center text-primary-500 mb-2">
                                                 {data.icon && data.icon.length === 1 ? (
                                                   <span className="text-xl">{data.icon}</span>
                                                 ) : (
@@ -9935,7 +9960,7 @@ export default function AgentPage() {
                                               <span className="text-slate-500">📁 محدود به دسته‌بندی‌های:</span>
                                               <div className="flex flex-wrap gap-1 mt-0.5 justify-end">
                                                 {matchedCats.map((c: any) => (
-                                                  <span key={c.id} className="bg-indigo-500/10 text-indigo-500 border border-indigo-500/10 px-1.5 py-0.5 rounded text-[8px] font-black">
+                                                  <span key={c.id} className="bg-primary-500/10 text-primary-500 border border-primary-500/10 px-1.5 py-0.5 rounded text-[8px] font-black">
                                                     {c.name}
                                                   </span>
                                                 ))}
@@ -10019,14 +10044,14 @@ export default function AgentPage() {
                                   if (isReport) {
                                     return (
                                       <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 text-right space-y-4 shadow-sm animate-fadeIn">
-                                        <div className="flex items-center gap-2 text-xs font-black text-indigo-500 border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                                        <div className="flex items-center gap-2 text-xs font-black text-primary-500 border-b border-slate-100 dark:border-slate-800 pb-2.5">
                                           <FileText size={16} />
                                           <span>📊 گزارش و پاسخ دستیار هوشمند</span>
                                         </div>
                                         <p className="text-[11px] text-slate-700 dark:text-slate-300 font-bold leading-relaxed whitespace-pre-line bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-100 dark:border-slate-900">
                                           {activeOutput.explanation}
                                         </p>
-                                        <div className="bg-indigo-500/5 border border-indigo-500/10 rounded-xl p-3 text-[9px] text-indigo-500 font-bold flex items-center gap-2 justify-center">
+                                        <div className="bg-primary-500/5 border border-primary-500/10 rounded-xl p-3 text-[9px] text-primary-500 font-bold flex items-center gap-2 justify-center">
                                           <Lightbulb size={12} className="shrink-0" />
                                           <span>این یک گزارش اطلاعاتی است و تغییری در سفارشات ایجاد نمی‌کند.</span>
                                         </div>
@@ -10040,7 +10065,7 @@ export default function AgentPage() {
                                   return (
                                     <div className="w-[240px] flex flex-col items-center animate-fadeIn text-right">
                                       <div className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex flex-col gap-3 shadow-xs">
-                                        <div className="flex items-center gap-2 text-[10px] font-black text-indigo-500 border-b border-slate-200 dark:border-slate-800 pb-2">
+                                        <div className="flex items-center gap-2 text-[10px] font-black text-primary-500 border-b border-slate-200 dark:border-slate-800 pb-2">
                                           <ShoppingBag size={14} />
                                           <span>بروزرسانی وضعیت سفارشات</span>
                                         </div>
@@ -10051,7 +10076,7 @@ export default function AgentPage() {
                                             <div className="flex justify-between items-center text-[10px] font-bold text-slate-600 dark:text-slate-400">
                                               <span>وضعیت عمومی:</span>
                                               <span className={`px-1.5 py-0.5 rounded text-[8px] font-black ${
-                                                updates.status === 'paid' ? 'bg-indigo-500/10 text-indigo-500' :
+                                                updates.status === 'paid' ? 'bg-primary-500/10 text-primary-500' :
                                                 updates.status === 'shipped' ? 'bg-blue-500/10 text-blue-500' :
                                                 updates.status === 'delivered' ? 'bg-emerald-500/10 text-emerald-500' :
                                                 updates.status === 'cancelled' ? 'bg-rose-500/10 text-rose-500' : 'bg-slate-500/10 text-slate-500'
@@ -10102,7 +10127,7 @@ export default function AgentPage() {
                                       <div className="mt-3 w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-right text-[10px] space-y-2 font-bold text-slate-600 dark:text-slate-400 shadow-2xs">
                                         <div className="border-b border-slate-100 dark:border-slate-800 pb-1.5 flex justify-between items-center">
                                           <span className="text-slate-900 dark:text-slate-200 text-[10px] font-black">⚙️ فاکتور و جزئیات اجرایی</span>
-                                          <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-indigo-500/10 text-indigo-500">
+                                          <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-primary-500/10 text-primary-500">
                                             کنترل سفارش
                                           </span>
                                         </div>
@@ -10173,7 +10198,7 @@ export default function AgentPage() {
                                         <div className="w-full bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 flex flex-col gap-2.5 shadow-sm text-right relative">
                                           <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2">
-                                              <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-950 flex items-center justify-center text-indigo-500 font-bold text-xs uppercase">
+                                              <div className="w-8 h-8 rounded-full bg-primary-50 dark:bg-slate-950 flex items-center justify-center text-primary-500 font-bold text-xs uppercase">
                                                 {rData.userName ? rData.userName.slice(0, 1) : 'U'}
                                               </div>
                                               <div className="flex flex-col">
@@ -10259,10 +10284,10 @@ export default function AgentPage() {
 
                                   if (activeOutput.action === 'update_status') {
                                     return (
-                                      <div className="w-[200px] bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 rounded-2xl p-4 flex flex-col items-center text-center shadow-xs">
-                                        <MessageSquare className="w-6 h-6 text-indigo-500 mb-2" />
+                                      <div className="w-[200px] bg-primary-50 dark:bg-slate-950/20 border border-primary-100 dark:border-slate-900/30 rounded-2xl p-4 flex flex-col items-center text-center shadow-xs">
+                                        <MessageSquare className="w-6 h-6 text-primary-500 mb-2" />
                                         <span className="text-xs font-black text-gray-800 dark:text-gray-200">تغییر وضعیت نظرات</span>
-                                        <span className="text-[10px] text-indigo-500 font-black mt-2 bg-indigo-500/10 px-2 py-0.5 rounded-full">{
+                                        <span className="text-[10px] text-primary-500 font-black mt-2 bg-primary-500/10 px-2 py-0.5 rounded-full">{
                                           activeOutput.status === 'approved' ? 'تایید و نمایش عمومی' :
                                           activeOutput.status === 'rejected' ? 'رد و عدم نمایش' : 'در انتظار بررسی'
                                         }</span>
@@ -10313,7 +10338,7 @@ export default function AgentPage() {
                                       {isUpdateStatus && (
                                         <div className="text-center py-2">
                                           <span className="text-[9px] text-slate-400 font-bold block mb-1">وضعیت جدید تیکت:</span>
-                                          <span className="text-xs font-black text-indigo-500 bg-indigo-500/10 px-2 py-0.5 rounded-full">
+                                          <span className="text-xs font-black text-primary-500 bg-primary-500/10 px-2 py-0.5 rounded-full">
                                             {activeOutput.status === 'new' ? 'جدید' :
                                              activeOutput.status === 'in_progress' ? 'در حال بررسی' :
                                              activeOutput.status === 'answered' ? 'پاسخ داده شده' : 'بسته شده'}
@@ -10400,7 +10425,7 @@ export default function AgentPage() {
                                           </div>
                                           <div className="flex justify-between items-center pt-1">
                                             <span className="text-slate-400 font-bold text-[9px]">نقش دسترسی:</span>
-                                            <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-indigo-500/10 text-indigo-500 uppercase">
+                                            <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-primary-500/10 text-primary-500 uppercase">
                                               {staffData.role === 'admin' ? 'مدیر کل' :
                                                staffData.role === 'editor' ? 'نویسنده' :
                                                staffData.role === 'storekeeper' ? 'انباردار' : 'پشتیبان'}
@@ -10499,7 +10524,7 @@ export default function AgentPage() {
                                           </div>
                                           <div>
                                             <span className="text-[9px] text-slate-400 block font-bold">فرمت فایل ذخیره‌سازی:</span>
-                                            <span className="text-indigo-500 font-bold font-mono uppercase">{activeOutput.format || 'csv'}</span>
+                                            <span className="text-primary-500 font-bold font-mono uppercase">{activeOutput.format || 'csv'}</span>
                                           </div>
                                         </div>
                                       )}
@@ -10551,10 +10576,10 @@ export default function AgentPage() {
                                   return (
                                     <div className="w-full max-w-sm bg-white dark:bg-gray-950 rounded-2xl border border-gray-100 dark:border-gray-800/80 p-4 shadow-sm text-right select-none space-y-4">
                                       <div className="flex items-center justify-between border-b border-gray-50 dark:border-gray-900 pb-2">
-                                        <span className="text-xs font-black text-indigo-500 flex items-center gap-1">
+                                        <span className="text-xs font-black text-primary-500 flex items-center gap-1">
                                           📸 ویرایشگر هوشمند تصاویر (هوش مصنوعی)
                                         </span>
-                                        <span className="text-[8px] font-black bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded">
+                                        <span className="text-[8px] font-black bg-primary-50 dark:bg-slate-950/40 text-primary-600 dark:text-primary-400 px-1.5 py-0.5 rounded">
                                           {replaceOriginal ? 'جایگزینی اصلی' : 'نسخه گالری جدید'}
                                         </span>
                                       </div>
@@ -10570,11 +10595,11 @@ export default function AgentPage() {
                                           </div>
                                         </div>
 
-                                        <div className="text-indigo-400 animate-pulse">◀</div>
+                                        <div className="text-primary-400 animate-pulse">◀</div>
 
                                         <div className="flex flex-col items-center gap-1">
-                                          <span className="text-[8px] font-bold text-indigo-500">خروجی بعد (After)</span>
-                                          <div className={`${aspectClass} rounded-xl overflow-hidden border border-indigo-500/20 flex items-center justify-center relative shadow-sm transition-all`} style={{ backgroundColor: removeBg ? (bgColor || '#ffffff') : '#f8fafc' }}>
+                                          <span className="text-[8px] font-bold text-primary-500">خروجی بعد (After)</span>
+                                          <div className={`${aspectClass} rounded-xl overflow-hidden border border-primary-500/20 flex items-center justify-center relative shadow-sm transition-all`} style={{ backgroundColor: removeBg ? (bgColor || '#ffffff') : '#f8fafc' }}>
                                             {removeBg ? (
                                               <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#4f46e5 1px, transparent 1px)', backgroundSize: '8px 8px' }} />
                                             ) : (
@@ -10604,7 +10629,7 @@ export default function AgentPage() {
                                         </div>
                                         <div className="flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/30 p-1.5 rounded-lg">
                                           <span className="flex items-center gap-1 text-slate-800 dark:text-slate-200">📐 ابعاد و نسبت تصویر</span>
-                                          <span className="text-indigo-500">{aspectLabel}</span>
+                                          <span className="text-primary-500">{aspectLabel}</span>
                                         </div>
                                         <div className="flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/30 p-1.5 rounded-lg">
                                           <span className="flex items-center gap-1 text-slate-800 dark:text-slate-200">🔍 مقیاس سوژه در بوم</span>
@@ -10636,7 +10661,7 @@ export default function AgentPage() {
                                       </div>
 
                                       {activeOutput.explanation && (
-                                        <div className="bg-indigo-50/20 dark:bg-indigo-950/10 p-2.5 rounded-xl border border-indigo-500/5">
+                                        <div className="bg-primary-50/20 dark:bg-slate-950/10 p-2.5 rounded-xl border border-primary-500/5">
                                           <p className="text-[9px] text-slate-500 dark:text-slate-400 font-bold leading-relaxed">{activeOutput.explanation}</p>
                                         </div>
                                       )}
@@ -10660,12 +10685,12 @@ export default function AgentPage() {
                                           {set.imageUrl ? (
                                             <img src={set.imageUrl} alt="" className="w-full h-full object-cover" />
                                           ) : (
-                                            <div className="w-full h-full flex items-center justify-center bg-indigo-500/10"><LayoutGrid size={24} className="text-indigo-500/40" /></div>
+                                            <div className="w-full h-full flex items-center justify-center bg-primary-500/10"><LayoutGrid size={24} className="text-primary-500/40" /></div>
                                           )}
                                           {itemsList.map((item: any, idx: number) => (
                                             <div
                                               key={idx}
-                                              className="absolute w-5 h-5 bg-indigo-600 border border-white text-white rounded-full flex items-center justify-center text-[8px] font-black cursor-pointer shadow-md animate-pulse"
+                                              className="absolute w-5 h-5 bg-primary-600 border border-white text-white rounded-full flex items-center justify-center text-[8px] font-black cursor-pointer shadow-md animate-pulse"
                                               style={{ left: `${item.x}%`, top: `${item.y}%`, transform: 'translate(-50%, -50%)' }}
                                               title="آیتم تعاملی"
                                             >
@@ -10686,7 +10711,7 @@ export default function AgentPage() {
                                       <div className="mt-3 w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-right text-[10px] space-y-2.5 font-bold text-slate-600 dark:text-slate-400 shadow-2xs">
                                         <div className="border-b border-slate-100 dark:border-slate-800 pb-1.5 flex justify-between items-center">
                                           <span className="text-slate-900 dark:text-slate-200 text-[10px] font-black">⚙️ جزئیات محصولات تعاملی</span>
-                                          <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-indigo-500/10 text-indigo-500">
+                                          <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-primary-500/10 text-primary-500">
                                             پکیج شاپبل
                                           </span>
                                         </div>
@@ -10746,7 +10771,7 @@ export default function AgentPage() {
                                   const actions = activeOutput.actions || activeOutput.rawResult?.actions || [];
                                   return (
                                     <div className="w-[260px] bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex flex-col gap-3 shadow-xs text-right" dir="rtl">
-                                      <div className="flex items-center gap-2 text-[10px] font-black text-indigo-500 border-b border-slate-200/60 dark:border-slate-800/60 pb-2">
+                                      <div className="flex items-center gap-2 text-[10px] font-black text-primary-500 border-b border-slate-200/60 dark:border-slate-800/60 pb-2">
                                         <Users size={14} />
                                         <span>خلاصه تغییرات باشگاه مشتریان و CRM</span>
                                       </div>
@@ -10757,7 +10782,7 @@ export default function AgentPage() {
                                             <div key={idx} className="text-[10px] font-bold text-slate-600 dark:text-slate-400 border-b border-slate-100 dark:border-slate-900/60 pb-2 last:border-0 last:pb-0">
                                               {type === 'updateSettings' && (
                                                 <div>
-                                                  <span className="text-indigo-400 block mb-1">⚙️ تنظیمات عمومی باشگاه:</span>
+                                                  <span className="text-primary-400 block mb-1">⚙️ تنظیمات عمومی باشگاه:</span>
                                                   <div className="space-y-0.5 pl-2">
                                                     <div>وضعیت: {action.data?.customerClubEnabled ? '🟢 فعال' : '🔴 غیرفعال'}</div>
                                                     {action.data?.customerClubEnabled && (
@@ -10826,7 +10851,7 @@ export default function AgentPage() {
                                               )}
                                               {type === 'getUserDetails' && (
                                                 <div>
-                                                  <span className="text-indigo-400 block mb-1">🔎 مشخصات مشتری:</span>
+                                                  <span className="text-primary-400 block mb-1">🔎 مشخصات مشتری:</span>
                                                   <div>نام: <span className="text-slate-900 dark:text-white font-black">{action.data?.name || action.userName || '—'}</span></div>
                                                   <div className="text-slate-500" dir="ltr">تلفن: {action.data?.phone || '—'}</div>
                                                   {action.data?.email && <div className="text-slate-500" dir="ltr">ایمیل: {action.data.email}</div>}
@@ -10979,7 +11004,7 @@ export default function AgentPage() {
                                         {settings.productType !== undefined && (
                                           <div className="flex justify-between items-center text-[10px]">
                                             <span className="text-slate-400">نوع کالاها</span>
-                                            <span className="font-bold text-indigo-500 font-mono">
+                                            <span className="font-bold text-primary-500 font-mono">
                                               {settings.productType === 'digital' ? 'فقط دیجیتال 💾' :
                                                settings.productType === 'physical' ? 'فقط فیزیکی 📦' : 'فیزیکی و دیجیتال'}
                                             </span>
@@ -10998,9 +11023,9 @@ export default function AgentPage() {
                                   const contact = config.contact || {};
                                   return (
                                     <div className="w-[240px] bg-white dark:bg-gray-950 border border-gray-100 dark:border-gray-900 rounded-2xl p-4 flex flex-col text-right shadow-sm select-none relative overflow-hidden">
-                                      <div className="absolute top-0 right-0 left-0 h-1.5 bg-indigo-600" />
+                                      <div className="absolute top-0 right-0 left-0 h-1.5 bg-primary-600" />
                                       <div className="flex items-center gap-2 mb-3 mt-1">
-                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400">
+                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary-50 dark:bg-slate-950/30 text-primary-600 dark:text-primary-400">
                                           <Info size={16} />
                                         </div>
                                         <div>
@@ -11012,7 +11037,7 @@ export default function AgentPage() {
                                       <div className="space-y-3 border-t border-slate-50 dark:border-slate-900/60 pt-3">
                                         {/* Brand Story Preview */}
                                         <div className="space-y-1">
-                                          <span className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 block">{brandStory.title || 'داستان برند'}</span>
+                                          <span className="text-[9px] font-black text-primary-600 dark:text-primary-400 block">{brandStory.title || 'داستان برند'}</span>
                                           <p className="text-[9px] text-slate-600 dark:text-slate-300 leading-relaxed line-clamp-3">{brandStory.storyText || 'داستان برند وارد نشده است.'}</p>
                                           {brandStory.foundingYear && (
                                             <span className="text-[8px] text-slate-400 font-bold block">سال تاسیس: {brandStory.foundingYear}</span>
@@ -11054,9 +11079,9 @@ export default function AgentPage() {
                                   const openingHours = config.openingHours || { list: [] };
                                   return (
                                     <div className="w-[240px] bg-white dark:bg-gray-950 border border-gray-100 dark:border-gray-900 rounded-2xl p-4 flex flex-col text-right shadow-sm select-none relative overflow-hidden">
-                                      <div className="absolute top-0 right-0 left-0 h-1.5 bg-indigo-600" />
+                                      <div className="absolute top-0 right-0 left-0 h-1.5 bg-primary-600" />
                                       <div className="flex items-center gap-2 mb-3 mt-1">
-                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400">
+                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary-50 dark:bg-slate-950/30 text-primary-600 dark:text-primary-400">
                                           <Phone size={16} />
                                         </div>
                                         <div>
@@ -11068,7 +11093,7 @@ export default function AgentPage() {
                                       <div className="space-y-3 border-t border-slate-50 dark:border-slate-900/60 pt-3">
                                         {/* Hero Preview */}
                                         <div className="space-y-1">
-                                          <span className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 block">{hero.title || 'ارتباط با ما'}</span>
+                                          <span className="text-[9px] font-black text-primary-600 dark:text-primary-400 block">{hero.title || 'ارتباط با ما'}</span>
                                           <span className="text-[8px] text-slate-400 font-bold block">{hero.subtitle}</span>
                                           <p className="text-[9px] text-slate-600 dark:text-slate-300 leading-relaxed line-clamp-2">{hero.description || 'توضیحات تماس با ما وارد نشده است.'}</p>
                                         </div>
@@ -11115,8 +11140,8 @@ export default function AgentPage() {
                                   return (
                                     <div className="w-[260px] bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs text-right select-none flex flex-col gap-2 p-3">
                                       <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-1.5 mb-1">
-                                        <span className="text-[10px] font-black text-indigo-500 flex items-center gap-1">📱 نمای زنده لندینگ صفحه اصلی</span>
-                                        <span className="text-[7px] font-black bg-indigo-500/15 text-indigo-500 px-1.5 py-0.5 rounded">
+                                        <span className="text-[10px] font-black text-primary-500 flex items-center gap-1">📱 نمای زنده لندینگ صفحه اصلی</span>
+                                        <span className="text-[7px] font-black bg-primary-500/15 text-primary-500 px-1.5 py-0.5 rounded">
                                           {home.homePageType === 'shop' ? 'مستقیم فروشگاه' : 'چیدمان دلخواه'}
                                         </span>
                                       </div>
@@ -11161,10 +11186,10 @@ export default function AgentPage() {
                                           if (section === 'slider') {
                                             return (
                                               <div key={idx} className="px-2">
-                                                <div className="w-full aspect-video bg-gradient-to-l from-indigo-500/20 to-blue-500/15 rounded-lg border border-slate-100 dark:border-slate-800 flex items-center justify-center relative">
+                                                <div className="w-full aspect-video bg-gradient-to-l from-primary-500/20 to-blue-500/15 rounded-lg border border-slate-100 dark:border-slate-800 flex items-center justify-center relative">
                                                   <span className="text-[6px] font-bold text-slate-400">🖼️ اسلایدر تصاویر</span>
                                                   <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5">
-                                                    <div className="w-1 h-1 rounded-full bg-indigo-500" />
+                                                    <div className="w-1 h-1 rounded-full bg-primary-500" />
                                                     <div className="w-1 h-1 rounded-full bg-slate-300" />
                                                     <div className="w-1 h-1 rounded-full bg-slate-300" />
                                                   </div>
@@ -11177,11 +11202,11 @@ export default function AgentPage() {
                                           if (section === 'hero') {
                                             return (
                                               <div key={idx} className="px-2">
-                                                <div className="p-3 bg-indigo-600 text-white rounded-lg flex flex-col gap-0.5 items-center text-center relative overflow-hidden shadow-2xs">
+                                                <div className="p-3 bg-primary-600 text-white rounded-lg flex flex-col gap-0.5 items-center text-center relative overflow-hidden shadow-2xs">
                                                   <span className="text-[8px] font-black line-clamp-1">{home.heroTitle || 'عنوان هیرو'}</span>
-                                                  <span className="text-[6px] text-indigo-200 line-clamp-1">{home.heroSubtitle || 'توضیحات هیرو'}</span>
+                                                  <span className="text-[6px] text-primary-200 line-clamp-1">{home.heroSubtitle || 'توضیحات هیرو'}</span>
                                                   {home.heroCtaText && (
-                                                    <span className="mt-1 px-1.5 py-0.5 bg-white text-indigo-600 rounded text-[5px] font-black scale-90">
+                                                    <span className="mt-1 px-1.5 py-0.5 bg-white text-primary-600 rounded text-[5px] font-black scale-90">
                                                       {home.heroCtaText}
                                                     </span>
                                                   )}
@@ -11194,10 +11219,10 @@ export default function AgentPage() {
                                           if (section === 'shoppable') {
                                             return (
                                               <div key={idx} className="px-2">
-                                                <div className="w-full aspect-video bg-indigo-50 dark:bg-indigo-950/20 rounded-lg border border-indigo-100 dark:border-indigo-900/30 flex items-center justify-center relative overflow-hidden">
-                                                  <span className="text-[6px] font-black text-indigo-400">📍 پکیج نقاط شاپبل تعاملی</span>
-                                                  <div className="absolute top-1/3 left-1/4 w-2 h-2 rounded-full bg-indigo-600 border border-white animate-pulse" />
-                                                  <div className="absolute bottom-1/3 left-2/3 w-2 h-2 rounded-full bg-indigo-600 border border-white animate-pulse" />
+                                                <div className="w-full aspect-video bg-primary-50 dark:bg-slate-950/20 rounded-lg border border-primary-100 dark:border-slate-900/30 flex items-center justify-center relative overflow-hidden">
+                                                  <span className="text-[6px] font-black text-primary-400">📍 پکیج نقاط شاپبل تعاملی</span>
+                                                  <div className="absolute top-1/3 left-1/4 w-2 h-2 rounded-full bg-primary-600 border border-white animate-pulse" />
+                                                  <div className="absolute bottom-1/3 left-2/3 w-2 h-2 rounded-full bg-primary-600 border border-white animate-pulse" />
                                                 </div>
                                               </div>
                                             );
@@ -11224,8 +11249,8 @@ export default function AgentPage() {
                                               <div key={idx} className="px-2">
                                                 <div className="grid grid-cols-4 gap-1">
                                                   {[1, 2, 3, 4].map(cidx => (
-                                                    <div key={cidx} className="p-1 bg-indigo-50/40 dark:bg-indigo-950/10 border border-indigo-100/30 dark:border-indigo-900/10 rounded flex flex-col items-center gap-0.5">
-                                                      <div className="w-3 h-3 rounded-full bg-indigo-500/10" />
+                                                    <div key={cidx} className="p-1 bg-primary-50/40 dark:bg-slate-950/10 border border-primary-100/30 dark:border-slate-900/10 rounded flex flex-col items-center gap-0.5">
+                                                      <div className="w-3 h-3 rounded-full bg-primary-500/10" />
                                                       <span className="text-[4px] text-slate-400 font-bold">دسته بندی {cidx}</span>
                                                     </div>
                                                   ))}
@@ -11244,7 +11269,7 @@ export default function AgentPage() {
                                                     <div key={pidx} className="p-1 bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-lg flex flex-col gap-0.5">
                                                       <div className="w-full aspect-square bg-slate-50 dark:bg-slate-900 rounded-md" />
                                                       <span className="text-[5px] font-black text-slate-800 dark:text-slate-350 line-clamp-1">محصول شماره {pidx}</span>
-                                                      <span className="text-[5px] text-indigo-500 font-mono">۱۲۵,۰۰۰ ت</span>
+                                                      <span className="text-[5px] text-primary-500 font-mono">۱۲۵,۰۰۰ ت</span>
                                                     </div>
                                                   ))}
                                                 </div>
@@ -11314,7 +11339,7 @@ export default function AgentPage() {
                                           <div className="p-2 bg-current/5 rounded-xl border border-current/10 space-y-1.5">
                                             <span className="text-[8px] font-black block">📧 {footer.newsletterTitle || 'عضویت در خبرنامه'}</span>
                                             <div className="flex gap-1">
-                                              <span className="bg-indigo-650 text-white text-[6px] font-black px-1.5 py-1 rounded-md shrink-0 bg-indigo-600">ثبت</span>
+                                              <span className="bg-indigo-650 text-white text-[6px] font-black px-1.5 py-1 rounded-md shrink-0 bg-primary-600">ثبت</span>
                                               <div className="bg-current/10 rounded-md flex-1 text-right text-[6px] px-2 py-1 opacity-60">ایمیل شما...</div>
                                             </div>
                                           </div>
@@ -11377,7 +11402,7 @@ export default function AgentPage() {
                                           {/* Left Icons: Cart and User Account */}
                                           <div className="flex gap-1.5 items-center shrink-0">
                                             {header.showCart && (
-                                              <span className="p-1 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-md text-[8px] font-black text-indigo-600 dark:text-indigo-400 flex items-center gap-0.5">
+                                              <span className="p-1 bg-primary-500/10 dark:bg-primary-500/20 rounded-md text-[8px] font-black text-primary-600 dark:text-primary-400 flex items-center gap-0.5">
                                                 🛒 سبد
                                               </span>
                                             )}
@@ -11399,7 +11424,7 @@ export default function AgentPage() {
                                           {/* Right: Logo Brand & Categories link */}
                                           <div className="flex gap-1.5 items-center shrink-0">
                                             {header.showCategories && (
-                                              <span className="text-[8px] font-black text-slate-500 hover:text-indigo-500 transition-colors border-r border-slate-200 dark:border-slate-800 pr-1.5">
+                                              <span className="text-[8px] font-black text-slate-500 hover:text-primary-500 transition-colors border-r border-slate-200 dark:border-slate-800 pr-1.5">
                                                 📂 دسته‌ها
                                               </span>
                                             )}
@@ -11420,7 +11445,7 @@ export default function AgentPage() {
                                       {/* Extra Metadata Panel */}
                                       {header.sticky && (
                                         <div className="mt-2 text-center">
-                                          <span className="px-2 py-0.5 rounded-full text-[8px] font-black bg-indigo-500/10 text-indigo-500 border border-indigo-500/10 flex items-center gap-1 justify-center">
+                                          <span className="px-2 py-0.5 rounded-full text-[8px] font-black bg-primary-500/10 text-primary-500 border border-primary-500/10 flex items-center gap-1 justify-center">
                                             📌 هدر به صورت شناور (Sticky) در بالای صفحه چسبیده است
                                           </span>
                                         </div>
@@ -11471,7 +11496,7 @@ export default function AgentPage() {
                                 return (
                                   <button
                                     onClick={() => setTaskStatuses(prev => ({ ...prev, [activeTask.id]: 'completed' }))}
-                                    className="w-full py-3 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white rounded-xl text-xs font-black shadow-md shadow-indigo-500/10 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
+                                    className="w-full py-3 bg-gradient-to-r from-primary-600 to-blue-600 hover:from-primary-500 hover:to-blue-500 text-white rounded-xl text-xs font-black shadow-md shadow-primary-500/10 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
                                   >
                                     <CheckCircle2 size={14} />
                                     <span>مشاهده گزارش — تکمیل مرحله</span>
@@ -11488,7 +11513,7 @@ export default function AgentPage() {
                                   return (
                                     <button
                                       onClick={() => setTaskStatuses(prev => ({ ...prev, [activeTask.id]: 'completed' }))}
-                                      className="w-full py-3 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white rounded-xl text-xs font-black shadow-md shadow-indigo-500/10 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
+                                      className="w-full py-3 bg-gradient-to-r from-primary-600 to-blue-600 hover:from-primary-500 hover:to-blue-500 text-white rounded-xl text-xs font-black shadow-md shadow-primary-500/10 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
                                     >
                                       <CheckCircle2 size={14} />
                                       <span>این اطلاعات فقط جهت مشاهده است — تکمیل مرحله</span>
@@ -11580,7 +11605,7 @@ export default function AgentPage() {
                               onClick={() => setCurrentTaskIndex(idx)}
                               className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
                                 currentTaskIndex === idx
-                                  ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-black'
+                                  ? 'bg-primary-500/10 border-primary-500/20 text-primary-600 dark:text-primary-400 font-black'
                                   : 'bg-slate-50/50 dark:bg-slate-900/20 border-transparent hover:bg-slate-100 dark:hover:bg-slate-800/40 text-slate-600 dark:text-slate-400'
                               }`}
                             >
@@ -11590,7 +11615,7 @@ export default function AgentPage() {
                               </div>
                               <div className="shrink-0">
                                 {s === 'completed' && <Check size={12} className="text-emerald-500" />}
-                                {s === 'running' && <Loader2 size={12} className="animate-spin text-indigo-500" />}
+                                {s === 'running' && <Loader2 size={12} className="animate-spin text-primary-500" />}
                                 {s === 'preview_ready' && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />}
                                 {s === 'failed' && <X size={12} className="text-rose-500" />}
                                 {s === 'idle' && <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700" />}
@@ -11606,7 +11631,7 @@ export default function AgentPage() {
                           onClick={() => {
                             setWizardStep(3);
                           }}
-                          className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-[10px] font-black shadow-sm transition-all flex items-center justify-center gap-1.5"
+                          className="w-full py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-[10px] font-black shadow-sm transition-all flex items-center justify-center gap-1.5"
                         >
                           <span>ثبت نهایی و مشاهده نتایج</span>
                           <ChevronLeft size={12} />
@@ -11697,7 +11722,7 @@ export default function AgentPage() {
                             <div className="text-[9px] text-slate-500 font-bold">{getTargetLabel(asset.type)}</div>
                           </div>
                         </div>
-                        <a href={asset.url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-[9px] font-black text-indigo-500 hover:text-indigo-300 transition-colors">
+                        <a href={asset.url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-[9px] font-black text-primary-500 hover:text-primary-300 transition-colors">
                           <span>مشاهده در سایت</span>
                           <ExternalLink size={10} />
                         </a>
@@ -11721,7 +11746,7 @@ export default function AgentPage() {
                       setPlan(null);
                       setWizardStep(1);
                     }}
-                    className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black shadow-lg shadow-indigo-500/20 transition-all cursor-pointer"
+                    className="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-black shadow-lg shadow-primary-500/20 transition-all cursor-pointer"
                   >
                     ادامه گفتگو روی این نتایج
                   </button>

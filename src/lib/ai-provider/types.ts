@@ -46,6 +46,13 @@ export interface AiProviderConfig {
   gatewayToken?: string;
   directApiKey?: string;
   timeoutMs: number;
+  allowDirect: boolean;
+  defaultChatModel: string;
+  simpleModel: string;
+  complexModel: string;
+  embeddingModel: string;
+  aiEmbeddingBaseUrl?: string;
+  aiEmbeddingApiKey?: string;
 }
 
 export interface AiLogContext {
@@ -53,4 +60,11 @@ export interface AiLogContext {
   shopId?: string;
   slot?: AiModelSlot;
   model?: string;
+  // AI-008 (Phase C): per-route usage/quota context threaded through the openRouterFetch chokepoint.
+  endpoint?: string;
+  capability?: string;
+  featureKey?: string;
+  billingMode?: 'tenant' | 'platform';
+  rootRequestId?: string;
+  userId?: string;
 }

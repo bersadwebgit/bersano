@@ -6,7 +6,7 @@ set -e
 # Run Prisma migrations if DATABASE_URL is set
 if [ -n "$DATABASE_URL" ]; then
   echo "Applying database migrations..."
-  prisma migrate deploy
+  npx prisma migrate deploy
 else
   echo "DATABASE_URL is not set. Skipping migrations."
 fi

@@ -10,10 +10,9 @@ import BottomNav from '@/components/layout/BottomNav';
 import BlogListClient from './BlogListClient';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
-import Link from 'next/link';
-import MarketingHeader from '@/components/layout/MarketingHeader';
-import MarketingFooter from '@/components/layout/MarketingFooter';
-import StickyMobileCTA from '@/components/layout/StickyMobileCTA';
+import MarketingShell from '@/components/marketing/MarketingShell';
+import StructuredData from '@/components/marketing/StructuredData';
+import { breadcrumbSchema } from '@/lib/marketing-schema';
 
 export async function generateMetadata(): Promise<Metadata> {
   const shop = await getTenantShop();
@@ -240,17 +239,20 @@ export default async function BlogListPage({ searchParams }: BlogListPageProps) 
     };
 
     return (
-      <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950 font-sans" dir="rtl">
+      <MarketingShell>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdSchema) }}
         />
-
-        {/* Unified Premium Marketing Header */}
-        <MarketingHeader />
+        <StructuredData
+          data={breadcrumbSchema([
+            { name: 'خانه', path: '/' },
+            { name: 'وبلاگ', path: '/blog' },
+          ])}
+        />
 
         {/* Blog Content */}
-        <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <BlogListClient
             shopName="برسانا"
             initialPosts={formattedPosts}
@@ -264,12 +266,8 @@ export default async function BlogListPage({ searchParams }: BlogListPageProps) 
             activePage={activePage}
             activeSort={activeSort}
           />
-        </main>
-
-        {/* Unified Premium Marketing Footer & Sticky Mobile CTA */}
-        <MarketingFooter />
-        <StickyMobileCTA />
-      </div>
+        </div>
+      </MarketingShell>
     );
   }
 

@@ -12,6 +12,12 @@ export interface AiLogContext {
   slot?: string;
   model?: string;
   billingMode?: 'tenant' | 'platform';
+  // AI-008 (Phase C): per-route usage/quota context. When shopId is a real tenant, the wrapped
+  // executeChatCompletion enforces quota and writes a durable AiUsage row for this capability.
+  endpoint?: string;
+  capability?: string;
+  featureKey?: string;
+  rootRequestId?: string;
 }
 
 let gatewayEnabledCache: { value: boolean; exp: number } | null = null;
@@ -123,12 +129,15 @@ export async function openRouterFetch(
   const billingMode = logContext.billingMode || 'tenant';
   const executeOpts = {
     shopId,
-    endpoint: 'legacy-openrouter-fetch',
+    endpoint: logContext.endpoint || 'legacy-openrouter-fetch',
     slot,
     enableFallback: true,
     skipQuotaCheck: billingMode === 'platform' || shopId === 'system' || shopId === 'N/A' ? true : false,
     requestId: logContext.requestId,
     billingMode,
+    featureKey: logContext.featureKey,
+    capability: logContext.capability,
+    rootRequestId: logContext.rootRequestId,
   };
 
   const result = await executeChatCompletion(requestPayload, executeOpts);
@@ -168,15 +177,17 @@ export async function openRouterFetch(
     });
   }
 
-  // Wrap into failure response
+  // Wrap into failure response. AI-008: propagate the real status/errorCode so structured errors
+  // (e.g. AI_QUOTA_EXCEEDED → 429) surface to legacy routes instead of a generic 502.
   const failureJson = {
     error: {
       message: result.error || 'خطای ارائه‌دهنده سرویس هوش مصنوعی',
+      code: result.errorCode,
     },
   };
 
   return new Response(JSON.stringify(failureJson), {
-    status: 502,
+    status: result.status || 502,
     headers: { 'Content-Type': 'application/json' },
   });
 }

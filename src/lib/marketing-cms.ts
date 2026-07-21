@@ -36,6 +36,7 @@ export interface PricingPlan {
   badge?: string;
   ctaText: string;
   ctaLink: string;
+  highlighted?: boolean;
 }
 
 export interface ComparisonRow {
@@ -294,6 +295,58 @@ const DEFAULT_PROMPTS: PromptExample[] = [
     outputPreview: 'یافتن الگو (مثلاً عدم اتصال درگاه زیبال در روز دوشنبه یا هزینه بالای پست) و پیشنهاد راهکار عملی.'
   }
 ];
+
+/**
+ * Typed pricing resolution for the marketing funnel.
+ * Priority: MarketingPlan table (managed, typed) -> saas_pricing JSON (legacy) -> DEFAULT_PRICING.
+ * Never throws; always returns a usable list so the funnel stays intact.
+ */
+export async function getMarketingPricingPlans(): Promise<PricingPlan[]> {
+  try {
+    const plans = await prisma.marketingPlan.findMany({
+      where: { isActive: true },
+      orderBy: { order: 'asc' },
+    });
+
+    if (plans.length > 0) {
+      return plans.map((p) => {
+        let features: string[] = [];
+        try {
+          features = Array.isArray(p.features) ? (p.features as string[]) : [];
+        } catch {
+          features = [];
+        }
+        return {
+          id: p.key,
+          name: p.name,
+          desc: p.description || '',
+          price: p.priceLabel,
+          period: p.period,
+          features,
+          badge: p.badge || undefined,
+          ctaText: p.ctaText,
+          ctaLink: p.ctaLink,
+          highlighted: p.highlighted,
+        } as PricingPlan & { highlighted?: boolean };
+      });
+    }
+  } catch (error) {
+    console.error('[CMS] MarketingPlan read failed, falling back to saas_pricing/defaults', error);
+  }
+
+  // Fallback to legacy saas_pricing JSON key, then hardcoded defaults.
+  try {
+    const row = await prisma.systemSetting.findUnique({ where: { key: 'saas_pricing' } });
+    if (row?.value) {
+      const parsed = JSON.parse(row.value);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {
+    // ignore, fall through to defaults
+  }
+
+  return DEFAULT_PRICING;
+}
 
 export async function getMarketingCMSContent(): Promise<MarketingContent> {
   try {

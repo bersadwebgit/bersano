@@ -9,11 +9,13 @@ import {
   isAdminRole,
 } from '@/lib/admin-roles';
 
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET && process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE !== 'phase-production-build') {
-  throw new Error('JWT_SECRET environment variable is missing!');
+function getJwtKey() {
+  const JWT_SECRET = process.env.JWT_SECRET;
+  if (!JWT_SECRET && process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE !== 'phase-production-build') {
+    throw new Error('JWT_SECRET environment variable is missing!');
+  }
+  return new TextEncoder().encode(JWT_SECRET || 'your-super-secret-key-change-in-production');
 }
-const key = new TextEncoder().encode(JWT_SECRET || 'your-super-secret-key-change-in-production');
 
 export async function middleware(request: NextRequest) {
   const response = await handleMiddleware(request);
@@ -36,6 +38,7 @@ export async function middleware(request: NextRequest) {
 }
 
 async function handleMiddleware(request: NextRequest) {
+  const key = getJwtKey();
   const { pathname } = request.nextUrl;
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-pathname', pathname);

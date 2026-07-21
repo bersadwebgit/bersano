@@ -197,6 +197,58 @@ export async function validateUrl(urlStr: string): Promise<boolean> {
 }
 
 /**
+ * SSRF guard for admin-configured external HTTP(S) endpoints (e.g. custom embedding base URL).
+ * Unlike validateUrl(), this does NOT enforce the trusted-domain allowlist (the endpoint is an
+ * arbitrary but legitimate public service), but it DOES resolve DNS and block private/reserved/
+ * loopback/link-local IP ranges. Returns true only when every resolved IP is public.
+ */
+export async function isPublicHttpUrlSafe(urlStr: string): Promise<boolean> {
+  if (!urlStr || typeof urlStr !== 'string') return false;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(urlStr.trim());
+  } catch {
+    return false;
+  }
+
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+
+  const hostname = parsed.hostname.toLowerCase();
+  if (
+    hostname === 'localhost' ||
+    hostname.endsWith('.localhost') ||
+    hostname.endsWith('.local') ||
+    hostname.endsWith('.internal')
+  ) {
+    return false;
+  }
+
+  // Strip IPv6 brackets (e.g. http://[::1]/ -> ::1)
+  const host = hostname.replace(/^\[/, '').replace(/\]$/, '');
+
+  // IP literal targets are checked directly (no DNS needed)
+  if (net.isIPv4(host)) return !isPrivateIPv4(host);
+  if (net.isIPv6(host)) return !isPrivateIPv6(host);
+
+  // Hostname: resolve DNS and block if any resolved IP is private/reserved
+  const ips = await resolveDns(host);
+  if (ips.length === 0) return false;
+
+  for (const ip of ips) {
+    if (net.isIPv4(ip)) {
+      if (isPrivateIPv4(ip)) return false;
+    } else if (net.isIPv6(ip)) {
+      if (isPrivateIPv6(ip)) return false;
+    } else {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
  * Safe fetch wrapper that prevents SSRF by validating the URL and re-checking after redirects.
  */
 export async function safeFetch(

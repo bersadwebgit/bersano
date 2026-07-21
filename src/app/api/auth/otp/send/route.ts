@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getTenantShop } from '@/lib/tenant';
-import { sendStoreSms, hashOtp, maskPhone } from '@/lib/sms';
+import { sendStoreSms, sendOtpSms, hashOtp, maskPhone } from '@/lib/sms';
 import { isRateLimited } from '@/lib/rate-limiter';
+import { ADMIN_ROLES } from '@/lib/admin-roles';
 
 export async function POST(request: Request) {
   try {
@@ -125,10 +126,27 @@ export async function POST(request: Request) {
     }
 
     // Send SMS via the store's own SMS configuration
-    const smsResult = await sendStoreSms(shop.shopId, 'otp', normalizedPhone, { code });
+    let smsResult = await sendStoreSms(shop.shopId, 'otp', normalizedPhone, { code });
 
     if (!smsResult.success) {
-      console.warn(`[WARN] [OTP/SMS]: Store SMS send failed. Error: ${smsResult.error}`);
+      // Check if the phone number belongs to an admin of this shop
+      const adminUser = await prisma.user.findFirst({
+        where: {
+          phone: normalizedPhone,
+          shopId: shop.shopId,
+          role: { in: [...ADMIN_ROLES] },
+        },
+      });
+
+      if (adminUser) {
+        console.log(`[INFO] [OTP/SMS]: Store SMS failed or not configured. Falling back to platform global SMS for admin user.`);
+        // Try sending via global SMS gateway (superadmin)
+        smsResult = await sendOtpSms(normalizedPhone, code);
+      }
+    }
+
+    if (!smsResult.success) {
+      console.warn(`[WARN] [OTP/SMS]: SMS send failed. Error: ${smsResult.error}`);
       
       if (process.env.NODE_ENV === 'production') {
         // If SMS is not configured or disabled, let the user know specifically
@@ -139,7 +157,7 @@ export async function POST(request: Request) {
           );
         }
         return NextResponse.json(
-          { error: 'خطا در ارسال پیامک کد تایید. لطفا مجددا تلاش کنید.' },
+          { error: smsResult.error || 'خطا در ارسال پیامک کد تایید. لطفا مجددا تلاش کنید.' },
           { status: 500 }
         );
       }

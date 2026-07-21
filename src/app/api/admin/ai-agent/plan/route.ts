@@ -43,6 +43,7 @@ export async function POST(request: Request) {
       requestId,
     });
   } catch (error: unknown) {
-    return NextResponse.json(serializeError(error, requestId), { status: 500 });
+    const status = error && typeof error === 'object' && 'status' in error ? (error as any).status : 500;
+    return NextResponse.json(serializeError(error, requestId), { status });
   }
 }
